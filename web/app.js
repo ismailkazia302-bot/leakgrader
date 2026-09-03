@@ -503,6 +503,12 @@ document.addEventListener('DOMContentLoaded', () => {
         const data = await res.json();
         const order = data.order || {};
 
+        if (order.checkout_url && order.checkout_url.startsWith('https://')) {
+          window.open(order.checkout_url, '_blank');
+          closePricing();
+          return;
+        }
+
         alert(`✅ Secure Checkout Session Created!\n\nOrder ID: ${order.order_id}\nPlan: ${order.plan_name}\nAmount: $${order.amount_usd} USD\nUnlock Token: ${order.unlock_token}\n\nStatus: Order Confirmed & Instant Pro Features Unlocked!`);
         closePricing();
       } catch (err) {
