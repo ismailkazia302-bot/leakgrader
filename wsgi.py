@@ -222,11 +222,19 @@ def application(environ, start_response):
         return [json.dumps(PLANS).encode('utf-8')]
 
     # 3. Static Web Files (HTML, CSS, JS)
-    file_path = path.lstrip('/')
-    if not file_path:
-        file_path = 'index.html'
+    WEB_DIR_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "web")
 
-    full_path = os.path.join(WEB_DIR, file_path)
+    if path in ['', '/']:
+        index_file = os.path.join(WEB_DIR_PATH, 'index.html')
+        if os.path.exists(index_file):
+            status = '200 OK'
+            response_headers = [('Content-Type', 'text/html; charset=utf-8'), ('Cache-Control', 'public, max-age=3600')]
+            start_response(status, response_headers)
+            with open(index_file, 'rb') as f:
+                return [f.read()]
+
+    file_path = path.lstrip('/')
+    full_path = os.path.join(WEB_DIR_PATH, file_path)
     if os.path.exists(full_path) and os.path.isfile(full_path):
         mime, _ = mimetypes.guess_type(full_path)
         content_type = mime or 'text/plain'
@@ -240,7 +248,7 @@ def application(environ, start_response):
             return [f.read()]
 
     # Fallback to index.html for single-page app routing
-    fallback_index = os.path.join(WEB_DIR, 'index.html')
+    fallback_index = os.path.join(WEB_DIR_PATH, 'index.html')
     if os.path.exists(fallback_index):
         status = '200 OK'
         response_headers = [('Content-Type', 'text/html; charset=utf-8')]

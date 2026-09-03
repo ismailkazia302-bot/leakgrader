@@ -42,8 +42,8 @@ from engine.payment_gateway import PaymentEngine, PLANS
 # Configuration
 PORT = int(os.environ.get("PORT", 8090))
 GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY", "")
-STORAGE_DIR = os.path.join(os.path.dirname(__file__), "storage")
-WEB_DIR = os.path.join(os.path.dirname(__file__), "web")
+STORAGE_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "storage")
+WEB_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "web")
 
 os.makedirs(STORAGE_DIR, exist_ok=True)
 INDEX_FILE = os.path.join(STORAGE_DIR, "knowledge_index.json")
