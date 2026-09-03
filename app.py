@@ -354,13 +354,13 @@ class MastermindRequestHandler(BaseHTTPRequestHandler):
         content_length = int(self.headers.get("Content-Length", 0))
 
         # --- 1. VIRAL 10-SECOND AUDIT ENGINE ---
-        if path == "/api/audit/run":
+        if path in ["/api/audit/run", "/api/audit/scan"]:
             body = self.rfile.read(content_length)
-            data = json.loads(body.decode("utf-8"))
+            data = json.loads(body.decode("utf-8")) if content_length > 0 else {}
             company_or_url = data.get("url_or_company", "Apex Global Real Estate")
             industry = data.get("industry", "Real Estate")
 
-            audit_result = AUDIT_ENGINE.audit_business(company_or_url, industry)
+            audit_result = AUDIT_ENGINE.run_instant_audit(company_or_url, industry)
             global AUDITS
             AUDITS.append(audit_result)
             save_audits()
