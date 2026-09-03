@@ -423,35 +423,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   if (btnExportCsv) {
     btnExportCsv.addEventListener('click', () => {
-      if (CURRENT_LEADS.length === 0) {
-        alert('Please search and generate prospects before exporting CSV.');
-        return;
-      }
-      let csvContent = 'Decision Maker,Title,Company,Revenue,Email,Phone,Website,Location,Pain Point,Pitch Script\n';
-      CURRENT_LEADS.forEach(l => {
-        const row = [
-          `"${l.contact_name || ''}"`,
-          `"${l.title || ''}"`,
-          `"${l.company_name || ''}"`,
-          `"${l.estimated_revenue || ''}"`,
-          `"${l.email || ''}"`,
-          `"${l.phone || ''}"`,
-          `"${l.website || ''}"`,
-          `"${l.location || ''}"`,
-          `"${(l.primary_pain_point || '').replace(/"/g, '""')}"`,
-          `"${(l.pitch_script || '').replace(/"/g, '""')}"`
-        ];
-        csvContent += row.join(',') + '\n';
-      });
-
-      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.setAttribute('href', url);
-      link.setAttribute('download', `verified_prospects_${Date.now()}.csv`);
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
+      openPricing();
     });
   }
 
