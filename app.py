@@ -38,10 +38,12 @@ from engine.content_crew_agent import ContentCrewEngine
 from engine.audit_engine import ViralAuditEngine
 from engine.seo_engine import ProgrammaticSEOEngine
 from engine.payment_gateway import PaymentEngine, PLANS
+from engine.growth_bot import GrowthAndIndexingAgent
 
 # Configuration
 PORT = int(os.environ.get("PORT", 8090))
 GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY", "")
+GROWTH_AGENT = GrowthAndIndexingAgent()
 STORAGE_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "storage")
 WEB_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "web")
 
@@ -555,6 +557,24 @@ class MastermindRequestHandler(BaseHTTPRequestHandler):
             result = CONTENT_CREW.run_multi_agent_pipeline(topic, audience, tone)
             self._set_headers(200)
             self.wfile.write(json.dumps({"success": True, "data": result}).encode("utf-8"))
+            return
+
+        elif path == "/api/growth/indexnow-ping":
+            result = GROWTH_AGENT.submit_to_indexnow()
+            self._set_headers(200)
+            self.wfile.write(json.dumps({"success": True, "result": result}).encode("utf-8"))
+            return
+
+        elif path == "/api/growth/generate-campaign":
+            body = self.rfile.read(content_length)
+            data = json.loads(body.decode("utf-8")) if content_length > 0 else {}
+            comp = data.get("company_name", "Stripe")
+            niche = data.get("niche", "SaaS & FinTech")
+            loss = data.get("lost_revenue", "$48,000/mo")
+
+            result = GROWTH_AGENT.generate_viral_campaign(comp, niche, loss)
+            self._set_headers(200)
+            self.wfile.write(json.dumps({"success": True, "campaign": result}).encode("utf-8"))
             return
 
         else:

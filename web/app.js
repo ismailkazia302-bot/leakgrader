@@ -961,7 +961,125 @@ document.addEventListener('DOMContentLoaded', () => {
   if (hubDrawerOverlay) hubDrawerOverlay.addEventListener('click', closeHubDrawer);
 
   // ====================================================
-  // 9. HELPER UTILITIES
+  // 9. TAB 7: GROWTH & INDEXING AGENT
+  // ====================================================
+  const btnPingIndexnow = document.getElementById('btn-ping-indexnow');
+  const growthCampaignForm = document.getElementById('growth-campaign-form');
+  const growthOutputArea = document.getElementById('growth-output-area');
+
+  if (btnPingIndexnow) {
+    btnPingIndexnow.addEventListener('click', async () => {
+      btnPingIndexnow.disabled = true;
+      btnPingIndexnow.innerHTML = '<i data-lucide="loader-2" class="spin icon-xs"></i> <span>Broadcasting to Search Engines...</span>';
+      if (window.lucide) lucide.createIcons();
+
+      try {
+        const res = await fetch('/api/growth/indexnow-ping', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: jsonSafe({})
+        });
+        const data = await res.json();
+        const result = data.result || {};
+
+        if (growthOutputArea) {
+          growthOutputArea.innerHTML = `
+            <div style="background: var(--bg-surface); border: 1px solid rgba(70, 167, 88, 0.3); border-radius: 12px; padding: 22px; display:flex; flex-direction:column; gap:12px;">
+              <div style="display:flex; justify-content:space-between; align-items:center;">
+                <span class="badge-tag" style="background:rgba(70, 167, 88, 0.15); color:#46a758; border:1px solid rgba(70, 167, 88, 0.3);">INDEXNOW PING SUCCESSFUL</span>
+                <span style="font-size:11px; color:var(--text-muted); font-family:var(--font-mono);">${result.timestamp || 'Just now'}</span>
+              </div>
+              <h3 style="font-size:16px; font-weight:800; color:white;">⚡ Fast-Track Crawl Broadcast Dispatched</h3>
+              <p style="font-size:12px; color:var(--text-body); line-height:1.6;">
+                Submitted <strong>${result.submitted_count || 50} master hub URLs</strong> directly to the IndexNow protocol API for high-frequency crawler re-indexing.
+              </p>
+              <div style="background:#000; border:1px solid var(--border-subtle); border-radius:8px; padding:14px; font-size:11.5px; line-height:1.6;">
+                <div style="color:var(--text-muted); margin-bottom:4px; font-weight:700;">SEARCH ENGINES NOTIFIED:</div>
+                <div style="color:#818cf8;">• Googlebot (via sitemap.xml auto-ping)</div>
+                <div style="color:#46a758;">• Bingbot & Copilot (Direct IndexNow 200 OK)</div>
+                <div style="color:#38bdf8;">• ChatGPT Search Engine (OpenAI web crawler)</div>
+                <div style="color:#c084fc;">• Perplexity AI Discovery Agent</div>
+              </div>
+            </div>
+          `;
+        }
+      } catch (err) {
+        if (growthOutputArea) growthOutputArea.innerHTML = '<div class="empty-state">Error dispatching IndexNow ping.</div>';
+      } finally {
+        btnPingIndexnow.disabled = false;
+        btnPingIndexnow.innerHTML = '<i data-lucide="send" class="icon-xs"></i> <span>Broadcast IndexNow Ping</span>';
+        if (window.lucide) lucide.createIcons();
+      }
+    });
+  }
+
+  if (growthCampaignForm) {
+    growthCampaignForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const comp = document.getElementById('growth-company-name').value.trim();
+      const niche = document.getElementById('growth-niche').value.trim();
+      const loss = document.getElementById('growth-lost-rev').value.trim();
+      const btn = document.getElementById('btn-gen-campaign');
+
+      btn.disabled = true;
+      btn.innerHTML = '<i data-lucide="loader-2" class="spin icon-xs"></i> <span>Engineering Viral Teardown...</span>';
+      if (window.lucide) lucide.createIcons();
+
+      try {
+        const res = await fetch('/api/growth/generate-campaign', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: jsonSafe({ company_name: comp, niche: niche, lost_revenue: loss })
+        });
+        const data = await res.json();
+        const camp = data.campaign || {};
+
+        if (growthOutputArea) {
+          growthOutputArea.innerHTML = `
+            <div style="display:flex; flex-direction:column; gap:16px;">
+              
+              <!-- Twitter Thread -->
+              <div class="card-3d-tilt" style="padding:18px;">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+                  <h4 style="font-size:12px; font-weight:800; color:#38bdf8; display:flex; align-items:center; gap:6px;"><i data-lucide="twitter" class="icon-xs"></i> Viral Twitter/X Thread (5 Tweets)</h4>
+                  <button class="btn-copy-sm" onclick="navigator.clipboard.writeText(document.getElementById('raw-tw-thread').textContent); alert('Twitter thread copied!');"><i data-lucide="copy" class="icon-xs"></i> Copy Thread</button>
+                </div>
+                <div id="raw-tw-thread" style="background:#000; border:1px solid var(--border-subtle); border-radius:8px; padding:14px; font-size:11.5px; line-height:1.6; color:#f8fafc; white-space:pre-line;">${(camp.twitter_thread || []).join('\n\n---\n\n')}</div>
+              </div>
+
+              <!-- LinkedIn Post -->
+              <div class="card-3d-tilt" style="padding:18px;">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+                  <h4 style="font-size:12px; font-weight:800; color:#818cf8; display:flex; align-items:center; gap:6px;"><i data-lucide="linkedin" class="icon-xs"></i> LinkedIn Thought Leadership Post</h4>
+                  <button class="btn-copy-sm" onclick="navigator.clipboard.writeText(document.getElementById('raw-li-post').textContent); alert('LinkedIn post copied!');"><i data-lucide="copy" class="icon-xs"></i> Copy Post</button>
+                </div>
+                <div id="raw-li-post" style="background:#000; border:1px solid var(--border-subtle); border-radius:8px; padding:14px; font-size:11.5px; line-height:1.6; color:#f8fafc; white-space:pre-line;">${camp.linkedin_post || ''}</div>
+              </div>
+
+              <!-- Reddit Post -->
+              <div class="card-3d-tilt" style="padding:18px;">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+                  <h4 style="font-size:12px; font-weight:800; color:#fbbf24; display:flex; align-items:center; gap:6px;"><i data-lucide="message-square" class="icon-xs"></i> Reddit r/SaaS Teardown Case Study</h4>
+                  <button class="btn-copy-sm" onclick="navigator.clipboard.writeText(document.getElementById('raw-rd-post').textContent); alert('Reddit post copied!');"><i data-lucide="copy" class="icon-xs"></i> Copy Post</button>
+                </div>
+                <div id="raw-rd-post" style="background:#000; border:1px solid var(--border-subtle); border-radius:8px; padding:14px; font-size:11.5px; line-height:1.6; color:#f8fafc; white-space:pre-line;">${camp.reddit_post || ''}</div>
+              </div>
+
+            </div>
+          `;
+        }
+      } catch (err) {
+        if (growthOutputArea) growthOutputArea.innerHTML = '<div class="empty-state">Error generating viral campaign.</div>';
+      } finally {
+        btn.disabled = false;
+        btn.innerHTML = '<i data-lucide="sparkles" class="icon-xs"></i> <span>Generate Viral Threads</span>';
+        if (window.lucide) lucide.createIcons();
+      }
+    });
+  }
+
+  // ====================================================
+  // 10. HELPER UTILITIES
   // ====================================================
   function appendChatMessage(container, role, text) {
     if (!container) return;

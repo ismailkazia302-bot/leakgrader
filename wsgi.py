@@ -14,7 +14,7 @@ from urllib.parse import parse_qs, unquote
 from app import (
     ALL_DOCUMENTS, ALL_CHUNKS, BOOKINGS, LEADS, AUDITS,
     RETRIEVER, INTELLIGENCE, LEAD_AGENT, BOOKING_AGENT,
-    CONTENT_CREW, AUDIT_ENGINE, SEO_ENGINE, PAYMENT_ENGINE, PLANS,
+    CONTENT_CREW, AUDIT_ENGINE, SEO_ENGINE, PAYMENT_ENGINE, GROWTH_AGENT, PLANS,
     WEB_DIR, save_index, save_bookings, save_leads, save_audits, load_all_data
 )
 
@@ -126,6 +126,25 @@ def application(environ, start_response):
             response_headers = [('Content-Type', 'application/json; charset=utf-8'), ('Access-Control-Allow-Origin', '*')]
             start_response(status, response_headers)
             return [json.dumps({"success": True, "order": order}).encode('utf-8')]
+
+        # Route: /api/growth/indexnow-ping
+        elif path == '/api/growth/indexnow-ping':
+            res = GROWTH_AGENT.submit_to_indexnow()
+            status = '200 OK'
+            response_headers = [('Content-Type', 'application/json; charset=utf-8'), ('Access-Control-Allow-Origin', '*')]
+            start_response(status, response_headers)
+            return [json.dumps({"success": True, "result": res}).encode('utf-8')]
+
+        # Route: /api/growth/generate-campaign
+        elif path == '/api/growth/generate-campaign':
+            comp = body_json.get("company_name", "Stripe")
+            niche = body_json.get("niche", "SaaS & FinTech")
+            loss = body_json.get("lost_revenue", "$48,000/mo")
+            res = GROWTH_AGENT.generate_viral_campaign(comp, niche, loss)
+            status = '200 OK'
+            response_headers = [('Content-Type', 'application/json; charset=utf-8'), ('Access-Control-Allow-Origin', '*')]
+            start_response(status, response_headers)
+            return [json.dumps({"success": True, "campaign": res}).encode('utf-8')]
 
     # 2. Handle GET endpoints
     if path == '/sitemap.xml':
