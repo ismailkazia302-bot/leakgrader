@@ -9,14 +9,14 @@ Executes 100% hands-free founder growth:
 import json
 import time
 import os
-from engine.lead_agent import LeadGenAgent
+from engine.lead_gen_agent import LeadPulseAgent
 
 class AutonomousOutreachEngine:
     def __init__(self, storage_dir: str = None):
         self.storage_dir = storage_dir or os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "storage")
         os.makedirs(self.storage_dir, exist_ok=True)
         self.outreach_file = os.path.join(self.storage_dir, "outreach_history.json")
-        self.lead_agent = LeadGenAgent()
+        self.lead_agent = LeadPulseAgent()
         self.history = self._load_history()
 
     def _load_history(self) -> list:
