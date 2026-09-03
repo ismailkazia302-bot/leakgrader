@@ -39,11 +39,13 @@ from engine.audit_engine import ViralAuditEngine
 from engine.seo_engine import ProgrammaticSEOEngine
 from engine.payment_gateway import PaymentEngine, PLANS
 from engine.growth_bot import GrowthAndIndexingAgent
+from engine.backend_sentinel import BackendSentinelAgent
 
 # Configuration
 PORT = int(os.environ.get("PORT", 8090))
 GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY", "")
 GROWTH_AGENT = GrowthAndIndexingAgent()
+SENTINEL_AGENT = BackendSentinelAgent()
 STORAGE_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "storage")
 WEB_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "web")
 
@@ -331,6 +333,12 @@ class MastermindRequestHandler(BaseHTTPRequestHandler):
         elif path == "/api/pricing/plans":
             self._set_headers(200)
             self.wfile.write(json.dumps(PLANS).encode("utf-8"))
+            return
+
+        # 6. Sentinel Watchdog Health Status
+        elif path in ["/api/sentinel/status", "/api/system/health"]:
+            self._set_headers(200)
+            self.wfile.write(json.dumps(SENTINEL_AGENT.get_health_status()).encode("utf-8"))
             return
 
         # Static Web Files

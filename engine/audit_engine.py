@@ -9,18 +9,22 @@ import re
 import time
 import urllib.request
 import urllib.error
+from engine.realtime_enricher import RealtimeWebsiteEnricher
 
 class ViralAuditEngine:
     def __init__(self, api_key: str = "", model: str = "gemini-1.5-flash"):
         self.api_key = api_key
         self.model = model
+        self.enricher = RealtimeWebsiteEnricher(timeout=3)
 
     def run_instant_audit(self, company_or_url: str, industry_hint: str = "") -> dict:
         """
-        Runs a comprehensive 15-point revenue leak diagnostic.
+        Runs a comprehensive 15-point revenue leak diagnostic with real-time website enrichment.
         Uses Gemini API if key is available, or returns instant algorithmic simulation.
         """
-        clean_name = company_or_url.replace("https://", "").replace("http://", "").replace("www.", "").split("/")[0].title()
+        enrichment = self.enricher.inspect_live_website(company_or_url)
+        detected_title = enrichment.get("detected_title")
+        clean_name = detected_title if (detected_title and detected_title != company_or_url) else company_or_url.replace("https://", "").replace("http://", "").replace("www.", "").split("/")[0].title()
         if not clean_name:
             clean_name = "Target Enterprise"
 
@@ -88,6 +92,9 @@ Return JSON with:
                 }
             ],
             "timestamp": time.strftime("%Y-%m-%d %H:%M:%S UTC"),
+            "tech_stack": enrichment.get("tech_stack", ["Modern Web Architecture"]),
+            "has_whatsapp": enrichment.get("has_whatsapp_closer", False),
+            "form_friction_fields": enrichment.get("form_friction_fields", 5),
             "status": "VERIFIED_AUDIT"
         }
 
