@@ -1,0 +1,564 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <title>LeakGrader.com — Autonomous AI Revenue Leak & Conversion Grader</title>
+  <link rel="stylesheet" href="/style.css?v=2030">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;700;800&display=swap" rel="stylesheet">
+  <!-- Lucide Icons -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <!-- Marked.js for Markdown Rendering -->
+  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+</head>
+<body>
+  <div class="apollo-app-layout">
+    
+    <!-- 🧭 DESKTOP NAVIGATION RAIL & MOBILE BOTTOM NAV -->
+    <aside class="apollo-nav-rail" id="nav-rail">
+      <div class="nav-rail-top">
+        <div class="app-brand-logo-3d" title="LeakGrader.com" id="brand-logo-btn">
+          <i data-lucide="zap"></i>
+        </div>
+
+        <div class="rail-divider"></div>
+
+        <button class="rail-btn-3d active" data-target="agent-audit" title="Website Revenue Leak Audit">
+          <i data-lucide="radar"></i>
+          <span>Free Audit</span>
+          <span class="active-indicator-pill"></span>
+        </button>
+
+        <button class="rail-btn-3d" data-target="agent-leadpulse" title="B2B Prospecting & Verified Leads">
+          <i data-lucide="users"></i>
+          <span>Prospects</span>
+          <span class="active-indicator-pill"></span>
+        </button>
+
+        <button class="rail-btn-3d" data-target="agent-bookflow" title="24/7 AI Sales Closer & CRM">
+          <i data-lucide="bot"></i>
+          <span>AI Closer</span>
+          <span class="active-indicator-pill"></span>
+        </button>
+
+        <button class="rail-btn-3d" data-target="agent-omnibrain" title="Document Knowledge & Second Brain">
+          <i data-lucide="file-text"></i>
+          <span>Doc Vault</span>
+          <span class="active-indicator-pill"></span>
+        </button>
+
+        <button class="rail-btn-3d" data-target="agent-contentcrew" title="SEO Article Generation Factory">
+          <i data-lucide="pen-tool"></i>
+          <span>SEO Writer</span>
+          <span class="active-indicator-pill"></span>
+        </button>
+
+        <button class="rail-btn-3d" data-target="agent-directory" title="Programmatic SEO Landing Pages">
+          <i data-lucide="globe"></i>
+          <span>SEO Pages</span>
+          <span class="active-indicator-pill"></span>
+        </button>
+      </div>
+
+      <div class="nav-rail-bottom">
+        <div class="live-orbital-badge" title="All AI Engines Operational">
+          <span class="live-dot-core"></span>
+        </div>
+      </div>
+    </aside>
+
+    <!-- 🖥️ MAIN CANVAS WRAPPER -->
+    <div class="apollo-main-canvas">
+      
+      <!-- 🔝 TOP HEADER BAR -->
+      <header class="apollo-topbar-3d">
+        <div class="topbar-left">
+          <div class="brand-title-box">
+            <span class="brand-name">LeakGrader<strong class="glow-cyan">.com</strong></span>
+          </div>
+          <div class="search-box-3d desktop-only">
+            <i data-lucide="search" class="icon-sm search-icon-glow"></i>
+            <input type="text" id="global-search-input" placeholder="Search verified prospects, companies, or run live audit...">
+            <span class="search-shortcut">⌘K</span>
+          </div>
+        </div>
+
+        <div class="topbar-right">
+          <div class="live-social-proof desktop-only">
+            <span class="pulse-green-dot"></span>
+            <span><strong>14,820+</strong> Audits Run</span>
+          </div>
+          <div class="credit-pill-3d">
+            <i data-lucide="shield-check" class="icon-xs" style="color:#10b981;"></i>
+            <span>Plan: <strong class="glow-gold">Unlimited Pro</strong></span>
+          </div>
+          <button id="btn-open-pricing" class="btn-upgrade-3d">
+            <i data-lucide="sparkles" class="icon-xs"></i>
+            <span>View Pricing</span>
+          </button>
+        </div>
+      </header>
+
+      <!-- ==================================================== -->
+      <!-- TAB 1: 10-SECOND WEBSITE REVENUE LEAK AUDIT          -->
+      <!-- ==================================================== -->
+      <section class="apollo-pane active" id="agent-audit">
+        <div class="audit-hero-layout-3d">
+          
+          <div class="audit-hero-header-3d">
+            <div class="hologram-badge">
+              <span class="hologram-dot"></span>
+              <span>10-SECOND AUTONOMOUS BUSINESS DIAGNOSTIC</span>
+            </div>
+
+            <h1 class="hero-title-3d">
+              Find Out How Much Revenue Your Website <span class="gradient-text-cyan">Loses Every Month</span>
+            </h1>
+
+            <p class="hero-desc-3d">
+              Enter any company domain below. Our autonomous AI simulates after-hours visitor dropoff, lead capture friction, and response latency to calculate your exact financial loss.
+            </p>
+
+            <form id="audit-form" class="audit-input-bar-3d">
+              <i data-lucide="globe" class="globe-icon-glow"></i>
+              <input type="text" id="audit-target-input" placeholder="Enter company domain (e.g. stripe.com, airbnb.com, luxehaven.ae)..." autocomplete="off" required>
+              <button type="submit" id="btn-run-audit" class="btn-3d-glow">
+                <i data-lucide="zap" class="icon-sm"></i>
+                <span>Run Free Audit</span>
+              </button>
+            </form>
+
+            <!-- Instant Sample Chips -->
+            <div class="quick-try-row">
+              <span class="try-label">Instant live demos:</span>
+              <button type="button" class="chip-sample" data-url="https://stripe.com">⚡ Stripe.com</button>
+              <button type="button" class="chip-sample" data-url="https://luxehaven.ae">🏖️ LuxeHaven Real Estate</button>
+              <button type="button" class="chip-sample" data-url="https://airbnb.com">🏡 Airbnb.com</button>
+              <button type="button" class="chip-sample" data-url="https://uber.com">🚗 Uber.com</button>
+            </div>
+          </div>
+
+          <!-- Dynamic Live Scorecard Container -->
+          <div class="audit-results-container-3d" id="audit-results-container">
+            <div class="hero-showcase-grid">
+              
+              <div class="showcase-card">
+                <div class="showcase-icon-box blue"><i data-lucide="radar"></i></div>
+                <h3>10s Revenue Leak Scanner</h3>
+                <p>Simulates visitor dropoff, after-hours response delays, and broken conversion funnels to pinpoint exact financial loss.</p>
+                <div class="showcase-stat-badge"><i data-lucide="trending-down" class="icon-xs" style="color:#fb7185;"></i> Avg $35,000/mo Lost Found</div>
+              </div>
+
+              <div class="showcase-card">
+                <div class="showcase-icon-box purple"><i data-lucide="bot"></i></div>
+                <h3>24/7 AI WhatsApp Closer</h3>
+                <p>Responds to inbound leads in 30 seconds, qualifies budgets over $5,000, and auto-schedules sales meetings into CRM.</p>
+                <div class="showcase-stat-badge"><i data-lucide="clock" class="icon-xs" style="color:#38bdf8;"></i> 30s Instant Response</div>
+              </div>
+
+              <div class="showcase-card">
+                <div class="showcase-icon-box green"><i data-lucide="users"></i></div>
+                <h3>B2B Verified Prospector</h3>
+                <p>Unlocks verified work emails, direct mobile numbers, and 1-click tailored pitch scripts for active buying decision-makers.</p>
+                <div class="showcase-stat-badge"><i data-lucide="check-circle" class="icon-xs" style="color:#34d399;"></i> 98.4% Verification Rate</div>
+              </div>
+
+            </div>
+          </div>
+
+        </div>
+      </section>
+
+      <!-- ==================================================== -->
+      <!-- TAB 2: PROSPECTS (B2B LEAD FINDER & DOSSIER)         -->
+      <!-- ==================================================== -->
+      <section class="apollo-pane" id="agent-leadpulse">
+        <div class="apollo-metrics-ribbon-3d">
+          <div class="metric-card-3d">
+            <span class="metric-label">Total Verified Prospects</span>
+            <strong class="metric-val" id="m-total-leads">0</strong>
+          </div>
+          <div class="metric-card-3d">
+            <span class="metric-label">Verified Emails & Direct Phones</span>
+            <strong class="metric-val text-success" id="m-verified-leads">0 (100% Verified)</strong>
+          </div>
+          <div class="metric-card-3d">
+            <span class="metric-label">Average Purchase Intent</span>
+            <strong class="metric-val text-accent" id="m-intent-val">0%</strong>
+          </div>
+          <div class="metric-card-3d">
+            <span class="metric-label">Estimated Deal Pipeline</span>
+            <strong class="metric-val text-warning" id="m-pipeline-val">$0</strong>
+          </div>
+        </div>
+
+        <div class="apollo-body-grid">
+          <aside class="apollo-filter-drawer-3d">
+            <div class="drawer-header-row">
+              <h3><i data-lucide="sliders-horizontal" class="icon-sm"></i> Prospect Filters</h3>
+              <button id="btn-reset-filters" class="link-btn-sm" type="button">Reset</button>
+            </div>
+            <form id="lead-form" class="filter-form">
+              <div class="filter-group">
+                <label><i data-lucide="briefcase" class="icon-xs"></i> Target Industry / Niche</label>
+                <input type="text" id="lead-industry" placeholder="e.g. Real Estate, Dental Clinics, SaaS, Wealth Management" required>
+                <div class="preset-pill-row">
+                  <span class="filter-preset-pill" data-input="lead-industry" data-val="Luxury Real Estate Developers">Real Estate</span>
+                  <span class="filter-preset-pill" data-input="lead-industry" data-val="Cosmetic & Dental Clinics">Dental</span>
+                  <span class="filter-preset-pill" data-input="lead-industry" data-val="B2B Cloud SaaS">SaaS</span>
+                </div>
+              </div>
+              <div class="filter-group">
+                <label><i data-lucide="map-pin" class="icon-xs"></i> Target City / Country</label>
+                <input type="text" id="lead-location" placeholder="e.g. Dubai, London, New York, Singapore" required>
+                <div class="preset-pill-row">
+                  <span class="filter-preset-pill" data-input="lead-location" data-val="Dubai, UAE">Dubai</span>
+                  <span class="filter-preset-pill" data-input="lead-location" data-val="London, UK">London</span>
+                  <span class="filter-preset-pill" data-input="lead-location" data-val="New York, USA">New York</span>
+                </div>
+              </div>
+              <div class="filter-group">
+                <label><i data-lucide="target" class="icon-xs"></i> Service You Are Pitching</label>
+                <textarea id="lead-service" rows="2" placeholder="e.g. 24/7 AI WhatsApp Lead Closer & Instant Booking Bots"></textarea>
+              </div>
+              <div class="filter-group">
+                <label><i data-lucide="layers" class="icon-xs"></i> Batch Size</label>
+                <select id="lead-count">
+                  <option value="5" selected>5 Verified Prospects</option>
+                  <option value="10">10 Verified Prospects</option>
+                </select>
+              </div>
+              <button type="submit" id="btn-generate-leads" class="btn-3d-glow full-width">
+                <i data-lucide="sparkles"></i>
+                <span>Search & Enrich Prospects</span>
+              </button>
+            </form>
+          </aside>
+
+          <main class="apollo-table-canvas-3d">
+            <div class="table-toolbar-3d">
+              <div class="toolbar-left-flex">
+                <span class="badge-tag cyan">VERIFIED DATABASE</span>
+                <span id="selected-count-label">Search for prospects using the filters on the left</span>
+              </div>
+              <div class="toolbar-right">
+                <button type="button" id="btn-export-csv" class="btn-action-3d"><i data-lucide="file-spreadsheet"></i> Export CSV</button>
+                <button type="button" id="btn-clear-leads" class="btn-action-3d danger"><i data-lucide="trash-2"></i> Clear</button>
+              </div>
+            </div>
+            <div class="table-scroll-wrapper">
+              <table class="apollo-table-3d" id="leads-table">
+                <thead>
+                  <tr>
+                    <th style="width: 36px;"><input type="checkbox" id="th-check-all"></th>
+                    <th>Decision Maker</th>
+                    <th>Company & Revenue</th>
+                    <th>Verified Contact Info</th>
+                    <th>Location & Website</th>
+                    <th>Primary Pain Point</th>
+                    <th style="text-align: right;">Action</th>
+                  </tr>
+                </thead>
+                <tbody id="leads-table-body">
+                  <tr>
+                    <td colspan="7">
+                      <div class="empty-state" style="padding:60px 20px; text-align:center;">
+                        <i data-lucide="search" class="icon-lg" style="color:var(--text-muted); margin-bottom:12px;"></i>
+                        <h3 style="font-size:15px; font-weight:700; color:#ffffff; margin-bottom:6px;">No Prospects Loaded Yet</h3>
+                        <p style="color:var(--text-body); font-size:12px; max-width:440px; margin:0 auto 16px;">Enter your target industry & location in the filters on the left, then click <strong>"Search & Enrich Prospects"</strong> to generate verified decision-makers in real-time.</p>
+                      </div>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </main>
+        </div>
+      </section>
+
+      <!-- ==================================================== -->
+      <!-- TAB 3: AI CLOSER (24/7 SALES AGENT & CRM)            -->
+      <!-- ==================================================== -->
+      <section class="apollo-pane" id="agent-bookflow">
+        <div class="sub-pane-layout-3d">
+          <div class="chat-panel-container-3d">
+            <div class="panel-header-bar-3d">
+              <div style="display:flex; align-items:center; gap:8px;">
+                <i data-lucide="bot" style="color:#0055ff;"></i>
+                <h3>Live 24/7 AI Sales Closer Bot</h3>
+              </div>
+              <span class="badge-pro-3d">Online & Ready</span>
+            </div>
+            <div class="booking-chat-thread" id="booking-chat-thread">
+              <div class="message assistant-message">
+                <div class="message-avatar-3d"><i data-lucide="headset"></i></div>
+                <div class="message-body-3d">
+                  Hello! I am your 24/7 AI Sales Closer. I qualify incoming leads, handle objections, and auto-book consultation calls directly into your CRM. Try messaging me below (e.g. <em>"I run a real estate agency in Dubai, our budget is $5,000, can we book a demo for tomorrow at 3 PM?"</em>).
+                </div>
+              </div>
+            </div>
+            <form id="booking-chat-form" class="chat-form-floating-3d">
+              <input type="text" id="booking-chat-input" placeholder="Type a message to test lead qualification & booking..." autocomplete="off" required>
+              <button type="submit" class="btn-send-3d" id="btn-send-booking"><i data-lucide="send"></i></button>
+            </form>
+          </div>
+
+          <div class="crm-ledger-container-3d">
+            <div class="panel-header-bar-3d">
+              <div style="display:flex; align-items:center; gap:8px;">
+                <i data-lucide="calendar-check" style="color:#10b981;"></i>
+                <h3>Booked Consultations CRM</h3>
+              </div>
+              <button id="btn-refresh-bookings" class="btn-ghost-sm" title="Refresh CRM"><i data-lucide="rotate-cw"></i></button>
+            </div>
+            <div class="ledger-list" id="ledger-list">
+              <div class="empty-state" style="padding:40px 20px; text-align:center;">
+                <i data-lucide="calendar" class="icon-lg" style="color:var(--text-muted); margin-bottom:8px;"></i>
+                <p style="font-size:12px; color:var(--text-body);">No consultations booked yet. Use the chat on the left to simulate automated scheduling.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ==================================================== -->
+      <!-- TAB 4: DOC VAULT (DOCUMENT SECOND BRAIN & QA)        -->
+      <!-- ==================================================== -->
+      <section class="apollo-pane" id="agent-omnibrain">
+        <div class="sub-pane-layout-3d">
+          <aside class="sub-sidebar-3d">
+            <div class="sub-sidebar-header">
+              <h3><i data-lucide="folder-up"></i> Document Vault</h3>
+              <span class="badge-subtle" id="vault-count">0 docs</span>
+            </div>
+            <div class="dropzone-3d" id="dropzone">
+              <input type="file" id="file-input" multiple accept=".pdf,.txt,.md,.markdown,.csv,.json" style="display:none;">
+              <i data-lucide="cloud-upload" class="icon-md" style="color:#38bdf8;"></i>
+              <strong>Drop PDF, TXT, CSV, JSON</strong>
+              <small>or click to browse local files</small>
+            </div>
+            <div class="url-scraper-bar-3d">
+              <input type="url" id="url-input" placeholder="https://your-docs.com">
+              <button id="btn-index-url" class="btn-sm-3d" type="button" title="Index Web URL"><i data-lucide="plus"></i></button>
+            </div>
+            <div class="doc-list" id="doc-list">
+              <div class="empty-state" style="padding:16px 0; text-align:center; font-size:11px; color:var(--text-muted);">No documents uploaded yet.</div>
+            </div>
+            
+            <div class="quick-agent-tools">
+              <button class="tool-btn-3d" id="btn-summary" type="button"><i data-lucide="file-check"></i> Generate Executive Summary</button>
+              <button class="tool-btn-3d" id="btn-risk" type="button"><i data-lucide="shield-alert"></i> Audit Contract Liabilities</button>
+              <button class="tool-btn-3d" id="btn-tables" type="button"><i data-lucide="table"></i> Extract Structured Tables</button>
+            </div>
+          </aside>
+
+          <main class="sub-main-chat-3d">
+            <div class="chat-thread" id="chat-thread">
+              <div class="message assistant-message">
+                <div class="message-avatar-3d"><i data-lucide="bot"></i></div>
+                <div class="message-body-3d">
+                  <h3>Document Second Brain Ready</h3>
+                  <p>Upload your business contracts, pricing sheets, and policies on the left or use the 1-click tools below. Ask any specific question to receive grounded, citation-backed answers with zero hallucination.</p>
+                </div>
+              </div>
+            </div>
+            <form id="chat-form" class="chat-form-floating-3d">
+              <textarea id="chat-input" placeholder="Ask anything about your uploaded documents or contracts..." rows="1" required></textarea>
+              <button type="submit" class="btn-send-3d" id="btn-send-chat"><i data-lucide="arrow-up"></i></button>
+            </form>
+          </main>
+        </div>
+      </section>
+
+      <!-- ==================================================== -->
+      <!-- TAB 5: SEO WRITER (MULTI-AGENT ARTICLE FACTORY)      -->
+      <!-- ==================================================== -->
+      <section class="apollo-pane" id="agent-contentcrew">
+        <div class="sub-pane-layout-3d">
+          <aside class="sub-sidebar-3d">
+            <div class="sub-sidebar-header">
+              <h3><i data-lucide="compass"></i> Article Generator Brief</h3>
+            </div>
+            <form id="crew-form" class="filter-form">
+              <div class="filter-group">
+                <label>Target Topic / Keyword</label>
+                <input type="text" id="crew-topic" placeholder="e.g. Why Real Estate Agencies Lose 35% Inbound Leads After Hours" required>
+              </div>
+              <div class="filter-group">
+                <label>Target Audience</label>
+                <input type="text" id="crew-audience" placeholder="e.g. Brokerage Owners, Sales Directors, Founders" required>
+              </div>
+              <div class="filter-group">
+                <label>Tone of Voice</label>
+                <select id="crew-tone">
+                  <option value="Authoritative & Results-Driven" selected>Authoritative & Results-Driven</option>
+                  <option value="Technical & Detailed">Technical & Detailed</option>
+                  <option value="Conversational & Case Study">Conversational & Case Study</option>
+                </select>
+              </div>
+              <button type="submit" id="btn-run-crew" class="btn-3d-glow full-width">
+                <i data-lucide="play"></i>
+                <span>Generate 1,500-Word Article</span>
+              </button>
+            </form>
+          </aside>
+
+          <main class="crew-output-canvas-3d">
+            <div class="crew-top-row-3d">
+              <h3>Multi-Agent Production Pipeline</h3>
+              <button id="btn-export-article" class="btn-action-3d" type="button"><i data-lucide="download"></i> Download Markdown</button>
+            </div>
+            <div class="crew-stages-3d">
+              <div class="stage-pill-3d" id="stage-research"><i data-lucide="search"></i> <span>1. Research Agent</span></div>
+              <div class="stage-pill-3d" id="stage-writer"><i data-lucide="pen-tool"></i> <span>2. Writer Agent</span></div>
+              <div class="stage-pill-3d" id="stage-seo"><i data-lucide="bar-chart"></i> <span>3. SEO Auditor</span></div>
+            </div>
+            <div class="crew-output-area-3d" id="crew-output-area">
+              <div class="empty-state">
+                <i data-lucide="file-code" class="icon-lg"></i>
+                <p>Fill the brief on the left and click "Generate 1,500-Word Article" to produce a publication-ready SEO article with readability score and metadata.</p>
+              </div>
+            </div>
+          </main>
+        </div>
+      </section>
+
+      <!-- ==================================================== -->
+      <!-- TAB 6: SEO PAGES (10,000 PROGRAMMATIC DIRECTORY)     -->
+      <!-- ==================================================== -->
+      <section class="apollo-pane" id="agent-directory">
+        <div class="directory-pane-layout-3d">
+          <div class="directory-header-card-3d">
+            <div class="header-icon-3d"><i data-lucide="globe"></i></div>
+            <div>
+              <h2>Programmatic Local SEO Engine</h2>
+              <p>Over 10,000 high-intent search landing pages capturing Google, Perplexity & ChatGPT Search traffic across 100+ Global Cities.</p>
+            </div>
+            <a href="/sitemap.xml" target="_blank" class="btn-action-3d"><i data-lucide="external-link"></i> View XML Sitemap</a>
+          </div>
+
+          <div class="directory-search-bar-row">
+            <div class="search-box-3d" style="width: 100%; max-width: 480px;">
+              <i data-lucide="search" class="icon-sm search-icon-glow"></i>
+              <input type="text" id="directory-search-input" placeholder="Filter by city (e.g. Dubai, London, New York) or niche...">
+            </div>
+            <span class="badge-tag cyan" id="directory-count-badge">80 Live Hubs Loaded</span>
+          </div>
+
+          <div class="directory-grid-3d" id="directory-grid"></div>
+        </div>
+      </section>
+
+    </div>
+  </div>
+
+  <!-- 🪟 SLIDE-OVER LEAD DOSSIER DRAWER -->
+  <div class="prospect-drawer-modal" id="prospect-drawer">
+    <div class="drawer-overlay" id="drawer-overlay"></div>
+    <div class="drawer-panel-3d">
+      <div class="drawer-top-3d">
+        <div class="prospect-profile-badge">
+          <div class="avatar-circle-3d" id="drawer-avatar">TA</div>
+          <div>
+            <h2 id="drawer-name">Tariq Al-Mansoor</h2>
+            <p id="drawer-title-company">Managing Director @ LuxeHaven Properties</p>
+          </div>
+        </div>
+        <button id="btn-close-drawer" class="btn-icon" type="button"><i data-lucide="x"></i></button>
+      </div>
+
+      <div class="drawer-body-3d">
+        <div class="dossier-card-3d">
+          <h4><i data-lucide="contact-2" class="icon-xs"></i> Contact Credentials</h4>
+          <div class="dossier-row"><span>Verified Email:</span><strong id="drawer-email">tariq@luxehaven.ae</strong></div>
+          <div class="dossier-row"><span>Direct Phone:</span><strong id="drawer-phone">+971 4 398 2145</strong></div>
+          <div class="dossier-row"><span>Website:</span><strong id="drawer-website">https://luxehaven.ae</strong></div>
+          <div class="dossier-row"><span>Company Revenue:</span><strong id="drawer-revenue">$15M - $30M / year</strong></div>
+        </div>
+
+        <div class="dossier-card-3d">
+          <div class="card-header-flex">
+            <h4><i data-lucide="mail" class="icon-xs"></i> Personalized Cold Email Script</h4>
+            <button id="btn-drawer-copy-email" class="btn-copy-sm" type="button"><i data-lucide="copy" class="icon-xs"></i> Copy</button>
+          </div>
+          <p class="pitch-subject">Subject: <strong id="drawer-subject">Capturing LuxeHaven's after-hours buyers</strong></p>
+          <div class="pitch-content-box" id="drawer-email-body"></div>
+        </div>
+
+        <div class="dossier-card-3d whatsapp-card">
+          <div class="card-header-flex">
+            <h4><i data-lucide="message-circle" class="icon-xs"></i> WhatsApp Outreach Message</h4>
+            <button id="btn-drawer-copy-wa" class="btn-copy-sm" type="button"><i data-lucide="copy" class="icon-xs"></i> Copy</button>
+          </div>
+          <p class="whatsapp-content" id="drawer-wa-body"></p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 💳 PRICING CHECKOUT MODAL -->
+  <div class="prospect-drawer-modal" id="pricing-modal">
+    <div class="drawer-overlay" id="pricing-overlay"></div>
+    <div class="pricing-modal-panel-3d">
+      <div class="drawer-top-3d">
+        <h2>Choose Your LeakGrader Monetization Plan</h2>
+        <button id="btn-close-pricing" class="btn-icon" type="button"><i data-lucide="x"></i></button>
+      </div>
+      <div class="pricing-cards-grid-3d">
+        <div class="plan-card-3d">
+          <h3>Instant Full Audit Report</h3>
+          <div class="plan-price-3d">$9 <span>one-time</span></div>
+          <p>Full 15-point diagnostic report + verified phone and email contacts for 1 target company.</p>
+          <button class="btn-checkout-3d" data-plan="micro_audit" type="button">Unlock Audit Report ($9)</button>
+        </div>
+
+        <div class="plan-card-3d featured">
+          <div class="plan-badge-3d">MOST POPULAR</div>
+          <h3>LeakGrader Pro Plan</h3>
+          <div class="plan-price-3d">$79 <span>/ month</span></div>
+          <p>Unlimited B2B verified prospect searches, Document RAG Second Brain, and SEO article generator.</p>
+          <button class="btn-checkout-3d primary" data-plan="pro_saas" type="button">Subscribe ($79/mo)</button>
+        </div>
+
+        <div class="plan-card-3d">
+          <h3>Done-For-You AI Closer Setup</h3>
+          <div class="plan-price-3d">$1,500 <span>setup</span></div>
+          <p>We build and deploy a custom 24/7 AI WhatsApp Closer bot and automated CRM workflow for your business.</p>
+          <button class="btn-checkout-3d" data-plan="agency_retainer" type="button">Book AI Setup ($1,500)</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 📑 PROGRAMMATIC PAGE DETAIL DRAWER -->
+  <div class="prospect-drawer-modal" id="hub-drawer">
+    <div class="drawer-overlay" id="hub-drawer-overlay"></div>
+    <div class="drawer-panel-3d">
+      <div class="drawer-top-3d">
+        <div>
+          <h2 id="hub-drawer-title">Programmatic Hub Details</h2>
+          <p id="hub-drawer-sub" style="font-size:12px; color:var(--text-muted);">Local Search Engine Optimization Metadata</p>
+        </div>
+        <button id="btn-close-hub-drawer" class="btn-icon" type="button"><i data-lucide="x"></i></button>
+      </div>
+      <div class="drawer-body-3d">
+        <div class="dossier-card-3d">
+          <h4><i data-lucide="info" class="icon-xs"></i> Hub Overview</h4>
+          <div class="dossier-row"><span>Target Market:</span><strong id="hub-drawer-market">Dubai, UAE</strong></div>
+          <div class="dossier-row"><span>Industry Niche:</span><strong id="hub-drawer-niche">Real Estate</strong></div>
+          <div class="dossier-row"><span>Avg Transaction Deal:</span><strong id="hub-drawer-deal" style="color:#10b981;">$50,000</strong></div>
+          <div class="dossier-row"><span>Estimated Monthly Leak:</span><strong id="hub-drawer-leak" style="color:#fb7185;">$42,000/mo</strong></div>
+        </div>
+        <div class="dossier-card-3d">
+          <h4><i data-lucide="code" class="icon-xs"></i> JSON-LD Schema Snippet (Google Search)</h4>
+          <pre id="hub-drawer-schema" style="background:#000; padding:12px; border-radius:8px; font-size:10px; color:#38bdf8; font-family:var(--font-mono); overflow-x:auto; max-height:220px;"></pre>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="/app.js?v=2026"></script>
+</body>
+</html>

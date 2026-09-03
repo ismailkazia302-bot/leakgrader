@@ -1,0 +1,37 @@
+MASTER CLOUD AI INFRASTRUCTURE & SLA SERVICES AGREEMENT (2026)
+
+PARTIES:
+1. Provider: Galicon Global AI Networks Ltd. ("Galicon")
+2. Client: Apex International Financial Services LLC ("Client")
+Effective Date: September 1, 2026
+Contract Identifier: GAL-SLA-99281-INTL
+
+1. SCOPE OF AI SERVICES & DELIVERABLES:
+Galicon agrees to deploy an autonomous AI Core infrastructure including:
+- Multi-Agent Customer Routing Engine
+- Automated Risk & Regulatory Auditing pipeline
+- 24/7 Real-Time Data Ingestion & Synthesis Engine
+Final production delivery deadline is scheduled for September 15, 2026.
+
+2. FINANCIAL TERMS & PAYMENT MILESTONES:
+Total Project Value: $150,000 USD
+- Milestone 1 (Kickoff Deposit): $45,000 USD payable immediately upon contract signing.
+- Milestone 2 (Beta Testing & Pipeline Audit): $60,000 USD payable on September 8, 2026.
+- Milestone 3 (Final SLA Deployment & Handover): $45,000 USD payable on September 15, 2026.
+Monthly Ongoing Infrastructure & Maintenance Retainer: $8,500 USD per month.
+
+3. SERVICE LEVEL AGREEMENT (SLA) & UPTIME GUARANTEE:
+- Galicon guarantees a 99.99% system uptime for all mission-critical AI inference pipelines.
+- Uptime calculation excludes scheduled maintenance windows announced 48 hours in advance.
+- In the event of unscheduled downtime exceeding 0.05% in any calendar month, Galicon shall issue a 15% service credit on the subsequent monthly retainer invoice.
+
+4. COMPLIANCE, SECURITY & DATA SOVEREIGNTY:
+- All financial client data must be encrypted in transit using TLS 1.3 and at rest using AES-256 encryption.
+- No client-identifiable data will be used to train external public foundation models.
+- Data retention is limited to 90 days after contract termination.
+
+5. TERMINATION, LIABILITY & BREACH PENALTIES:
+- Either party may terminate this agreement with 30 days written notice.
+- Early termination without cause by the Client will incur a 20% liquidation fee of the remaining contract balance.
+- Confidentiality breach penalty: A fixed statutory liquidated damage of $25,000 USD per incident, in addition to actual damages.
+- Governing Law: Jurisdiction of the courts of London, United Kingdom.
