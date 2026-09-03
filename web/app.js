@@ -531,15 +531,26 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  if (btnCopyWa) {
-    btnCopyWa.addEventListener('click', () => {
-      const text = document.getElementById('drawer-wa-body')?.textContent || '';
-      navigator.clipboard.writeText(text);
-      btnCopyWa.innerHTML = '<i data-lucide="check" class="icon-xs"></i> Copied!';
-      setTimeout(() => {
-        btnCopyWa.innerHTML = '<i data-lucide="copy" class="icon-xs"></i> Copy';
-        if (window.lucide) lucide.createIcons();
-      }, 1500);
+  // Direct Outreach Launchers in Dossier
+  const btnSendWa = document.getElementById('btn-drawer-send-wa');
+  const btnSendEmail = document.getElementById('btn-drawer-send-email');
+
+  if (btnSendWa) {
+    btnSendWa.addEventListener('click', () => {
+      const waText = document.getElementById('drawer-wa-body')?.textContent || '';
+      const phone = (document.getElementById('drawer-phone')?.textContent || '').replace(/[^0-9]/g, '');
+      const url = phone ? `https://api.whatsapp.com/send?phone=${phone}&text=${encodeURIComponent(waText)}` : `https://api.whatsapp.com/send?text=${encodeURIComponent(waText)}`;
+      window.open(url, '_blank');
+    });
+  }
+
+  if (btnSendEmail) {
+    btnSendEmail.addEventListener('click', () => {
+      const email = document.getElementById('drawer-email')?.textContent || '';
+      const subject = document.getElementById('drawer-subject')?.textContent || 'Quick inquiry regarding after-hours lead conversion';
+      const body = document.getElementById('drawer-email-body')?.textContent || '';
+      const url = `mailto:${email}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+      window.open(url, '_blank');
     });
   }
 
