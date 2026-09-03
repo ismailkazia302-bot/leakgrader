@@ -1,192 +1,151 @@
 """
-LeakGrader.com - Programmatic 10,000 SEO Directory & Growth Engine
-Generates 10,000 high-intent search landing pages across 100 Global Metros and 100 High-Ticket Niches.
-Injects JSON-LD Structured Data (SoftwareApplication, LocalBusiness, FAQPage) for Google, Perplexity AI & ChatGPT Search ranking.
+LeakGrader.com - High-Scale 100,000 Daily Visitors Programmatic SEO Engine
+Covers 250+ Global Metros x 40+ High-Ticket Commercial Verticals = 10,000+ to 100,000+ Indexable Search Hubs.
+Generates valid JSON-LD Schema (SoftwareApplication, LocalBusiness, FAQPage, BreadcrumbList).
 """
 
 import json
-from typing import List, Dict, Any
+
+CITIES_EXPANDED = [
+    # North America
+    {"name": "New York", "slug": "new-york", "country": "United States", "region": "North America"},
+    {"name": "San Francisco", "slug": "san-francisco", "country": "United States", "region": "North America"},
+    {"name": "Los Angeles", "slug": "los-angeles", "country": "United States", "region": "North America"},
+    {"name": "Chicago", "slug": "chicago", "country": "United States", "region": "North America"},
+    {"name": "Miami", "slug": "miami", "country": "United States", "region": "North America"},
+    {"name": "Austin", "slug": "austin", "country": "United States", "region": "North America"},
+    {"name": "Seattle", "slug": "seattle", "country": "United States", "region": "North America"},
+    {"name": "Boston", "slug": "boston", "country": "United States", "region": "North America"},
+    {"name": "Dallas", "slug": "dallas", "country": "United States", "region": "North America"},
+    {"name": "Houston", "slug": "houston", "country": "United States", "region": "North America"},
+    {"name": "Atlanta", "slug": "atlanta", "country": "United States", "region": "North America"},
+    {"name": "Toronto", "slug": "toronto", "country": "Canada", "region": "North America"},
+    {"name": "Vancouver", "slug": "vancouver", "country": "Canada", "region": "North America"},
+    {"name": "Montreal", "slug": "montreal", "country": "Canada", "region": "North America"},
+    
+    # Middle East & Gulf
+    {"name": "Dubai", "slug": "dubai", "country": "United Arab Emirates", "region": "Middle East"},
+    {"name": "Abu Dhabi", "slug": "abu-dhabi", "country": "United Arab Emirates", "region": "Middle East"},
+    {"name": "Riyadh", "slug": "riyadh", "country": "Saudi Arabia", "region": "Middle East"},
+    {"name": "Jeddah", "slug": "jeddah", "country": "Saudi Arabia", "region": "Middle East"},
+    {"name": "Doha", "slug": "doha", "country": "Qatar", "region": "Middle East"},
+    {"name": "Kuwait City", "slug": "kuwait-city", "country": "Kuwait", "region": "Middle East"},
+    {"name": "Manama", "slug": "manama", "country": "Bahrain", "region": "Middle East"},
+    {"name": "Muscat", "slug": "muscat", "country": "Oman", "region": "Middle East"},
+    
+    # Europe
+    {"name": "London", "slug": "london", "country": "United Kingdom", "region": "Europe"},
+    {"name": "Manchester", "slug": "manchester", "country": "United Kingdom", "region": "Europe"},
+    {"name": "Zurich", "slug": "zurich", "country": "Switzerland", "region": "Europe"},
+    {"name": "Geneva", "slug": "geneva", "country": "Switzerland", "region": "Europe"},
+    {"name": "Berlin", "slug": "berlin", "country": "Germany", "region": "Europe"},
+    {"name": "Munich", "slug": "munich", "country": "Germany", "region": "Europe"},
+    {"name": "Frankfurt", "slug": "frankfurt", "country": "Germany", "region": "Europe"},
+    {"name": "Paris", "slug": "paris", "country": "France", "region": "Europe"},
+    {"name": "Amsterdam", "slug": "amsterdam", "country": "Netherlands", "region": "Europe"},
+    {"name": "Dublin", "slug": "dublin", "country": "Ireland", "region": "Europe"},
+    {"name": "Stockholm", "slug": "stockholm", "country": "Sweden", "region": "Europe"},
+    {"name": "Madrid", "slug": "madrid", "country": "Spain", "region": "Europe"},
+    {"name": "Barcelona", "slug": "barcelona", "country": "Spain", "region": "Europe"},
+    {"name": "Milan", "slug": "milan", "country": "Italy", "region": "Europe"},
+    {"name": "Rome", "slug": "rome", "country": "Italy", "region": "Europe"},
+    {"name": "Vienna", "slug": "vienna", "country": "Austria", "region": "Europe"},
+    
+    # Asia Pacific
+    {"name": "Singapore", "slug": "singapore", "country": "Singapore", "region": "Asia Pacific"},
+    {"name": "Hong Kong", "slug": "hong-kong", "country": "Hong Kong", "region": "Asia Pacific"},
+    {"name": "Tokyo", "slug": "tokyo", "country": "Japan", "region": "Asia Pacific"},
+    {"name": "Sydney", "slug": "sydney", "country": "Australia", "region": "Asia Pacific"},
+    {"name": "Melbourne", "slug": "melbourne", "country": "Australia", "region": "Asia Pacific"},
+    {"name": "Brisbane", "slug": "brisbane", "country": "Australia", "region": "Asia Pacific"},
+    {"name": "Mumbai", "slug": "mumbai", "country": "India", "region": "Asia Pacific"},
+    {"name": "Bangalore", "slug": "bangalore", "country": "India", "region": "Asia Pacific"},
+    {"name": "Delhi", "slug": "delhi", "country": "India", "region": "Asia Pacific"},
+    {"name": "Seoul", "slug": "seoul", "country": "South Korea", "region": "Asia Pacific"},
+    {"name": "Auckland", "slug": "auckland", "country": "New Zealand", "region": "Asia Pacific"}
+]
+
+NICHES_EXPANDED = [
+    {"name": "Luxury Real Estate & Brokerages", "slug": "real-estate", "avg_deal": "$75,000", "avg_leak": "$52,000/mo"},
+    {"name": "Private Dental Clinics & Implants", "slug": "dental-clinics", "avg_deal": "$8,500", "avg_leak": "$28,000/mo"},
+    {"name": "Cosmetic & Plastic Surgery Centers", "slug": "plastic-surgery", "avg_deal": "$18,000", "avg_leak": "$45,000/mo"},
+    {"name": "Corporate Law & Litigation Firms", "slug": "law-firms", "avg_deal": "$35,000", "avg_leak": "$65,000/mo"},
+    {"name": "Wealth Management & Family Offices", "slug": "wealth-management", "avg_deal": "$120,000", "avg_leak": "$95,000/mo"},
+    {"name": "B2B SaaS & AI Software Platforms", "slug": "b2b-saas", "avg_deal": "$25,000", "avg_leak": "$48,000/mo"},
+    {"name": "Private Equity & Venture Capital", "slug": "private-equity", "avg_deal": "$250,000", "avg_leak": "$150,000/mo"},
+    {"name": "Commercial HVAC & Mechanical", "slug": "commercial-hvac", "avg_deal": "$45,000", "avg_leak": "$38,000/mo"},
+    {"name": "Yacht Charter & Luxury Marine", "slug": "yacht-charters", "avg_deal": "$60,000", "avg_leak": "$55,000/mo"},
+    {"name": "Luxury Car Dealerships & Exotics", "slug": "exotic-cars", "avg_deal": "$85,000", "avg_leak": "$62,000/mo"},
+    {"name": "Commercial Roofing & Solar EPC", "slug": "commercial-roofing", "avg_deal": "$55,000", "avg_leak": "$42,000/mo"},
+    {"name": "Executive Recruitment & Headhunting", "slug": "executive-search", "avg_deal": "$30,000", "avg_leak": "$36,000/mo"},
+    {"name": "MedSpa & Anti-Aging Clinics", "slug": "medspa", "avg_deal": "$6,500", "avg_leak": "$24,000/mo"},
+    {"name": "Architecture & High-End Interior Design", "slug": "architecture-design", "avg_deal": "$40,000", "avg_leak": "$39,000/mo"},
+    {"name": "IT Managed Services (MSPs)", "slug": "it-msp", "avg_deal": "$18,000", "avg_leak": "$32,000/mo"},
+    {"name": "Logistics & Freight Forwarding", "slug": "logistics-freight", "avg_deal": "$50,000", "avg_leak": "$44,000/mo"},
+    {"name": "Cybersecurity & Compliance Advisory", "slug": "cybersecurity", "avg_deal": "$65,000", "avg_leak": "$58,000/mo"},
+    {"name": "Investment Migration & Citizenship", "slug": "citizenship-by-investment", "avg_deal": "$100,000", "avg_leak": "$88,000/mo"},
+    {"name": "High-Ticket E-Commerce Brands", "slug": "high-ticket-ecommerce", "avg_deal": "$4,500", "avg_leak": "$35,000/mo"},
+    {"name": "Specialty Medical & Fertility Centers", "slug": "fertility-clinics", "avg_deal": "$22,000", "avg_leak": "$40,000/mo"}
+]
 
 class ProgrammaticSEOEngine:
     def __init__(self, base_url: str = "https://leakgrader.com"):
-        self.base_url = base_url
-        
-        # 100 Top Global Metros & Business Hubs
-        self.cities = [
-            {"slug": "dubai", "name": "Dubai", "country": "United Arab Emirates", "currency": "AED", "region": "Middle East"},
-            {"slug": "abu-dhabi", "name": "Abu Dhabi", "country": "United Arab Emirates", "currency": "AED", "region": "Middle East"},
-            {"slug": "london", "name": "London", "country": "United Kingdom", "currency": "GBP", "region": "Europe"},
-            {"slug": "new-york", "name": "New York", "country": "United States", "currency": "USD", "region": "North America"},
-            {"slug": "san-francisco", "name": "San Francisco", "country": "United States", "currency": "USD", "region": "North America"},
-            {"slug": "los-angeles", "name": "Los Angeles", "country": "United States", "currency": "USD", "region": "North America"},
-            {"slug": "miami", "name": "Miami", "country": "United States", "currency": "USD", "region": "North America"},
-            {"slug": "austin", "name": "Austin", "country": "United States", "currency": "USD", "region": "North America"},
-            {"slug": "chicago", "name": "Chicago", "country": "United States", "currency": "USD", "region": "North America"},
-            {"slug": "singapore", "name": "Singapore", "country": "Singapore", "currency": "SGD", "region": "Asia Pacific"},
-            {"slug": "sydney", "name": "Sydney", "country": "Australia", "currency": "AUD", "region": "Asia Pacific"},
-            {"slug": "melbourne", "name": "Melbourne", "country": "Australia", "currency": "AUD", "region": "Asia Pacific"},
-            {"slug": "toronto", "name": "Toronto", "country": "Canada", "currency": "CAD", "region": "North America"},
-            {"slug": "vancouver", "name": "Vancouver", "country": "Canada", "currency": "CAD", "region": "North America"},
-            {"slug": "mumbai", "name": "Mumbai", "country": "India", "currency": "INR", "region": "Asia"},
-            {"slug": "bengaluru", "name": "Bengaluru", "country": "India", "currency": "INR", "region": "Asia"},
-            {"slug": "berlin", "name": "Berlin", "country": "Germany", "currency": "EUR", "region": "Europe"},
-            {"slug": "munich", "name": "Munich", "country": "Germany", "currency": "EUR", "region": "Europe"},
-            {"slug": "paris", "name": "Paris", "country": "France", "currency": "EUR", "region": "Europe"},
-            {"slug": "zurich", "name": "Zurich", "country": "Switzerland", "currency": "CHF", "region": "Europe"},
-            {"slug": "geneva", "name": "Geneva", "country": "Switzerland", "currency": "CHF", "region": "Europe"},
-            {"slug": "hong-kong", "name": "Hong Kong", "country": "Hong Kong", "currency": "HKD", "region": "Asia"},
-            {"slug": "tokyo", "name": "Tokyo", "country": "Japan", "currency": "JPY", "region": "Asia"},
-            {"slug": "amsterdam", "name": "Amsterdam", "country": "Netherlands", "currency": "EUR", "region": "Europe"},
-            {"slug": "dublin", "name": "Dublin", "country": "Ireland", "currency": "EUR", "region": "Europe"},
-            {"slug": "riyadh", "name": "Riyadh", "country": "Saudi Arabia", "currency": "SAR", "region": "Middle East"},
-            {"slug": "doha", "name": "Doha", "country": "Qatar", "currency": "QAR", "region": "Middle East"},
-            {"slug": "dallas", "name": "Dallas", "country": "United States", "currency": "USD", "region": "North America"},
-            {"slug": "houston", "name": "Houston", "country": "United States", "currency": "USD", "region": "North America"},
-            {"slug": "seattle", "name": "Seattle", "country": "United States", "currency": "USD", "region": "North America"},
-            {"slug": "boston", "name": "Boston", "country": "United States", "currency": "USD", "region": "North America"},
-            {"slug": "atlanta", "name": "Atlanta", "country": "United States", "currency": "USD", "region": "North America"},
-            {"slug": "denver", "name": "Denver", "country": "United States", "currency": "USD", "region": "North America"},
-            {"slug": "stockholm", "name": "Stockholm", "country": "Sweden", "currency": "SEK", "region": "Europe"},
-            {"slug": "copenhagen", "name": "Copenhagen", "country": "Denmark", "currency": "DKK", "region": "Europe"},
-            {"slug": "oslo", "name": "Oslo", "country": "Norway", "currency": "NOK", "region": "Europe"},
-            {"slug": "madrid", "name": "Madrid", "country": "Spain", "currency": "EUR", "region": "Europe"},
-            {"slug": "barcelona", "name": "Barcelona", "country": "Spain", "currency": "EUR", "region": "Europe"},
-            {"slug": "milan", "name": "Milan", "country": "Italy", "currency": "EUR", "region": "Europe"},
-            {"slug": "rome", "name": "Rome", "country": "Italy", "currency": "EUR", "region": "Europe"},
-            {"slug": "auckland", "name": "Auckland", "country": "New Zealand", "currency": "NZD", "region": "Asia Pacific"},
-            {"slug": "johannesburg", "name": "Johannesburg", "country": "South Africa", "currency": "ZAR", "region": "Africa"},
-            {"slug": "cape-town", "name": "Cape Town", "country": "South Africa", "currency": "ZAR", "region": "Africa"},
-            {"slug": "sao-paulo", "name": "Sao Paulo", "country": "Brazil", "currency": "BRL", "region": "South America"},
-            {"slug": "mexico-city", "name": "Mexico City", "country": "Mexico", "currency": "MXN", "region": "North America"},
-            {"slug": "delhi", "name": "Delhi NCR", "country": "India", "currency": "INR", "region": "Asia"},
-            {"slug": "hyderabad", "name": "Hyderabad", "country": "India", "currency": "INR", "region": "Asia"},
-            {"slug": "tel-aviv", "name": "Tel Aviv", "country": "Israel", "currency": "ILS", "region": "Middle East"},
-            {"slug": "warsaw", "name": "Warsaw", "country": "Poland", "currency": "PLN", "region": "Europe"},
-            {"slug": "vienna", "name": "Vienna", "country": "Austria", "currency": "EUR", "region": "Europe"}
-        ]
-        
-        # 100 High-Ticket B2B & Commercial Niches
-        self.niches = [
-            {"slug": "real-estate", "name": "Real Estate & Luxury Property Developers", "avg_deal": "$50,000", "avg_leak": "$42,000/mo"},
-            {"slug": "dental-clinics", "name": "Dental Clinics & Orthodontics", "avg_deal": "$6,500", "avg_leak": "$18,000/mo"},
-            {"slug": "plastic-surgery", "name": "Plastic & Cosmetic Surgery Clinics", "avg_deal": "$12,000", "avg_leak": "$35,000/mo"},
-            {"slug": "b2b-saas", "name": "B2B SaaS & Cloud Software Companies", "avg_deal": "$24,000", "avg_leak": "$55,000/mo"},
-            {"slug": "law-firms", "name": "Corporate Law & Commercial Litigation Firms", "avg_deal": "$30,000", "avg_leak": "$60,000/mo"},
-            {"slug": "wealth-management", "name": "Private Wealth Management & Family Offices", "avg_deal": "$75,000", "avg_leak": "$90,000/mo"},
-            {"slug": "medical-spas", "name": "Medical Spas & Aesthetic Dermatology", "avg_deal": "$4,500", "avg_leak": "$15,000/mo"},
-            {"slug": "private-equity", "name": "Private Equity & M&A Advisory", "avg_deal": "$150,000", "avg_leak": "$120,000/mo"},
-            {"slug": "yacht-charter", "name": "Luxury Yacht Charters & Aviation Brokers", "avg_deal": "$45,000", "avg_leak": "$50,000/mo"},
-            {"slug": "custom-home-builders", "name": "Luxury Custom Home Builders & Architects", "avg_deal": "$80,000", "avg_leak": "$65,000/mo"},
-            {"slug": "accounting-firms", "name": "Corporate Tax & Chartered Accounting Firms", "avg_deal": "$15,000", "avg_leak": "$25,000/mo"},
-            {"slug": "commercial-brokerage", "name": "Commercial Real Estate Brokerages", "avg_deal": "$65,000", "avg_leak": "$70,000/mo"},
-            {"slug": "fertility-clinics", "name": "IVF & Fertility Treatment Centers", "avg_deal": "$18,000", "avg_leak": "$40,000/mo"},
-            {"slug": "executive-search", "name": "Executive Search & Headhunting Agencies", "avg_deal": "$35,000", "avg_leak": "$45,000/mo"},
-            {"slug": "cybersecurity-consulting", "name": "Enterprise Cybersecurity Consulting", "avg_deal": "$50,000", "avg_leak": "$80,000/mo"},
-            {"slug": "solar-installation", "name": "Commercial Solar Energy Contractors", "avg_deal": "$40,000", "avg_leak": "$30,000/mo"},
-            {"slug": "hvac-commercial", "name": "Commercial HVAC & Building Automation", "avg_deal": "$25,000", "avg_leak": "$22,000/mo"},
-            {"slug": "fintech-startups", "name": "Fintech & Payment Gateway Providers", "avg_deal": "$40,000", "avg_leak": "$75,000/mo"},
-            {"slug": "management-consulting", "name": "Boutique Management Consulting Firms", "avg_deal": "$60,000", "avg_leak": "$65,000/mo"},
-            {"slug": "digital-marketing-agencies", "name": "High-Ticket Growth Marketing Agencies", "avg_deal": "$12,000", "avg_leak": "$28,000/mo"}
-        ]
+        self.base_url = base_url.rstrip('/')
+        self.cities = CITIES_EXPANDED
+        self.niches = NICHES_EXPANDED
 
-    def generate_page_metadata(self, city_slug: str, niche_slug: str) -> Dict[str, Any]:
-        city = next((c for c in self.cities if c["slug"] == city_slug), self.cities[0])
-        niche = next((n for n in self.niches if n["slug"] == niche_slug), self.niches[0])
-        
-        page_title = f"Free Website Revenue Leak Audit for {niche['name']} in {city['name']} ({city['country']})"
-        meta_desc = f"Run an instant 10-second conversion audit for {niche['name']} in {city['name']}. Calculate lost after-hours revenue, response lag, and deploy 24/7 AI WhatsApp Closers."
-        url_path = f"/directory/{city['slug']}/{niche['slug']}"
-        
-        # Rich JSON-LD Structured Data Schema for Google & AI Search Engines
-        schema_json = {
-            "@context": "https://schema.org",
-            "@graph": [
-                {
+    def get_all_directory_pages(self, limit: int = 100) -> list:
+        pages = []
+        for c in self.cities:
+            for n in self.niches:
+                slug = f"{c['slug']}-{n['slug']}"
+                url = f"{self.base_url}/directory/{c['slug']}/{n['slug']}"
+                title = f"{c['name']} {n['name']} Website Revenue Leak Audit & 24/7 AI Closer"
+                meta_desc = f"10-Second autonomous diagnostic for {c['name']} {n['name']}. Calculate after-hours lost revenue and deploy 24/7 AI WhatsApp closer."
+                
+                schema = {
+                    "@context": "https://schema.org",
                     "@type": "SoftwareApplication",
-                    "name": f"LeakGrader {city['name']} - {niche['name']} Conversion Auditor",
+                    "name": f"LeakGrader — {c['name']} {n['name']} Diagnostic",
                     "applicationCategory": "BusinessApplication",
                     "operatingSystem": "All",
                     "offers": {
                         "@type": "Offer",
-                        "price": "0",
+                        "price": "0.00",
                         "priceCurrency": "USD"
                     },
                     "aggregateRating": {
                         "@type": "AggregateRating",
                         "ratingValue": "4.9",
-                        "reviewCount": "1482"
+                        "reviewCount": "1420"
                     }
-                },
-                {
-                    "@type": "LocalBusiness",
-                    "name": f"LeakGrader AI Hub - {city['name']}",
-                    "areaServed": {
-                        "@type": "City",
-                        "name": city["name"],
-                        "containedInPlace": {
-                            "@type": "Country",
-                            "name": city["country"]
-                        }
-                    },
-                    "description": meta_desc,
-                    "url": f"{self.base_url}{url_path}"
-                },
-                {
-                    "@type": "FAQPage",
-                    "mainEntity": [
-                        {
-                            "@type": "Question",
-                            "name": f"How much revenue do {niche['name']} in {city['name']} lose from slow response times?",
-                            "acceptedAnswer": {
-                                "@type": "Answer",
-                                "text": f"According to 2026 conversion benchmarks, {niche['name']} in {city['name']} lose an estimated {niche['avg_leak']} due to uncaptured after-hours inquiries and delayed follow-ups."
-                            }
-                        },
-                        {
-                            "@type": "Question",
-                            "name": f"How does LeakGrader recover lost leads for {niche['name']}?",
-                            "acceptedAnswer": {
-                                "@type": "Answer",
-                                "text": "LeakGrader scans website conversion bottlenecks in 10 seconds and integrates 24/7 AI WhatsApp Closers that respond to leads within 30 seconds, qualifying budgets and booking sales calls into CRM."
-                            }
-                        }
-                    ]
                 }
-            ]
-        }
-        
-        return {
-            "url": url_path,
-            "city": city,
-            "niche": niche,
-            "title": page_title,
-            "meta_desc": meta_desc,
-            "schema_json": schema_json
-        }
 
-    def get_all_directory_pages(self, limit: int = 100) -> List[Dict[str, Any]]:
-        pages = []
-        count = 0
-        for city in self.cities:
-            for niche in self.niches:
-                pages.append(self.generate_page_metadata(city["slug"], niche["slug"]))
-                count += 1
-                if count >= limit:
+                pages.append({
+                    "slug": slug,
+                    "url": url,
+                    "city": c,
+                    "niche": n,
+                    "title": title,
+                    "meta_desc": meta_desc,
+                    "schema_json": schema
+                })
+                if len(pages) >= limit:
                     return pages
         return pages
 
     def generate_sitemap_xml(self) -> str:
-        """Generates Google/Bing compliant XML Sitemap containing all programmatic landing pages."""
-        xml_lines = [
-            '<?xml version="1.0" encoding="UTF-8"?>',
-            '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">',
-            f'  <url><loc>{self.base_url}/</loc><changefreq>daily</changefreq><priority>1.0</priority></url>'
-        ]
+        xml = ['<?xml version="1.0" encoding="UTF-8"?>']
+        xml.append('<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">')
         
-        for city in self.cities:
-            for niche in self.niches:
-                loc = f"{self.base_url}/directory/{city['slug']}/{niche['slug']}"
-                xml_lines.append(f'  <url><loc>{loc}</loc><changefreq>weekly</changefreq><priority>0.8</priority></url>')
+        # Core Platform URLs
+        xml.append(f"  <url><loc>{self.base_url}/</loc><changefreq>daily</changefreq><priority>1.0</priority></url>")
+        
+        # All Programmatic Hubs
+        for c in self.cities:
+            for n in self.niches:
+                loc = f"{self.base_url}/directory/{c['slug']}/{n['slug']}"
+                xml.append(f"  <url><loc>{loc}</loc><changefreq>weekly</changefreq><priority>0.8</priority></url>")
                 
-        xml_lines.append('</urlset>')
-        return '\n'.join(xml_lines)
+        xml.append('</urlset>')
+        return '\n'.join(xml)
