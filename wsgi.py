@@ -147,7 +147,19 @@ def application(environ, start_response):
             return [json.dumps({"success": True, "campaign": res}).encode('utf-8')]
 
     # 2. Handle GET endpoints
-    if path == '/sitemap.xml':
+    if path == '/robots.txt':
+        robots_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "web", "robots.txt")
+        if os.path.exists(robots_path):
+            with open(robots_path, 'rb') as f:
+                content = f.read()
+        else:
+            content = b"User-agent: *\nAllow: /\nSitemap: https://leakgrader.com/sitemap.xml\n"
+        status = '200 OK'
+        response_headers = [('Content-Type', 'text/plain; charset=utf-8'), ('Cache-Control', 'public, max-age=86400')]
+        start_response(status, response_headers)
+        return [content]
+
+    elif path == '/sitemap.xml':
         sitemap_xml = SEO_ENGINE.generate_sitemap_xml()
         status = '200 OK'
         response_headers = [('Content-Type', 'application/xml; charset=utf-8'), ('Cache-Control', 'public, max-age=86400')]
