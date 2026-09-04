@@ -310,14 +310,35 @@ class MastermindRequestHandler(BaseHTTPRequestHandler):
             self.wfile.write(svg_content.encode("utf-8"))
             return
 
+        elif path == "/favicon.ico":
+            svg_favicon = """<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+  <defs>
+    <linearGradient id="g" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0055ff"/>
+      <stop offset="100%" stop-color="#38bdf8"/>
+    </linearGradient>
+  </defs>
+  <rect width="32" height="32" rx="8" fill="#06080e"/>
+  <path d="M16 4L28 16L16 28L4 16Z" fill="none" stroke="url(#g)" stroke-width="2.5"/>
+  <circle cx="16" cy="16" r="4" fill="#38bdf8"/>
+</svg>"""
+            self.send_response(200)
+            self.send_header("Content-Type", "image/svg+xml; charset=utf-8")
+            self.send_header("Cache-Control", "public, max-age=86400")
+            self.end_headers()
+            self.wfile.write(svg_favicon.encode("utf-8"))
+            return
+
         elif path.startswith("/report/"):
             slug = path.replace("/report/", "").replace("-", " ").title()
+            clean_slug = path.replace("/report/", "")
             report_html = f"""<!DOCTYPE html>
 <html lang="en" class="dark">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>{slug} — Website Revenue Leak & Conversion Audit Report | LeakGrader.com</title>
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0%25' y1='0%25' x2='100%25' y2='100%25'%3E%3Cstop offset='0%25' stop-color='%230055ff'/%3E%3Cstop offset='100%25' stop-color='%2338bdf8'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='32' height='32' rx='8' fill='%2306080e'/%3E%3Cpath d='M16 4L28 16L16 28L4 16Z' fill='none' stroke='url(%23g)' stroke-width='2.5'/%3E%3Ccircle cx='16' cy='16' r='4' fill='%2338bdf8'/%3E%3C/svg%3E">
   <meta name="description" content="Verified conversion audit for {slug}. Estimated monthly revenue loss, response time benchmark, and 24/7 AI WhatsApp Closer recommendation.">
   <meta property="og:title" content="{slug} — LeakGrader.com Conversion Scorecard">
   <meta property="og:description" content="View {slug}'s official conversion score and revenue leak analysis. Audited by LeakGrader.com.">
@@ -330,7 +351,10 @@ class MastermindRequestHandler(BaseHTTPRequestHandler):
 <body style="padding: 40px 20px; max-width: 860px; margin: 0 auto; background: #030407; color: white; font-family: 'Plus Jakarta Sans', sans-serif;">
   <header style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 36px; padding-bottom: 20px; border-bottom: 1px solid rgba(255,255,255,0.08);">
     <a href="/" style="font-size: 20px; font-weight: 900; color: white; text-decoration: none;">LeakGrader<strong style="color:#0055ff;">.com</strong></a>
-    <a href="/" style="background:#0055ff; color:white; padding:8px 18px; border-radius:999px; text-decoration:none; font-weight:700; font-size:12px;">Run New Free Audit</a>
+    <div style="display:flex; gap:10px;">
+      <a href="/report/dossier/{clean_slug}" target="_blank" style="background:rgba(56,189,248,0.15); color:#38bdf8; border:1px solid rgba(56,189,248,0.3); padding:8px 16px; border-radius:999px; text-decoration:none; font-weight:700; font-size:12px;">📄 View Boardroom PDF</a>
+      <a href="/" style="background:#0055ff; color:white; padding:8px 18px; border-radius:999px; text-decoration:none; font-weight:700; font-size:12px;">Run New Audit</a>
+    </div>
   </header>
 
   <div style="background: rgba(12, 16, 28, 0.8); border: 1px solid rgba(255,255,255,0.12); border-radius: 20px; padding: 36px; box-shadow: 0 20px 50px rgba(0,0,0,0.8); backdrop-filter: blur(24px); margin-bottom: 24px;">
@@ -352,22 +376,15 @@ class MastermindRequestHandler(BaseHTTPRequestHandler):
       </div>
     </div>
 
-    <!-- Viral Share Buttons -->
-    <div style="display:flex; gap:12px; flex-wrap:wrap; align-items:center; padding-top:20px; border-top:1px solid rgba(255,255,255,0.08);">
-      <span style="font-size:12px; color:#94a3b8; font-weight:700;">Share Scorecard:</span>
-      <a href="https://api.whatsapp.com/send?text=Check%20out%20the%20website%20revenue%20audit%20for%20{slug}%20on%20LeakGrader%3A%20https%3A%2F%2Fleakgrader.com{path}" target="_blank" style="background:#25D366; color:white; padding:8px 16px; border-radius:8px; text-decoration:none; font-size:12px; font-weight:700; display:inline-flex; align-items:center; gap:6px;">WhatsApp</a>
-      <a href="https://twitter.com/intent/tweet?text=View%20the%20official%20revenue%20leak%20audit%20for%20{slug}%20on%20%40LeakGrader%3A%20https%3A%2F%2Fleakgrader.com{path}" target="_blank" style="background:#1DA1F2; color:white; padding:8px 16px; border-radius:8px; text-decoration:none; font-size:12px; font-weight:700; display:inline-flex; align-items:center; gap:6px;">Twitter / X</a>
-      <a href="https://www.linkedin.com/sharing/share-offsite/?url=https%3A%2F%2Fleakgrader.com{path}" target="_blank" style="background:#0077B5; color:white; padding:8px 16px; border-radius:8px; text-decoration:none; font-size:12px; font-weight:700; display:inline-flex; align-items:center; gap:6px;">LinkedIn</a>
+    <!-- Professional Social Sharing Bar -->
+    <div style="display:flex; gap:10px; flex-wrap:wrap; align-items:center; padding-top:20px; border-top:1px solid rgba(255,255,255,0.08);">
+      <span style="font-size:12px; color:#ffffff; font-weight:800; margin-right:4px;">Share Scorecard:</span>
+      <a href="https://api.whatsapp.com/send?text=Check%20out%20the%20website%20revenue%20audit%20for%20{slug}%20on%20LeakGrader%3A%20https%3A%2F%2Fleakgrader.com{path}" target="_blank" style="background:#25D366; color:white; padding:8px 14px; border-radius:8px; text-decoration:none; font-size:12px; font-weight:700; display:inline-flex; align-items:center; gap:6px;">WhatsApp</a>
+      <a href="https://www.linkedin.com/sharing/share-offsite/?url=https%3A%2F%2Fleakgrader.com{path}" target="_blank" style="background:#0a66c2; color:white; padding:8px 14px; border-radius:8px; text-decoration:none; font-size:12px; font-weight:700; display:inline-flex; align-items:center; gap:6px;">LinkedIn</a>
+      <a href="https://twitter.com/intent/tweet?text=View%20the%20official%20revenue%20leak%20audit%20for%20{slug}%20on%20%40LeakGrader%3A%20https%3A%2F%2Fleakgrader.com{path}" target="_blank" style="background:#0f1419; color:white; border:1px solid rgba(255,255,255,0.2); padding:8px 14px; border-radius:8px; text-decoration:none; font-size:12px; font-weight:700; display:inline-flex; align-items:center; gap:6px;">Twitter / X</a>
+      <a href="https://www.facebook.com/sharer/sharer.php?u=https%3A%2F%2Fleakgrader.com{path}" target="_blank" style="background:#1877f2; color:white; padding:8px 14px; border-radius:8px; text-decoration:none; font-size:12px; font-weight:700; display:inline-flex; align-items:center; gap:6px;">Facebook</a>
+      <button type="button" onclick="navigator.clipboard.writeText(window.location.href); alert('Scorecard link copied to clipboard!');" style="background:rgba(255,255,255,0.08); color:#e2e8f0; border:1px solid rgba(255,255,255,0.15); padding:8px 14px; border-radius:8px; font-size:12px; font-weight:700; cursor:pointer;">Copy Link</button>
     </div>
-  </div>
-
-  <!-- Embed Badge Section -->
-  <div style="background: rgba(12, 16, 28, 0.6); border: 1px solid rgba(255,255,255,0.08); border-radius: 16px; padding: 22px;">
-    <h3 style="font-size:14px; font-weight:800; margin-bottom:8px;">Embed Verified Badge On Your Website:</h3>
-    <p style="font-size:12px; color:#94a3b8; margin-bottom:12px;">Copy this HTML code into your website footer to display your verified audit badge:</p>
-    <code style="display:block; background:#000000; border:1px solid rgba(255,255,255,0.1); padding:10px 14px; border-radius:8px; font-size:11px; color:#38bdf8; font-family:monospace; word-break:break-all;">
-      &lt;a href="https://leakgrader.com{path}" target="_blank"&gt;&lt;img src="https://leakgrader.com/badge/{path.replace('/report/', '')}.svg" alt="Audited by LeakGrader"&gt;&lt;/a&gt;
-    </code>
   </div>
 </body>
 </html>"""

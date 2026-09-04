@@ -330,19 +330,21 @@ document.addEventListener('DOMContentLoaded', () => {
             </div>
           </div>
 
-          <!-- VIRAL 1-CLICK SHARE & EMBED BADGE LOOP -->
-          <div class="card-3d-tilt" style="padding:20px 24px; display:flex; flex-direction:column; gap:12px; background:rgba(8,11,20,0.7); border:1px solid var(--border-subtle);">
+          <!-- 🌟 HIGH-CONVERTING SOCIAL SHARE & COLLABORATION BAR -->
+          <div class="card-3d-tilt" style="padding:18px 22px; display:flex; flex-direction:column; gap:12px; background:rgba(8,11,20,0.85); border:1px solid var(--border-subtle); border-radius:14px;">
             <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px;">
               <div style="display:flex; align-items:center; gap:8px;">
-                <span style="font-size:12px; font-weight:800; color:#ffffff;">Share Live Scorecard:</span>
-                <a href="https://api.whatsapp.com/send?text=Check%20out%20our%20website%20revenue%20audit%20on%20LeakGrader%3A%20https%3A%2F%2Fleakgrader.com%2Freport%2F${cleanSlug}" target="_blank" class="btn-action-3d" style="background:#25D366; color:white; border:none; padding:6px 14px; font-size:11px; font-weight:800; border-radius:6px; text-decoration:none;"><i data-lucide="message-circle" class="icon-xs"></i> WhatsApp</a>
-                <a href="https://twitter.com/intent/tweet?text=View%20the%20official%20revenue%20leak%20audit%20for%20${encodeURIComponent(audit.company_name || urlOrCompany)}%20on%20%40LeakGrader%3A%20https%3A%2F%2Fleakgrader.com%2Freport%2F${cleanSlug}" target="_blank" class="btn-action-3d" style="background:#1DA1F2; color:white; border:none; padding:6px 14px; font-size:11px; font-weight:800; border-radius:6px; text-decoration:none;"><i data-lucide="twitter" class="icon-xs"></i> Twitter / X</a>
+                <span style="font-size:12px; font-weight:800; color:#ffffff; display:flex; align-items:center; gap:6px;">
+                  <i data-lucide="share-2" class="icon-xs" style="color:#38bdf8;"></i> Share Scorecard:
+                </span>
               </div>
-              <a href="/report/${cleanSlug}" target="_blank" style="font-size:11px; color:#38bdf8; font-weight:700; text-decoration:none; display:flex; align-items:center; gap:4px;">View Public Permalink <i data-lucide="external-link" class="icon-xs"></i></a>
-            </div>
-            <div style="font-size:11px; color:var(--text-muted); display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
-              <span>Embed Badge:</span>
-              <code style="background:#000000; padding:4px 8px; border-radius:4px; font-size:10px; color:#34d399; font-family:var(--font-mono); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; max-width:100%;">&lt;a href="https://leakgrader.com/report/${cleanSlug}" target="_blank"&gt;&lt;img src="https://leakgrader.com/badge/${cleanSlug}.svg" alt="Audited by LeakGrader"&gt;&lt;/a&gt;</code>
+              <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
+                <a href="https://api.whatsapp.com/send?text=Check%20out%20our%20website%20revenue%20audit%20on%20LeakGrader%3A%20https%3A%2F%2Fleakgrader.com%2Freport%2F${cleanSlug}" target="_blank" class="btn-action-3d" style="background:#25D366; color:white; border:none; padding:7px 14px; font-size:11.5px; font-weight:800; border-radius:8px; text-decoration:none; display:inline-flex; align-items:center; gap:5px;"><i data-lucide="message-circle" class="icon-xs"></i> WhatsApp</a>
+                <a href="https://www.linkedin.com/sharing/share-offsite/?url=https%3A%2F%2Fleakgrader.com%2Freport%2F${cleanSlug}" target="_blank" class="btn-action-3d" style="background:#0a66c2; color:white; border:none; padding:7px 14px; font-size:11.5px; font-weight:800; border-radius:8px; text-decoration:none; display:inline-flex; align-items:center; gap:5px;"><i data-lucide="linkedin" class="icon-xs"></i> LinkedIn</a>
+                <a href="https://twitter.com/intent/tweet?text=View%20the%20official%20revenue%20leak%20audit%20for%20${encodeURIComponent(audit.company_name || urlOrCompany)}%20on%20%40LeakGrader%3A%20https%3A%2F%2Fleakgrader.com%2Freport%2F${cleanSlug}" target="_blank" class="btn-action-3d" style="background:#0f1419; color:white; border:1px solid rgba(255,255,255,0.2); padding:7px 14px; font-size:11.5px; font-weight:800; border-radius:8px; text-decoration:none; display:inline-flex; align-items:center; gap:5px;"><i data-lucide="twitter" class="icon-xs"></i> Twitter / X</a>
+                <a href="https://www.facebook.com/sharer/sharer.php?u=https%3A%2F%2Fleakgrader.com%2Freport%2F${cleanSlug}" target="_blank" class="btn-action-3d" style="background:#1877f2; color:white; border:none; padding:7px 14px; font-size:11.5px; font-weight:800; border-radius:8px; text-decoration:none; display:inline-flex; align-items:center; gap:5px;"><i data-lucide="facebook" class="icon-xs"></i> Facebook</a>
+                <button type="button" class="btn-action-3d" id="btn-copy-scorecard-link" onclick="navigator.clipboard.writeText('https://leakgrader.com/report/${cleanSlug}'); this.innerHTML='<i data-lucide=\\'check\\' class=\\'icon-xs\\'></i> Copied!'; if(window.lucide)lucide.createIcons(); setTimeout(()=>{this.innerHTML='<i data-lucide=\\'link\\' class=\\'icon-xs\\'></i> Copy Link'; if(window.lucide)lucide.createIcons();}, 2000);" style="background:rgba(255,255,255,0.08); color:#e2e8f0; border:1px solid var(--border-subtle); padding:7px 14px; font-size:11.5px; font-weight:700; border-radius:8px; cursor:pointer; display:inline-flex; align-items:center; gap:5px;"><i data-lucide="link" class="icon-xs"></i> Copy Link</button>
+              </div>
             </div>
           </div>
         </div>
