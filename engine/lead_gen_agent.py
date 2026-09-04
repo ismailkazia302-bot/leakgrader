@@ -747,6 +747,7 @@ RETURN VALID JSON ARRAY of objects with this schema:
                 "industry": ind_clean,
                 "primary_pain_point": pain,
                 "pitch_script": pitch
+            })
         return leads
 
     def export_leads_to_csv(self, leads: list) -> str:
