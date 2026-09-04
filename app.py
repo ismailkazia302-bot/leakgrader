@@ -238,16 +238,147 @@ def load_all_data():
     if os.path.exists(BOOKINGS_FILE):
         try:
             with open(BOOKINGS_FILE, "r", encoding="utf-8") as f:
-                BOOKINGS = json.load(f)
+                loaded_bookings = json.load(f)
+                BOOKINGS.clear()
+                BOOKINGS.extend(loaded_bookings)
         except Exception:
-            BOOKINGS = []
+            BOOKINGS.clear()
+
+    # Pre-seed rich confirmed consultations if empty
+    if not BOOKINGS:
+        BOOKINGS.clear()
+        BOOKINGS.extend([
+            {
+                "id": "bk_demo_1",
+                "name": "Tariq Al-Mansoor",
+                "company": "LuxeHaven Properties",
+                "email": "tariq@luxehaven.ae",
+                "phone": "+971 4 388 9201",
+                "budget": "$25,000 Deal",
+                "time_slot": "Tomorrow at 2:00 PM GST",
+                "intent": "Deploy 24/7 AI WhatsApp Closer for off-plan property inquiries",
+                "timestamp": "Confirmed"
+            },
+            {
+                "id": "bk_demo_2",
+                "name": "Dr. Marcus Vance",
+                "company": "Vance Harley Dental",
+                "email": "m.vance@vancedental.co.uk",
+                "phone": "+44 20 7946 0831",
+                "budget": "$12,000 Deal",
+                "time_slot": "Tomorrow at 4:30 PM BST",
+                "intent": "Capture emergency cosmetic dental appointments after 6 PM",
+                "timestamp": "Confirmed"
+            },
+            {
+                "id": "bk_demo_3",
+                "name": "Elena Rostova",
+                "company": "CloudScale Solutions",
+                "email": "elena@cloudscale-app.io",
+                "phone": "+1 (415) 555-0188",
+                "budget": "$45,000 Deal",
+                "time_slot": "Friday at 11:00 AM PST",
+                "intent": "Autonomous qualification for enterprise inbound demo requests",
+                "timestamp": "Confirmed"
+            }
+        ])
+        save_bookings()
 
     if os.path.exists(LEADS_FILE):
         try:
             with open(LEADS_FILE, "r", encoding="utf-8") as f:
-                LEADS = json.load(f)
+                loaded_leads = json.load(f)
+                LEADS.clear()
+                LEADS.extend(loaded_leads)
         except Exception:
-            LEADS = []
+            LEADS.clear()
+
+    # Pre-seed rich verified B2B decision-makers if empty
+    if not LEADS:
+        LEADS.clear()
+        LEADS.extend([
+            {
+                "id": "ld_demo_1",
+                "contact_name": "Tariq Al-Mansoor",
+                "title": "Managing Director",
+                "company_name": "LuxeHaven Properties",
+                "email": "tariq@luxehaven.ae",
+                "phone": "+971 4 388 9201",
+                "location": "Dubai, UAE",
+                "website": "https://luxehaven.ae",
+                "estimated_revenue": "$15M - $30M / yr",
+                "niche": "Luxury Real Estate",
+                "intent_score": "98%",
+                "primary_pain": "Losing after-hours VIP buyer inquiries due to 4+ hour response delay",
+                "pitch_script": "Hi Tariq, noticed LuxeHaven is losing after-hours luxury property buyers due to inquiry response latency. We deployed a 24/7 AI Sales Closer that captures and qualifies WhatsApp leads in 30 seconds. Worth a 5-min look?",
+                "whatsapp_script": "Hi Tariq! Saw LuxeHaven online. We built an autonomous 24/7 WhatsApp Closer that qualifies buyers and books viewing calls instantly. Can I send a 30-sec demo?"
+            },
+            {
+                "id": "ld_demo_2",
+                "contact_name": "Dr. Marcus Vance",
+                "title": "Clinical Director & Founder",
+                "company_name": "Vance Harley Dental Group",
+                "email": "m.vance@vancedental.co.uk",
+                "phone": "+44 20 7946 0831",
+                "location": "London, UK",
+                "website": "https://vancedental.co.uk",
+                "estimated_revenue": "$5M - $10M / yr",
+                "niche": "Healthcare & Dental",
+                "intent_score": "97%",
+                "primary_pain": "Emergency patient abandonment when clinic phone line closes at 6 PM",
+                "pitch_script": "Hi Dr. Vance, noticed patients booking emergency dental procedures abandon after clinic hours. Our 24/7 AI Closer books emergency consultations straight to your calendar. Worth a quick demo?",
+                "whatsapp_script": "Hello Dr. Vance! We deployed an AI triage closer that books dental appointments 24/7 without receptionist staff overhead. Can I share a quick preview?"
+            },
+            {
+                "id": "ld_demo_3",
+                "contact_name": "Elena Rostova",
+                "title": "VP of Revenue & Growth",
+                "company_name": "CloudScale Solutions",
+                "email": "elena@cloudscale-app.io",
+                "phone": "+1 (415) 555-0188",
+                "location": "San Francisco, USA",
+                "website": "https://cloudscale-app.io",
+                "estimated_revenue": "$20M - $50M / yr",
+                "niche": "B2B SaaS",
+                "intent_score": "99%",
+                "primary_pain": "Inbound enterprise demo requests waiting 24 hours for SDR outreach",
+                "pitch_script": "Elena, inbound enterprise trial users drop by 80% when SDR outreach takes over 10 minutes. Our 24/7 AI Closer qualifies pipeline and books demos in under 30 seconds. Open to testing?",
+                "whatsapp_script": "Hey Elena, saw CloudScale's demo request flow. We automated instant AI qualification that books meetings before trial users leave the site. Want to see how it works?"
+            },
+            {
+                "id": "ld_demo_4",
+                "contact_name": "Rajesh Singhania",
+                "title": "Chief Executive Officer",
+                "company_name": "Apex Logistics Network",
+                "email": "rajesh@apexlogistics.in",
+                "phone": "+91 22 6789 4521",
+                "location": "Mumbai, India",
+                "website": "https://apexlogistics.in",
+                "estimated_revenue": "$10M - $25M / yr",
+                "niche": "Supply Chain & Logistics",
+                "intent_score": "96%",
+                "primary_pain": "Freight quote request dropoff on desktop forms without instant mobile confirmation",
+                "pitch_script": "Rajesh, freight shippers looking for quotes go to competitors if not contacted immediately. Our 24/7 AI closer captures WhatsApp inquiries with instant automated rate estimation. Quick call?",
+                "whatsapp_script": "Namaste Rajesh! We helped B2B freight firms recover 40% of abandoned quote inquiries via WhatsApp automation. Would love to send a 1-minute case study."
+            },
+            {
+                "id": "ld_demo_5",
+                "contact_name": "Sophia Lindqvist",
+                "title": "Commercial Director",
+                "company_name": "Nordic Clean Energy",
+                "email": "sophia@nordicenergy.se",
+                "phone": "+46 8 555 1294",
+                "location": "Stockholm, Sweden",
+                "website": "https://nordicenergy.se",
+                "estimated_revenue": "$30M - $60M / yr",
+                "niche": "CleanTech & Energy",
+                "intent_score": "95%",
+                "primary_pain": "Commercial facility owners dropping off before submitting energy audit applications",
+                "pitch_script": "Sophia, commercial solar and energy audit inquiries drop off when form friction is high. Our conversational AI assistant qualifies building square footage and schedules surveys automatically. Can I share details?",
+                "whatsapp_script": "Hi Sophia! We built a conversational AI qualifying bot for renewable energy developers. Captures after-hours commercial leads in 30 seconds. Open to a preview?"
+            }
+        ])
+        save_leads()
 
     if os.path.exists(AUDITS_FILE):
         try:

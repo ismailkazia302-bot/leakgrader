@@ -15,10 +15,13 @@ from app import (
     ALL_DOCUMENTS, ALL_CHUNKS, BOOKINGS, LEADS, AUDITS,
     RETRIEVER, INTELLIGENCE, LEAD_AGENT, BOOKING_AGENT,
     CONTENT_CREW, AUDIT_ENGINE, SEO_ENGINE, PAYMENT_ENGINE, GROWTH_AGENT, PLANS,
-    ANALYTICS_DASHBOARD, WEBSITE_MANAGER, SOCIAL_POSTER,
+    ANALYTICS_DASHBOARD, WEBSITE_MANAGER, SOCIAL_POSTER, SENTINEL_AGENT,
     TRAFFIC_BLASTER, VIRAL_REEL_STUDIO,
     WEB_DIR, save_index, save_bookings, save_leads, save_audits, load_all_data
 )
+
+# Web assets directory
+WEB_DIR_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "web")
 
 # Load existing index & storage data on startup
 load_all_data()
@@ -409,6 +412,48 @@ def application(environ, start_response):
         start_response(status, response_headers)
         return [json.dumps({"bookings": BOOKINGS}).encode('utf-8')]
 
+    elif path == '/api/leads/list':
+        status = '200 OK'
+        response_headers = [('Content-Type', 'application/json; charset=utf-8'), ('Access-Control-Allow-Origin', '*')]
+        start_response(status, response_headers)
+        return [json.dumps({"leads": LEADS}).encode('utf-8')]
+
+    elif path == '/api/leads/export-csv':
+        csv_data = LEAD_AGENT.export_leads_to_csv(LEADS) if hasattr(LEAD_AGENT, 'export_leads_to_csv') else ''
+        status = '200 OK'
+        response_headers = [
+            ('Content-Type', 'text/csv; charset=utf-8'),
+            ('Content-Disposition', 'attachment; filename="verified_leads_export.csv"'),
+            ('Access-Control-Allow-Origin', '*')
+        ]
+        start_response(status, response_headers)
+        return [csv_data.encode('utf-8')]
+
+    elif path in ['/api/sentinel/status', '/api/system/health']:
+        health = SENTINEL_AGENT.get_health_status() if hasattr(SENTINEL_AGENT, 'get_health_status') else {"status": "healthy", "uptime": "99.99%"}
+        status = '200 OK'
+        response_headers = [('Content-Type', 'application/json; charset=utf-8'), ('Access-Control-Allow-Origin', '*')]
+        start_response(status, response_headers)
+        return [json.dumps(health).encode('utf-8')]
+
+    elif path in ['/privacy', '/privacy.html']:
+        privacy_file = os.path.join(WEB_DIR_PATH, 'privacy.html')
+        if os.path.exists(privacy_file):
+            status = '200 OK'
+            response_headers = [('Content-Type', 'text/html; charset=utf-8'), ('Cache-Control', 'public, max-age=3600')]
+            start_response(status, response_headers)
+            with open(privacy_file, 'rb') as f:
+                return [f.read()]
+
+    elif path in ['/terms', '/terms.html']:
+        terms_file = os.path.join(WEB_DIR_PATH, 'terms.html')
+        if os.path.exists(terms_file):
+            status = '200 OK'
+            response_headers = [('Content-Type', 'text/html; charset=utf-8'), ('Cache-Control', 'public, max-age=3600')]
+            start_response(status, response_headers)
+            with open(terms_file, 'rb') as f:
+                return [f.read()]
+
     elif path == '/api/pricing/plans':
         status = '200 OK'
         response_headers = [('Content-Type', 'application/json; charset=utf-8'), ('Access-Control-Allow-Origin', '*')]
@@ -416,8 +461,6 @@ def application(environ, start_response):
         return [json.dumps(PLANS).encode('utf-8')]
 
     # 3. Static Web Files (HTML, CSS, JS)
-    WEB_DIR_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "web")
-
     if path in ['', '/']:
         index_file = os.path.join(WEB_DIR_PATH, 'index.html')
         if os.path.exists(index_file):

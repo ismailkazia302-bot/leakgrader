@@ -1320,6 +1320,131 @@ body {
 @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
 
 /* ==================================================== */
+/* 🧩 SUB-PANE SPLIT LAYOUTS (AI CLOSER, DOCS, CREW)    */
+/* ==================================================== */
+.sub-pane-layout-3d {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  height: 100%;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.sub-pane-layout-3d.has-sidebar {
+  grid-template-columns: 320px 1fr;
+}
+
+/* ==================================================== */
+/* 📊 1-ROW LIVE MARQUEE INTEL TICKER                   */
+/* ==================================================== */
+.apollo-metrics-marquee-3d {
+  display: flex !important;
+  flex-direction: row !important;
+  align-items: center !important;
+  flex-wrap: nowrap !important;
+  white-space: nowrap !important;
+  height: 38px !important;
+  max-height: 38px !important;
+  min-height: 38px !important;
+  background: rgba(10, 14, 26, 0.95) !important;
+  border-bottom: 1px solid var(--border-subtle) !important;
+  overflow: hidden !important;
+  position: relative !important;
+  z-index: 10 !important;
+  padding: 0 14px !important;
+  box-sizing: border-box !important;
+}
+
+.marquee-tag-badge {
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 6px !important;
+  background: rgba(56, 189, 248, 0.15) !important;
+  border: 1px solid rgba(56, 189, 248, 0.35) !important;
+  color: #38bdf8 !important;
+  font-size: 10px !important;
+  font-weight: 800 !important;
+  letter-spacing: 0.06em !important;
+  padding: 3px 8px !important;
+  border-radius: 6px !important;
+  flex-shrink: 0 !important;
+  margin-right: 14px !important;
+  z-index: 2 !important;
+}
+
+.live-dot-pulse {
+  width: 6px !important;
+  height: 6px !important;
+  border-radius: 50% !important;
+  background: #34d399 !important;
+  box-shadow: 0 0 8px #34d399 !important;
+  display: inline-block !important;
+  animation: dotPulse 1.5s infinite !important;
+}
+
+.marquee-scroll-container {
+  flex: 1 1 auto !important;
+  overflow: hidden !important;
+  white-space: nowrap !important;
+  display: flex !important;
+  flex-direction: row !important;
+  flex-wrap: nowrap !important;
+  align-items: center !important;
+  mask-image: linear-gradient(to right, transparent, black 15px, black 95%, transparent) !important;
+  -webkit-mask-image: linear-gradient(to right, transparent, black 15px, black 95%, transparent) !important;
+}
+
+.marquee-track {
+  display: inline-flex !important;
+  flex-direction: row !important;
+  flex-wrap: nowrap !important;
+  white-space: nowrap !important;
+  align-items: center !important;
+  gap: 32px !important;
+  animation: marqueeRoll 28s linear infinite !important;
+}
+
+.marquee-track:hover {
+  animation-play-state: paused !important;
+}
+
+.marquee-item {
+  display: inline-flex !important;
+  flex-direction: row !important;
+  flex-wrap: nowrap !important;
+  align-items: center !important;
+  gap: 7px !important;
+  font-size: 11.5px !important;
+  white-space: nowrap !important;
+  flex-shrink: 0 !important;
+}
+
+.marquee-item .m-lbl {
+  color: #94a3b8 !important;
+  font-weight: 600 !important;
+}
+
+.marquee-item .metric-val {
+  font-family: 'JetBrains Mono', monospace !important;
+  font-weight: 700 !important;
+}
+
+.marquee-item .text-white { color: #ffffff !important; }
+.marquee-item .text-emerald { color: #34d399 !important; }
+.marquee-item .text-purple { color: #c084fc !important; }
+.marquee-item .text-amber { color: #fbbf24 !important; }
+
+@keyframes marqueeRoll {
+  0% { transform: translateX(0); }
+  100% { transform: translateX(-50%); }
+}
+
+@keyframes dotPulse {
+  0%, 100% { transform: scale(1); opacity: 1; }
+  50% { transform: scale(1.4); opacity: 0.5; }
+}
+
+/* ==================================================== */
 /* 📱 100% RESPONSIVE MOBILE OPTIMIZATION (< 768px)    */
 /* ==================================================== */
 @media (max-width: 768px) {
@@ -1455,7 +1580,84 @@ body {
   }
 
   .apollo-pane {
-    height: calc(100vh - 108px);
+    height: calc(100dvh - 50px - 58px) !important;
+    overflow-y: auto !important;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .sub-pane-layout-3d,
+  .sub-pane-layout-3d.has-sidebar,
+  #agent-bookflow .sub-pane-layout-3d,
+  #agent-omnibrain .sub-pane-layout-3d,
+  #agent-contentcrew .sub-pane-layout-3d {
+    display: flex !important;
+    flex-direction: column !important;
+    height: auto !important;
+    min-height: 100% !important;
+    overflow-y: auto !important;
+  }
+
+  .chat-panel-container-3d,
+  .crm-panel-container-3d,
+  .sub-sidebar-3d,
+  .sub-content-canvas-3d {
+    width: 100% !important;
+    max-width: 100% !important;
+    flex: none !important;
+    min-height: 380px !important;
+    border-right: none !important;
+    border-bottom: 1px solid var(--border-subtle) !important;
+  }
+
+  .booking-chat-thread {
+    min-height: 320px !important;
+    max-height: 480px !important;
+  }
+
+  .crm-ledger-3d {
+    min-height: 350px !important;
+    max-height: none !important;
+  }
+
+  /* Mobile Marquee 1-Row Strict Enforcement */
+  .apollo-metrics-marquee-3d {
+    height: 38px !important;
+    min-height: 38px !important;
+    max-height: 38px !important;
+    padding: 0 8px !important;
+    flex-direction: row !important;
+    flex-wrap: nowrap !important;
+    white-space: nowrap !important;
+    overflow: hidden !important;
+  }
+
+  .marquee-tag-badge {
+    font-size: 9px !important;
+    padding: 2px 6px !important;
+    margin-right: 8px !important;
+  }
+
+  .marquee-scroll-container {
+    flex-direction: row !important;
+    flex-wrap: nowrap !important;
+    white-space: nowrap !important;
+    overflow: hidden !important;
+  }
+
+  .marquee-track {
+    flex-direction: row !important;
+    flex-wrap: nowrap !important;
+    white-space: nowrap !important;
+    gap: 20px !important;
+  }
+
+  .marquee-item {
+    font-size: 10.5px !important;
+    gap: 5px !important;
+    flex-direction: row !important;
+    flex-wrap: nowrap !important;
+    white-space: nowrap !important;
+    flex-shrink: 0 !important;
   }
 
   .audit-hero-layout-3d {

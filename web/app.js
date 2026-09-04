@@ -44,6 +44,20 @@ document.addEventListener('DOMContentLoaded', () => {
     brandLogoBtn.addEventListener('click', () => switchTab('agent-audit'));
   }
 
+  // Footer Navigation Link Switchers
+  document.querySelectorAll('.footer-nav-link').forEach(link => {
+    link.addEventListener('click', (e) => {
+      const target = link.dataset.target;
+      if (target) {
+        e.preventDefault();
+        switchTab(target);
+        const mainCanvas = document.querySelector('.apollo-main-canvas');
+        if (mainCanvas) mainCanvas.scrollTo({ top: 0, behavior: 'smooth' });
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      }
+    });
+  });
+
   // Global Keyboard Shortcut (⌘K / Ctrl+K)
   window.addEventListener('keydown', (e) => {
     if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
