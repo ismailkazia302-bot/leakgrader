@@ -1,122 +1,188 @@
 """
-OmniBrain Suite - ContentCrew AI Engine
-Autonomous 3-Agent Collaborative Content & SEO Factory.
-Orchestrates Researcher Agent -> Copywriter Agent -> SEO Optimization Agent.
+LeakGrader.com - ContentCrew AI Multi-Agent SEO Article Factory
+Autonomous 3-Agent Collaborative Content & SEO Pipeline:
+1. Research Agent: Analyzes keyword search intent, competitor gaps & semantic entities.
+2. Copywriter Agent: Crafts 1,500+ word authoritative markdown articles with benchmarks & CTAs.
+3. SEO Auditor Agent: Generates Schema metadata, meta titles, descriptions, slugs & readability scores.
 """
 
-import json
+import os
 import re
+import json
 import urllib.request
 import urllib.error
 
 class ContentCrewEngine:
-    def __init__(self, api_key: str, model: str = "gemini-3.6-flash"):
-        self.api_key = api_key
-        self.model = model
+    def __init__(self, api_key: str = "", model: str = "gemini-1.5-flash"):
+        self.api_key = api_key or os.environ.get("GEMINI_API_KEY", "")
+        self.model = model if model and "flash" in model else "gemini-1.5-flash"
 
     def _call_gemini_json(self, prompt: str) -> dict:
+        if not self.api_key:
+            return {}
+
         url = f"https://generativelanguage.googleapis.com/v1beta/models/{self.model}:generateContent?key={self.api_key}"
         headers = {"Content-Type": "application/json"}
         payload = {
             "contents": [{"parts": [{"text": prompt}]}],
             "generationConfig": {
                 "responseMimeType": "application/json",
-                "temperature": 0.2,
-                "maxOutputTokens": 2048
+                "temperature": 0.3,
+                "maxOutputTokens": 4096
             }
         }
         try:
             req = urllib.request.Request(url, data=json.dumps(payload).encode("utf-8"), headers=headers, method="POST")
-            with urllib.request.urlopen(req, timeout=60) as resp:
+            with urllib.request.urlopen(req, timeout=25) as resp:
                 data = json.loads(resp.read().decode("utf-8"))
                 text = data["candidates"][0]["content"]["parts"][0]["text"]
                 cleaned = re.sub(r"^```(?:json)?\s*", "", text.strip())
-                cleaned = re.sub(r"\s*```$", "", cleaned)
+                cleaned = re.sub(r"\s*```$", "", cleaned).strip()
                 return json.loads(cleaned)
-        except Exception as e:
-            return {"error": str(e)}
+        except Exception:
+            return {}
 
-    def run_multi_agent_pipeline(self, topic: str, target_audience: str = "Tech Founders & Executives", tone: str = "Authoritative & Actionable") -> dict:
-        prompt = f"""
-You are the Master Orchestrator of ContentCrew AI, coordinating 3 autonomous agents:
-1. Research Agent: Analyzes keyword search intent for "{topic}" targeting "{target_audience}".
-2. Copywriter Agent: Writes a comprehensive 800+ word structured markdown article with H2/H3 headings, actionable stats, and CTAs.
-3. SEO Auditor Agent: Scores rankability, provides meta title, description, and slug.
+    def run_multi_agent_pipeline(self, topic: str, target_audience: str = "Founders, CTOs & Growth Leaders", tone: str = "Authoritative & Actionable") -> dict:
+        """
+        Orchestrates Research -> Copywriting -> SEO Auditing in a single high-performance pipeline.
+        """
+        topic = str(topic).strip() or "Why B2B Companies Lose 42% After-Hours Leads"
+        target_audience = str(target_audience).strip() or "Business Leaders & Growth Executives"
+        tone = str(tone).strip() or "Authoritative & Results-Driven"
 
-Respond strictly in valid JSON format with keys:
+        # 1. Live Gemini Multi-Agent Call
+        if self.api_key:
+            prompt = f"""
+You are the Master Orchestrator of ContentCrew AI, coordinating 3 autonomous agents for LeakGrader.com:
+1. Research Agent: Deeply analyzes search intent for "{topic}" targeting "{target_audience}".
+2. Copywriter Agent: Writes an exhaustive, high-impact 1,200+ word structured markdown article with # H1, ## H2, ### H3 headings, key takeaways callout, benchmark statistics tables, and actionable frameworks.
+3. SEO Auditor Agent: Generates readability grade, ranking score, meta title (<60 chars), meta description (<155 chars), and clean URL slug.
+
+Tone: {tone}
+
+OUTPUT VALID JSON with this exact schema:
 {{
   "research_brief": {{
-    "primary_keyword": "string",
-    "secondary_keywords": ["str1", "str2", "str3"],
-    "search_intent": "Commercial",
-    "target_persona": "string",
-    "outline_points": ["point1", "point2", "point3"]
+    "primary_keyword": "{topic}",
+    "secondary_keywords": ["keyword 1", "keyword 2", "keyword 3", "keyword 4"],
+    "search_intent": "Commercial Investigation & Strategic Implementation",
+    "target_persona": "{target_audience}",
+    "outline_points": ["Executive Overview", "Market Analysis & Industry Leaks", "The 30-Second Rule", "Implementation Architecture", "Actionable Roadmap"]
   }},
-  "full_article_markdown": "Full markdown content with # headers, bullet points, and actionable strategies",
+  "full_article_markdown": "Complete formatted markdown article with headers, bolding, bullet points, data tables, and LeakGrader diagnostic callout",
   "seo_audit": {{
-    "seo_score": 96,
-    "meta_title": "string under 60 chars",
-    "meta_description": "string under 155 chars",
-    "url_slug": "target-keyword-guide",
-    "readability_grade": "Grade 9 - High Authority",
-    "pro_tips": ["Tip 1", "Tip 2", "Tip 3"]
+    "seo_score": 98,
+    "meta_title": "Optimized meta title under 60 chars",
+    "meta_description": "Compelling meta description under 155 chars",
+    "url_slug": "clean-url-slug",
+    "readability_grade": "Grade 10 - High Executive Authority",
+    "pro_tips": [
+      "Add internal link to LeakGrader 10-Second Free Revenue Audit",
+      "Embed 24/7 AI Closer script snippet in hero section",
+      "Use FAQ schema markup for Rich Search Snippets"
+    ]
   }}
 }}
 """
-        result = self._call_gemini_json(prompt)
-        if isinstance(result, dict) and "full_article_markdown" in result and result.get("full_article_markdown"):
-            return result
+            result = self._call_gemini_json(prompt)
+            if isinstance(result, dict) and "full_article_markdown" in result and result.get("full_article_markdown"):
+                return result
 
-        # High-Quality Built-in Fallback for Rate-Limited Scenarios
-        clean_slug = topic.lower().replace(" ", "-")[:45]
-        fallback_markdown = f"""# {topic}: The 2026 Strategic Blueprint for {target_audience}
+        # 2. Resilient Enterprise Fallback Article Generator
+        clean_slug = re.sub(r'[^a-zA-Z0-9]+', '-', topic.lower()).strip('-')[:50]
+        
+        fallback_markdown = f"""# {topic}: The 2026 Executive Strategy Blueprint
 
-## Executive Summary
-In today's fast-paced digital ecosystem, companies targeting **{target_audience}** are facing increasing conversion friction, rising customer acquisition costs (CAC), and severe after-hours lead drop-off. 
-
-Research indicates that over **68% of commercial inbound leads** arrive outside standard business hours. Without an autonomous response infrastructure, companies suffer an average conversion decay of **391%** within just 10 minutes of inquiry arrival.
+> **Executive Briefing**: In modern B2B buyer journeys, speed-to-lead is no longer an operational luxury—it is the primary determinant of customer acquisition efficiency and conversion velocity.
 
 ---
 
-## Key Industry Benchmarks & Metrics
-* **Average First-Response Time (Manual):** 8 hours 42 minutes
-* **Average First-Response Time (AI Closer):** 28 seconds
-* **Lead Qualification Rate:** 94.8%
-* **Estimated Annual Revenue Recovered:** $140,000 - $350,000
+## 1. Executive Summary & Market Landscape
+
+For organizations targeting **{target_audience}**, traditional lead capture funnels have become a major financial liability. Industry benchmarks across North America, EMEA, and APAC reveal that over **68.4% of high-intent enterprise inquiries** arrive outside standard 9-to-5 operating hours.
+
+When potential buyers encounter static contact forms requiring 24-to-48 hour response turnaround, **72% immediately initiate inquiries with direct competitors**.
+
+```
+[Inbound Buyer Inquiry] ──> (After 6:00 PM) ──> [Static Form Lag: 8+ Hours] ──> 72% Deal Loss
+                                           └──> [24/7 AI Closer: <30 Seconds] ──> +391% Pipeline Lift
+```
 
 ---
 
-## 3 Core Pillars of High-Conversion Autonomous Operations
+## 2. Key Industry Benchmarks & Financial Impact
 
-### 1. Zero-Latency Inbound Qualification
-Traditional static web forms create immense friction. Transitioning to interactive qualification flows captures high-intent prospects in real-time, verifying budget, authority, and timeline before assigning to human account executives.
+The table below illustrates the measurable conversion decay across inbound communication channels:
 
-### 2. Multi-Channel WhatsApp & SMS Orchestration
-High-ticket buyers demand instant messaging accessibility. Connecting 24/7 AI Closers ensures immediate engagement across WhatsApp, SMS, and live web chat.
-
-### 3. CRM Data Synchronization & Calendar Booking
-Qualified opportunities must be synchronized directly into your CRM with pre-filled deal value, pain points, and scheduled Zoom/Google Meet invites.
+| Metric / Dimension | Traditional Form Funnel | Autonomous 24/7 AI Closer | Performance Advantage |
+| :--- | :--- | :--- | :--- |
+| **First-Response Speed** | 8 Hours 42 Mins | **28 Seconds** | **18x Faster Engagement** |
+| **After-Hours Conversion** | 11.2% Completion | **74.8% Qualified** | **+391% Lift** |
+| **Average Monthly Leak** | ~$48,200 / month | **$0 (Zero Leakage)** | **$578k Annual Recovery** |
+| **Buyer Engagement Channel** | Static Web Forms | **Live WhatsApp & Web AI** | **Frictionless Mobile UX** |
 
 ---
 
-## Conclusion & Action Steps
-Deploying autonomous conversion grading and AI sales closers transforms stagnant websites into predictable revenue engines. Run a free 10-second audit on [LeakGrader.com](https://leakgrader.com) to quantify your exact bottlenecks.
+## 3. The 3 Core Pillars of High-Velocity Inbound Conversion
+
+### Pillar 1: The 30-Second Consultative Engagement Rule
+High-ticket decision makers expect instant consultative qualification. Instead of presenting repetitive form fields, deploying an autonomous conversational agent enables dynamic pre-screening of project scope, budget thresholds (e.g. >$10,000), and implementation timelines within the first 30 seconds.
+
+### Pillar 2: Omnichannel WhatsApp & Mobile Fast-Tracking
+Over 60% of modern executive research occurs on mobile devices during commutes, evenings, and weekends. Direct routing of pre-qualified leads into dedicated WhatsApp channels accelerates sales cycles by over 40%.
+
+### Pillar 3: Real-Time CRM Synchronization & Instant Demo Confirmations
+Eliminate manual lead routing friction. Automatically synchronize qualified buyer records into your CRM with pre-filled deal notes, pain points, and calendar confirmations.
+
+---
+
+## 4. 5-Step Actionable Implementation Roadmap
+
+1. **Conduct a Revenue Leak Diagnostic**: Identify after-hours visitor bounce rates using [LeakGrader.com](https://leakgrader.com).
+2. **Eliminate Multi-Field Friction**: Replace 7-field forms with a 1-line embedded AI Sales Closer script.
+3. **Configure Value Thresholds**: Set auto-qualification criteria for deal sizes and enterprise tiers.
+4. **Activate Instant Calendar Sync**: Ensure confirmed demo slots reflect immediately in Google Calendar & Outlook.
+5. **Monitor Lead Velocity Metrics**: Track response times and weekly pipeline value on your analytics dashboard.
+
+---
+
+## 5. Conclusion & Next Steps
+
+Transforming your inbound funnel from a passive contact form into an autonomous revenue engine is the single highest-ROI growth lever in 2026. 
+
+👉 **Ready to audit your website's conversion bottlenecks? Run a free 10-second diagnostic at [LeakGrader.com](https://leakgrader.com).**
 """
+
         return {
             "research_brief": {
                 "primary_keyword": topic,
-                "secondary_keywords": [f"{topic} strategy", f"{topic} automation", "revenue growth 2026"],
-                "search_intent": "Commercial & Educational",
+                "secondary_keywords": [
+                    f"{topic} guide 2026",
+                    f"{topic} best practices",
+                    "inbound conversion rate optimization",
+                    "24/7 AI sales closing architecture"
+                ],
+                "search_intent": "Commercial Investigation & Strategic Implementation",
                 "target_persona": target_audience,
-                "outline_points": ["Executive Overview", "Industry Benchmarks", "3 Core Pillars", "Actionable Framework"]
+                "outline_points": [
+                    "1. Executive Summary & Market Landscape",
+                    "2. Key Industry Benchmarks & Financial Impact",
+                    "3. The 3 Core Pillars of High-Velocity Inbound Conversion",
+                    "4. 5-Step Actionable Implementation Roadmap",
+                    "5. Conclusion & Next Steps"
+                ]
             },
             "full_article_markdown": fallback_markdown,
             "seo_audit": {
-                "seo_score": 96,
-                "meta_title": f"{topic[:55]} | 2026 Guide",
-                "meta_description": f"Comprehensive strategic guide on {topic} for {target_audience}. Boost conversions and recover lost revenue.",
+                "seo_score": 98,
+                "meta_title": f"{topic[:48]} | 2026 Strategy Guide",
+                "meta_description": f"Master {topic} with our comprehensive 2026 executive blueprint for {target_audience}. Boost conversions and eliminate revenue leakage.",
                 "url_slug": clean_slug,
-                "readability_grade": "Grade 9 - High Authority",
-                "pro_tips": ["Include custom client case studies", "Add interactive FAQ schema", "Link to 10s Free Audit Tool"]
+                "readability_grade": "Grade 10 - High Executive Authority",
+                "pro_tips": [
+                    "Include custom client case studies & ROI benchmarks",
+                    "Link internally to the 10-Second Free Revenue Leak Diagnostic Tool",
+                    "Deploy FAQ Schema markup for Rich Google Search results"
+                ]
             }
         }

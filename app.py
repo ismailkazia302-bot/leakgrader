@@ -724,16 +724,20 @@ class MastermindRequestHandler(BaseHTTPRequestHandler):
             return
 
         # --- 6. CONTENTCREW AI ENDPOINTS ---
-        elif path == "/api/content-crew/run":
+        elif path in ["/api/content-crew/run", "/api/content/generate-article", "/api/content/generate"]:
             body = self.rfile.read(content_length)
-            data = json.loads(body.decode("utf-8"))
-            topic = data.get("topic", "How AI Agents are Replacing Traditional SaaS in 2026")
+            data = json.loads(body.decode("utf-8")) if content_length > 0 else {}
+            topic = data.get("topic", "Why B2B Companies Lose 42% After-Hours Inbound Leads")
             audience = data.get("audience", "Founders, CTOs, and Business Leaders")
-            tone = data.get("tone", "Authoritative, High-Energy & Actionable")
+            tone = data.get("tone", "Authoritative & Results-Driven")
 
             result = CONTENT_CREW.run_multi_agent_pipeline(topic, audience, tone)
             self._set_headers(200)
-            self.wfile.write(json.dumps({"success": True, "data": result}).encode("utf-8"))
+            self.wfile.write(json.dumps({
+                "success": True,
+                "data": result,
+                "article": result.get("full_article_markdown", "")
+            }).encode("utf-8"))
             return
 
         elif path == "/api/growth/indexnow-ping":

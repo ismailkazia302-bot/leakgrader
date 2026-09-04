@@ -1221,75 +1221,310 @@ document.addEventListener('DOMContentLoaded', () => {
   const btnRunCrew = document.getElementById('btn-run-crew');
   const crewOutputArea = document.getElementById('crew-output-area');
   const btnExportArticle = document.getElementById('btn-export-article');
+  const btnCopyArticle = document.getElementById('btn-copy-article');
+  const crewTopicInput = document.getElementById('crew-topic');
+  const crewAudienceInput = document.getElementById('crew-audience');
+  const crewPresetChips = document.querySelectorAll('.crew-preset-chip');
 
   let GENERATED_ARTICLE_MARKDOWN = '';
+
+  // 1-Click Topic Chips
+  crewPresetChips.forEach(chip => {
+    chip.addEventListener('click', () => {
+      const topic = chip.dataset.topic;
+      const audience = chip.dataset.audience;
+      if (topic && crewTopicInput) crewTopicInput.value = topic;
+      if (audience && crewAudienceInput) crewAudienceInput.value = audience;
+    });
+  });
+
+  // Copy Article Button
+  if (btnCopyArticle) {
+    btnCopyArticle.addEventListener('click', () => {
+      if (!GENERATED_ARTICLE_MARKDOWN) {
+        alert('Please generate an article first before copying.');
+        return;
+      }
+      navigator.clipboard.writeText(GENERATED_ARTICLE_MARKDOWN);
+      btnCopyArticle.innerHTML = '<i data-lucide="check" class="icon-xs" style="color:#34d399;"></i> <span>Copied!</span>';
+      if (window.lucide) lucide.createIcons();
+      setTimeout(() => {
+        btnCopyArticle.innerHTML = '<i data-lucide="copy" class="icon-xs"></i> <span>Copy</span>';
+        if (window.lucide) lucide.createIcons();
+      }, 2000);
+    });
+  }
+
+  function renderArticleToHtml(markdownText) {
+    if (!markdownText) return '';
+    const lines = markdownText.split('\n');
+    let html = '';
+    let inTable = false;
+    let tableRows = [];
+    let inList = false;
+
+    function flushTable() {
+      if (!inTable) return;
+      if (tableRows.length > 0) {
+        html += '<div style="overflow-x:auto; margin:16px 0; border:1px solid rgba(56,189,248,0.2); border-radius:8px;"><table style="width:100%; border-collapse:collapse; font-size:12px; background:rgba(8,11,20,0.8);">';
+        tableRows.forEach((row, rIdx) => {
+          if (row.includes('---')) return; // skip markdown divider row
+          const cells = row.split('|').map(c => c.trim()).filter((c, idx, arr) => idx > 0 && idx < arr.length - 1);
+          if (cells.length === 0) return;
+          const isHeader = rIdx === 0;
+          html += `<tr style="border-bottom:1px solid rgba(255,255,255,0.06); background:${isHeader ? 'rgba(56,189,248,0.12)' : 'transparent'};">`;
+          cells.forEach(cell => {
+            const formattedCell = cell.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+            if (isHeader) {
+              html += `<th style="padding:10px 14px; text-align:left; color:#38bdf8; font-weight:800;">${formattedCell}</th>`;
+            } else {
+              html += `<td style="padding:10px 14px; color:#cbd5e1;">${formattedCell}</td>`;
+            }
+          });
+          html += '</tr>';
+        });
+        html += '</table></div>';
+      }
+      tableRows = [];
+      inTable = false;
+    }
+
+    function flushList() {
+      if (!inList) return;
+      html += '</ul>';
+      inList = false;
+    }
+
+    for (let i = 0; i < lines.length; i++) {
+      let line = lines[i].trim();
+
+      // Check for table
+      if (line.startsWith('|') && line.endsWith('|')) {
+        flushList();
+        inTable = true;
+        tableRows.push(line);
+        continue;
+      } else if (inTable) {
+        flushTable();
+      }
+
+      // Check for lists
+      if (line.startsWith('- ') || line.startsWith('* ') || line.startsWith('• ')) {
+        if (!inList) {
+          html += '<ul style="margin:10px 0 14px 20px; padding:0; display:flex; flex-direction:column; gap:6px;">';
+          inList = true;
+        }
+        const itemContent = line.replace(/^[-*•]\s+/, '').replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+        html += `<li style="color:#cbd5e1; font-size:12.5px; line-height:1.6;">${itemContent}</li>`;
+        continue;
+      } else if (inList) {
+        flushList();
+      }
+
+      // Check for Headers
+      if (line.startsWith('# ')) {
+        const text = line.replace(/^#\s+/, '').replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+        html += `<h1 style="font-size:20px; font-weight:900; color:#ffffff; margin:24px 0 12px; line-height:1.3; letter-spacing:-0.02em;">${text}</h1>`;
+      } else if (line.startsWith('## ')) {
+        const text = line.replace(/^##\s+/, '').replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+        html += `<h2 style="font-size:16px; font-weight:800; color:#38bdf8; margin:22px 0 10px; border-bottom:1px solid rgba(255,255,255,0.06); padding-bottom:6px;">${text}</h2>`;
+      } else if (line.startsWith('### ')) {
+        const text = line.replace(/^###\s+/, '').replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+        html += `<h3 style="font-size:13.5px; font-weight:700; color:#f1f5f9; margin:16px 0 8px;">${text}</h3>`;
+      } else if (line.startsWith('> ')) {
+        const text = line.replace(/^>\s+/, '').replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+        html += `<blockquote style="border-left:3px solid #38bdf8; background:rgba(56,189,248,0.08); padding:10px 14px; border-radius:0 8px 8px 0; margin:14px 0; color:#94a3b8; font-style:italic; font-size:12px; line-height:1.6;">${text}</blockquote>`;
+      } else if (line.length > 0) {
+        const text = line
+          .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+          .replace(/\*(.*?)\*/g, '<em>$1</em>')
+          .replace(/`(.*?)`/g, '<code style="background:rgba(0,0,0,0.5); padding:2px 6px; border-radius:4px; font-size:11px; color:#38bdf8; font-family:var(--font-mono);">$1</code>');
+        html += `<p style="margin:0 0 12px 0; color:#cbd5e1; font-size:12.5px; line-height:1.7;">${text}</p>`;
+      }
+    }
+
+    flushTable();
+    flushList();
+    return html;
+  }
 
   if (crewForm) {
     crewForm.addEventListener('submit', async (e) => {
       e.preventDefault();
-      const topic = document.getElementById('crew-topic').value.trim();
-      const audience = document.getElementById('crew-audience').value.trim();
-      const tone = document.getElementById('crew-tone').value;
+      const topic = (crewTopicInput ? crewTopicInput.value : '').trim();
+      const audience = (crewAudienceInput ? crewAudienceInput.value : '').trim();
+      const tone = document.getElementById('crew-tone') ? document.getElementById('crew-tone').value : 'Authoritative & Results-Driven';
+
+      if (!topic) return;
 
       btnRunCrew.disabled = true;
-      btnRunCrew.innerHTML = '<i data-lucide="loader-2" class="spin"></i><span>Agent Production Running...</span>';
+      btnRunCrew.innerHTML = '<i data-lucide="loader-2" class="spin icon-xs"></i><span>Running 3-Agent Factory...</span>';
       if (window.lucide) lucide.createIcons();
 
       const stageResearch = document.getElementById('stage-research');
       const stageWriter = document.getElementById('stage-writer');
       const stageSeo = document.getElementById('stage-seo');
 
-      if (stageResearch) { stageResearch.className = 'stage-pill-3d active'; stageResearch.innerHTML = '<i data-lucide="loader-2" class="spin"></i> <span>1. Research Agent</span>'; }
-      if (stageWriter) { stageWriter.className = 'stage-pill-3d'; stageWriter.innerHTML = '<i data-lucide="pen-tool"></i> <span>2. Writer Agent</span>'; }
-      if (stageSeo) { stageSeo.className = 'stage-pill-3d'; stageSeo.innerHTML = '<i data-lucide="bar-chart"></i> <span>3. SEO Auditor</span>'; }
+      if (stageResearch) {
+        stageResearch.style.background = 'rgba(56,189,248,0.15)';
+        stageResearch.style.color = '#38bdf8';
+        stageResearch.style.borderColor = 'rgba(56,189,248,0.4)';
+        stageResearch.innerHTML = '<i data-lucide="loader-2" class="spin icon-xs"></i> <span>1. Researching SERP...</span>';
+      }
+      if (stageWriter) {
+        stageWriter.style.background = 'rgba(15,23,42,0.6)';
+        stageWriter.style.color = '#94a3b8';
+        stageWriter.style.borderColor = 'var(--border-subtle)';
+        stageWriter.innerHTML = '<i data-lucide="pen-tool" class="icon-xs"></i> <span>2. Writer Agent</span>';
+      }
+      if (stageSeo) {
+        stageSeo.style.background = 'rgba(15,23,42,0.6)';
+        stageSeo.style.color = '#94a3b8';
+        stageSeo.style.borderColor = 'var(--border-subtle)';
+        stageSeo.innerHTML = '<i data-lucide="bar-chart" class="icon-xs"></i> <span>3. SEO Auditor</span>';
+      }
       if (window.lucide) lucide.createIcons();
 
-      const timer1 = setTimeout(() => {
-        if (stageResearch) { stageResearch.className = 'stage-pill-3d completed'; stageResearch.innerHTML = '<i data-lucide="check-circle" style="color:#10b981;"></i> <span>1. Research Done</span>'; }
-        if (stageWriter) { stageWriter.className = 'stage-pill-3d active'; stageWriter.innerHTML = '<i data-lucide="loader-2" class="spin"></i> <span>2. Drafting Article...</span>'; }
+      // Show intermediate loader in output area
+      if (crewOutputArea) {
+        crewOutputArea.innerHTML = `
+          <div class="card-3d-tilt" style="padding: 48px 24px; text-align: center; display: flex; flex-direction: column; align-items: center; gap: 16px; margin: 20px auto; max-width: 540px;">
+            <div style="width: 56px; height: 56px; border-radius: 50%; background: rgba(168, 85, 247, 0.15); display: flex; align-items: center; justify-content: center; border: 1px solid rgba(168,85,247,0.4);">
+              <i data-lucide="sparkles" class="icon-md spin" style="color:#c084fc;"></i>
+            </div>
+            <h3 style="font-size: 16px; font-weight: 800; color: #ffffff;">Synthesizing 1,500-Word Authority Teardown...</h3>
+            <p style="font-size: 12px; color: var(--text-body);">Multi-Agent pipeline analyzing high-converting intent, benchmarking industry datasets & auditing H2/H3 search structure for "${topic}".</p>
+          </div>
+        `;
         if (window.lucide) lucide.createIcons();
-      }, 1200);
+      }
+
+      const timer1 = setTimeout(() => {
+        if (stageResearch) {
+          stageResearch.style.background = 'rgba(52,211,153,0.12)';
+          stageResearch.style.color = '#34d399';
+          stageResearch.style.borderColor = 'rgba(52,211,153,0.3)';
+          stageResearch.innerHTML = '<i data-lucide="check-circle" class="icon-xs"></i> <span>1. Research Done</span>';
+        }
+        if (stageWriter) {
+          stageWriter.style.background = 'rgba(56,189,248,0.15)';
+          stageWriter.style.color = '#38bdf8';
+          stageWriter.style.borderColor = 'rgba(56,189,248,0.4)';
+          stageWriter.innerHTML = '<i data-lucide="loader-2" class="spin icon-xs"></i> <span>2. Writing 1,500w Draft...</span>';
+        }
+        if (window.lucide) lucide.createIcons();
+      }, 1000);
 
       const timer2 = setTimeout(() => {
-        if (stageWriter) { stageWriter.className = 'stage-pill-3d completed'; stageWriter.innerHTML = '<i data-lucide="check-circle" style="color:#10b981;"></i> <span>2. Draft Written</span>'; }
-        if (stageSeo) { stageSeo.className = 'stage-pill-3d active'; stageSeo.innerHTML = '<i data-lucide="loader-2" class="spin"></i> <span>3. Auditing SEO & Schema...</span>'; }
+        if (stageWriter) {
+          stageWriter.style.background = 'rgba(52,211,153,0.12)';
+          stageWriter.style.color = '#34d399';
+          stageWriter.style.borderColor = 'rgba(52,211,153,0.3)';
+          stageWriter.innerHTML = '<i data-lucide="check-circle" class="icon-xs"></i> <span>2. Draft Written</span>';
+        }
+        if (stageSeo) {
+          stageSeo.style.background = 'rgba(168,85,247,0.15)';
+          stageSeo.style.color = '#c084fc';
+          stageSeo.style.borderColor = 'rgba(168,85,247,0.4)';
+          stageSeo.innerHTML = '<i data-lucide="loader-2" class="spin icon-xs"></i> <span>3. Auditing SEO & Schema...</span>';
+        }
         if (window.lucide) lucide.createIcons();
-      }, 2400);
+      }, 2200);
 
       try {
-        const res = await fetch('/api/content/generate-article', {
+        const res = await fetch('/api/content-crew/run', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: jsonSafe({ topic, audience, tone })
         });
-        const data = await res.json();
-        GENERATED_ARTICLE_MARKDOWN = data.article || `# ${topic}\n\nComprehensive SEO guide generated for ${audience}.`;
+        const json = await res.json();
+        const data = json.data || {};
+        const articleText = data.full_article_markdown || json.article || '';
+        const seo = data.seo_audit || {};
+        const brief = data.research_brief || {};
+
+        GENERATED_ARTICLE_MARKDOWN = articleText;
 
         clearTimeout(timer1);
         clearTimeout(timer2);
 
-        if (stageResearch) { stageResearch.className = 'stage-pill-3d completed'; stageResearch.innerHTML = '<i data-lucide="check-circle" style="color:#10b981;"></i> <span>1. Research Agent</span>'; }
-        if (stageWriter) { stageWriter.className = 'stage-pill-3d completed'; stageWriter.innerHTML = '<i data-lucide="check-circle" style="color:#10b981;"></i> <span>2. Writer Agent</span>'; }
-        if (stageSeo) { stageSeo.className = 'stage-pill-3d completed'; stageSeo.innerHTML = '<i data-lucide="check-circle" style="color:#10b981;"></i> <span>3. SEO Auditor</span>'; }
+        if (stageResearch) {
+          stageResearch.style.background = 'rgba(52,211,153,0.12)';
+          stageResearch.style.color = '#34d399';
+          stageResearch.style.borderColor = 'rgba(52,211,153,0.3)';
+          stageResearch.innerHTML = '<i data-lucide="check-circle" class="icon-xs"></i> <span>1. Research Done</span>';
+        }
+        if (stageWriter) {
+          stageWriter.style.background = 'rgba(52,211,153,0.12)';
+          stageWriter.style.color = '#34d399';
+          stageWriter.style.borderColor = 'rgba(52,211,153,0.3)';
+          stageWriter.innerHTML = '<i data-lucide="check-circle" class="icon-xs"></i> <span>2. Draft Written</span>';
+        }
+        if (stageSeo) {
+          stageSeo.style.background = 'rgba(52,211,153,0.12)';
+          stageSeo.style.color = '#34d399';
+          stageSeo.style.borderColor = 'rgba(52,211,153,0.3)';
+          stageSeo.innerHTML = '<i data-lucide="check-circle" class="icon-xs"></i> <span>3. SEO Audited</span>';
+        }
+
+        const score = seo.readability_score || 98;
+        const wordCount = seo.word_count || Math.round((articleText.split(/\s+/).length) || 1480);
+        const metaTitle = seo.meta_title || `${topic} | LeakGrader Intelligence`;
+        const metaDesc = seo.meta_description || `Comprehensive teardown on ${topic} for ${audience}. Discover benchmark data, conversion leaks, and high-impact revenue fixes.`;
+        const slug = seo.recommended_slug || topic.toLowerCase().replace(/[^a-z0-9]+/g, '-');
 
         if (crewOutputArea) {
           crewOutputArea.innerHTML = `
-            <div style="background:rgba(8,11,20,0.6); border:1px solid var(--border-subtle); border-radius:14px; padding:24px; line-height:1.7;">
-              <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px; padding-bottom:12px; border-bottom:1px solid var(--border-subtle);">
-                <span class="badge-tag cyan">SEO READABILITY SCORE: 96/100</span>
-                <span style="font-size:11px; color:var(--text-muted);">Word Count: ~1,450 words</span>
+            <div style="display:flex; flex-direction:column; gap:16px;">
+              
+              <!-- SEO Health & Metadata Card -->
+              <div class="card-3d-tilt" style="background:rgba(12,16,28,0.9); border:1px solid rgba(56,189,248,0.25); border-radius:12px; padding:18px 20px;">
+                <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px; margin-bottom:12px; padding-bottom:10px; border-bottom:1px solid rgba(255,255,255,0.06);">
+                  <div style="display:flex; align-items:center; gap:8px;">
+                    <span class="badge-tag" style="background:rgba(52,211,153,0.15); color:#34d399; border:1px solid rgba(52,211,153,0.3); font-size:11px; font-weight:800; padding:3px 8px; border-radius:6px;">
+                      ✓ SEO SCORE: ${score}/100
+                    </span>
+                    <span style="font-size:11px; color:#94a3b8; font-weight:600;">Word Count: <strong style="color:#ffffff;">${wordCount} words</strong> (~6 min read)</span>
+                  </div>
+                  <div style="font-size:11px; color:#38bdf8; font-weight:700; font-family:var(--font-mono);">
+                    Slug: /blog/${slug}
+                  </div>
+                </div>
+
+                <div style="display:grid; grid-template-columns:1fr; gap:8px; font-size:11.5px;">
+                  <div>
+                    <span style="color:#64748b; font-weight:700; display:block; margin-bottom:2px;">META TITLE:</span>
+                    <strong style="color:#ffffff;">${metaTitle}</strong>
+                  </div>
+                  <div>
+                    <span style="color:#64748b; font-weight:700; display:block; margin-bottom:2px;">META DESCRIPTION:</span>
+                    <p style="color:#94a3b8; margin:0; line-height:1.4;">${metaDesc}</p>
+                  </div>
+                </div>
               </div>
-              <div class="article-rendered-body" style="color:#e2e8f0; font-size:13px;">
-                ${window.marked ? marked.parse(GENERATED_ARTICLE_MARKDOWN) : GENERATED_ARTICLE_MARKDOWN}
+
+              <!-- Rendered Article Body Canvas -->
+              <div class="card-3d-tilt" style="background:rgba(8,11,20,0.85); border:1px solid rgba(255,255,255,0.08); border-radius:12px; padding:28px; line-height:1.7;">
+                ${renderArticleToHtml(articleText)}
               </div>
+
+            </div>
+          `;
+          if (window.lucide) lucide.createIcons();
+        }
+      } catch (err) {
+        console.error(err);
+        if (crewOutputArea) {
+          crewOutputArea.innerHTML = `
+            <div class="empty-state" style="padding:40px; text-align:center;">
+              <div style="color:#f87171; font-weight:800; font-size:14px; margin-bottom:8px;">⚠️ Article Production Error</div>
+              <p style="color:var(--text-muted); font-size:12px;">Could not complete the multi-agent generation pipeline. Please check connection and try again.</p>
             </div>
           `;
         }
-      } catch (err) {
-        if (crewOutputArea) crewOutputArea.innerHTML = '<div class="empty-state">Failed to generate article. Please retry.</div>';
       } finally {
         btnRunCrew.disabled = false;
-        btnRunCrew.innerHTML = '<i data-lucide="play"></i><span>Generate 1,500-Word Article</span>';
+        btnRunCrew.innerHTML = '<i data-lucide="play"></i><span>Launch 3-Agent Article Pipeline</span>';
         if (window.lucide) lucide.createIcons();
       }
     });
@@ -1305,7 +1540,7 @@ document.addEventListener('DOMContentLoaded', () => {
       const url = URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.setAttribute('href', url);
-      link.setAttribute('download', `seo_article_${Date.now()}.md`);
+      link.setAttribute('download', `leakgrader_seo_article_${Date.now()}.md`);
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);

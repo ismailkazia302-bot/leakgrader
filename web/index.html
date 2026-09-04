@@ -784,51 +784,106 @@
       <!-- TAB 5: SEO WRITER (MULTI-AGENT ARTICLE FACTORY)      -->
       <!-- ==================================================== -->
       <section class="apollo-pane" id="agent-contentcrew">
-        <div class="sub-pane-layout-3d">
-          <aside class="sub-sidebar-3d">
-            <div class="sub-sidebar-header">
-              <h3><i data-lucide="compass"></i> Article Generator Brief</h3>
+        <div class="sub-pane-layout-3d" style="display:grid; grid-template-columns:320px 1fr; height:100%; min-height:0; overflow:hidden;">
+          
+          <!-- LEFT: ARTICLE GENERATOR BRIEF -->
+          <aside class="sub-sidebar-3d" style="background:rgba(8,11,20,0.95); border-right:1px solid var(--border-subtle); padding:16px; display:flex; flex-direction:column; gap:12px; overflow-y:auto;">
+            <div class="sub-sidebar-header" style="display:flex; justify-content:space-between; align-items:center; padding-bottom:8px; border-bottom:1px solid var(--border-subtle);">
+              <div style="display:flex; align-items:center; gap:8px;">
+                <div style="width:26px; height:26px; border-radius:6px; background:rgba(168,85,247,0.15); color:#c084fc; display:flex; align-items:center; justify-content:center;">
+                  <i data-lucide="sparkles" style="width:14px; height:14px;"></i>
+                </div>
+                <h3 style="font-size:12.5px; font-weight:800; color:#ffffff; margin:0;">SEO Article Factory</h3>
+              </div>
+              <span class="badge-tag" style="background:rgba(52,211,153,0.15); color:#34d399; border:1px solid rgba(52,211,153,0.3); font-size:10px; font-weight:800; padding:2px 8px; border-radius:999px;">3 Agents Online</span>
             </div>
-            <form id="crew-form" class="filter-form">
+
+            <form id="crew-form" class="filter-form" style="display:flex; flex-direction:column; gap:12px;">
               <div class="filter-group">
-                <label>Target Topic / Keyword</label>
-                <input type="text" id="crew-topic" placeholder="e.g. Why Real Estate Agencies Lose 35% Inbound Leads After Hours" required>
+                <label style="font-size:11px; font-weight:700; color:#e2e8f0; margin-bottom:4px; display:flex; align-items:center; gap:6px;">
+                  <i data-lucide="key" class="icon-xs" style="color:#38bdf8;"></i> Target Keyword / Topic
+                </label>
+                <input type="text" id="crew-topic" placeholder="e.g. Why Real Estate Brokerages Lose 42% After-Hours Leads" required style="background:#000000; border:1px solid rgba(255,255,255,0.15); border-radius:8px; padding:10px 12px; color:#fff; font-size:12px; width:100%; outline:none;">
+                
+                <!-- 1-Click Topic Chips -->
+                <div class="preset-pill-row" style="display:flex; flex-wrap:wrap; gap:5px; margin-top:6px;">
+                  <span class="crew-preset-chip" data-topic="Why Real Estate Brokerages Lose 42% After-Hours Leads" data-audience="Real Estate Founders & Brokers" style="cursor:pointer; background:rgba(56,189,248,0.08); border:1px solid rgba(56,189,248,0.2); color:#38bdf8; padding:3px 7px; border-radius:5px; font-size:9.5px; font-weight:600;">🏢 Real Estate Leads</span>
+                  <span class="crew-preset-chip" data-topic="How 24/7 Dental AI Closers 3x Weekend Patient Consultations" data-audience="Dental Clinic Owners & Practice Managers" style="cursor:pointer; background:rgba(52,211,153,0.08); border:1px solid rgba(52,211,153,0.2); color:#34d399; padding:3px 7px; border-radius:5px; font-size:9.5px; font-weight:600;">🏥 Dental Booking AI</span>
+                  <span class="crew-preset-chip" data-topic="The 30-Second Rule in High-Ticket B2B Inbound Sales" data-audience="B2B Founders & Sales Leaders" style="cursor:pointer; background:rgba(168,85,247,0.08); border:1px solid rgba(168,85,247,0.2); color:#c084fc; padding:3px 7px; border-radius:5px; font-size:9.5px; font-weight:600;">⚡ 30-Second Rule</span>
+                </div>
               </div>
+
               <div class="filter-group">
-                <label>Target Audience</label>
-                <input type="text" id="crew-audience" placeholder="e.g. Brokerage Owners, Sales Directors, Founders" required>
+                <label style="font-size:11px; font-weight:700; color:#e2e8f0; margin-bottom:4px; display:flex; align-items:center; gap:6px;">
+                  <i data-lucide="users" class="icon-xs" style="color:#34d399;"></i> Target Reader Persona
+                </label>
+                <input type="text" id="crew-audience" placeholder="e.g. Agency Founders, Sales Directors, Business Owners" required style="background:#000000; border:1px solid rgba(255,255,255,0.15); border-radius:8px; padding:10px 12px; color:#fff; font-size:12px; width:100%; outline:none;">
               </div>
+
               <div class="filter-group">
-                <label>Tone of Voice</label>
-                <select id="crew-tone">
+                <label style="font-size:11px; font-weight:700; color:#e2e8f0; margin-bottom:4px; display:flex; align-items:center; gap:6px;">
+                  <i data-lucide="sliders" class="icon-xs" style="color:#fbbf24;"></i> Tone of Voice
+                </label>
+                <select id="crew-tone" style="background:#000000; border:1px solid rgba(255,255,255,0.15); border-radius:8px; padding:8px 10px; color:#fff; font-size:11.5px; width:100%; outline:none;">
                   <option value="Authoritative & Results-Driven" selected>Authoritative & Results-Driven</option>
-                  <option value="Technical & Detailed">Technical & Detailed</option>
-                  <option value="Conversational & Case Study">Conversational & Case Study</option>
+                  <option value="Technical & Data-Backed">Technical & Data-Backed</option>
+                  <option value="Conversational Case Study">Conversational Case Study</option>
                 </select>
               </div>
-              <button type="submit" id="btn-run-crew" class="btn-3d-glow full-width">
+
+              <button type="submit" id="btn-run-crew" class="btn-3d-glow full-width" style="margin-top:6px; padding:12px; border-radius:10px; background:linear-gradient(135deg, #a855f7, #0055ff); font-weight:800; font-size:12.5px;">
                 <i data-lucide="play"></i>
-                <span>Generate 1,500-Word Article</span>
+                <span>Launch 3-Agent Article Pipeline</span>
               </button>
             </form>
           </aside>
 
-          <main class="crew-output-canvas-3d">
-            <div class="crew-top-row-3d">
-              <h3>Multi-Agent Production Pipeline</h3>
-              <button id="btn-export-article" class="btn-action-3d" type="button"><i data-lucide="download"></i> Download Markdown</button>
-            </div>
-            <div class="crew-stages-3d">
-              <div class="stage-pill-3d" id="stage-research"><i data-lucide="search"></i> <span>1. Research Agent</span></div>
-              <div class="stage-pill-3d" id="stage-writer"><i data-lucide="pen-tool"></i> <span>2. Writer Agent</span></div>
-              <div class="stage-pill-3d" id="stage-seo"><i data-lucide="bar-chart"></i> <span>3. SEO Auditor</span></div>
-            </div>
-            <div class="crew-output-area-3d" id="crew-output-area">
-              <div class="empty-state">
-                <i data-lucide="file-code" class="icon-lg"></i>
-                <p>Fill the brief on the left and click "Generate 1,500-Word Article" to produce a publication-ready SEO article with readability score and metadata.</p>
+          <!-- RIGHT: MULTI-AGENT PRODUCTION CANVAS -->
+          <main class="crew-output-canvas-3d" style="display:flex; flex-direction:column; height:100%; min-height:0; background:rgba(6,9,16,0.95); position:relative; overflow:hidden;">
+            
+            <!-- Header Toolbar -->
+            <div class="crew-top-row-3d" style="padding:14px 20px; border-bottom:1px solid var(--border-subtle); display:flex; justify-content:space-between; align-items:center; background:rgba(12,16,28,0.8);">
+              <div style="display:flex; align-items:center; gap:10px;">
+                <div style="width:30px; height:30px; border-radius:8px; background:rgba(168,85,247,0.2); border:1px solid rgba(168,85,247,0.4); display:flex; align-items:center; justify-content:center; color:#c084fc;">
+                  <i data-lucide="layers" style="width:16px; height:16px;"></i>
+                </div>
+                <div>
+                  <h3 style="font-size:13px; font-weight:800; color:#ffffff; margin:0;">Autonomous SEO Article Factory</h3>
+                  <span style="font-size:10.5px; color:#94a3b8;">Research Agent → Copywriter Agent → SEO Auditor Agent</span>
+                </div>
+              </div>
+              <div style="display:flex; gap:8px;">
+                <button id="btn-copy-article" class="btn-action-3d" type="button" style="background:rgba(255,255,255,0.06); border:1px solid var(--border-subtle); color:#e2e8f0; font-weight:600; font-size:11px; padding:6px 12px; border-radius:6px; cursor:pointer; display:flex; align-items:center; gap:5px;"><i data-lucide="copy" class="icon-xs"></i> Copy</button>
+                <button id="btn-export-article" class="btn-action-3d" type="button" style="background:rgba(56,189,248,0.15); border:1px solid rgba(56,189,248,0.3); color:#38bdf8; font-weight:700; font-size:11px; padding:6px 12px; border-radius:6px; cursor:pointer; display:flex; align-items:center; gap:5px;"><i data-lucide="download" class="icon-xs"></i> Download .MD</button>
               </div>
             </div>
+
+            <!-- Agent Progress Ribbon -->
+            <div class="crew-stages-3d" style="display:flex; gap:8px; padding:10px 20px; background:rgba(8,11,20,0.9); border-bottom:1px solid var(--border-subtle);">
+              <div class="stage-pill-3d" id="stage-research" style="flex:1; padding:8px; background:rgba(15,23,42,0.6); border:1px solid var(--border-subtle); border-radius:8px; font-size:11px; font-weight:700; color:#94a3b8; display:flex; align-items:center; justify-content:center; gap:6px;">
+                <i data-lucide="search" class="icon-xs"></i> <span>1. Research Agent</span>
+              </div>
+              <div class="stage-pill-3d" id="stage-writer" style="flex:1; padding:8px; background:rgba(15,23,42,0.6); border:1px solid var(--border-subtle); border-radius:8px; font-size:11px; font-weight:700; color:#94a3b8; display:flex; align-items:center; justify-content:center; gap:6px;">
+                <i data-lucide="pen-tool" class="icon-xs"></i> <span>2. Writer Agent</span>
+              </div>
+              <div class="stage-pill-3d" id="stage-seo" style="flex:1; padding:8px; background:rgba(15,23,42,0.6); border:1px solid var(--border-subtle); border-radius:8px; font-size:11px; font-weight:700; color:#94a3b8; display:flex; align-items:center; justify-content:center; gap:6px;">
+                <i data-lucide="bar-chart" class="icon-xs"></i> <span>3. SEO Auditor</span>
+              </div>
+            </div>
+
+            <!-- Article Output Area -->
+            <div class="crew-output-area-3d" id="crew-output-area" style="flex:1; overflow-y:auto; padding:22px; line-height:1.7;">
+              <div class="empty-state" style="padding:60px 20px; text-align:center;">
+                <div style="width:48px; height:48px; border-radius:12px; background:rgba(168,85,247,0.12); border:1px solid rgba(168,85,247,0.3); color:#c084fc; display:flex; align-items:center; justify-content:center; margin:0 auto 14px;">
+                  <i data-lucide="file-text" style="width:24px; height:24px;"></i>
+                </div>
+                <h3 style="font-size:16px; font-weight:800; color:#ffffff; margin-bottom:6px;">Ready to Produce Publication-Grade SEO Articles</h3>
+                <p style="color:var(--text-body); font-size:12.5px; max-width:520px; margin:0 auto 18px; line-height:1.6;">
+                  Enter your target topic on the left or select a 1-click sample to generate a complete 1,500-word authoritative article with benchmarks, data tables, and SEO schema.
+                </p>
+              </div>
+            </div>
+
           </main>
         </div>
       </section>
