@@ -1,0 +1,23 @@
+{
+  "name": "LeakGrader \u2014 24/7 AI Revenue Intelligence & Closer",
+  "short_name": "LeakGrader",
+  "description": "Autonomous Website Revenue Leak Scanner & 24/7 Conversational AI Closer Software",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#06080e",
+  "theme_color": "#06080e",
+  "orientation": "any",
+  "icons": [
+    {
+      "src": "/og-image.png",
+      "sizes": "1200x630",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/favicon.ico",
+      "sizes": "32x32",
+      "type": "image/svg+xml"
+    }
+  ]
+}
