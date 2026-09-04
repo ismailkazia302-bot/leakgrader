@@ -690,8 +690,41 @@ class MastermindRequestHandler(BaseHTTPRequestHandler):
                 return
 
 
+import threading
+
+def start_autonomous_cloud_growth_daemon():
+    """
+    Runs 24/7/365 in Render Cloud in the background even when the laptop is off!
+    Every 15 minutes:
+    - Pings IndexNow & Search Engines
+    - Logs fresh unique high-DA backlink target in BacklinkLedger
+    - Checks Sentinel Watchdog
+    """
+    def daemon_loop():
+        time.sleep(30)
+        while True:
+            try:
+                # 1. IndexNow & Search Engine Broadcast
+                GROWTH_AGENT.submit_to_indexnow()
+                # 2. Non-repeating Backlink Acquisition
+                from engine.backlink_ledger import BacklinkLedgerEngine
+                ledger = BacklinkLedgerEngine(STORAGE_DIR)
+                entry = ledger.log_backlink_submission()
+                # 3. Sentinel heartbeat
+                SENTINEL_AGENT.get_health_status()
+                print(f"[Cloud 24/7 SEO Daemon] Sprint executed for {entry['platform']} (DA {entry['domain_authority']}) at {time.strftime('%Y-%m-%d %H:%M:%S UTC')}")
+            except Exception as e:
+                print(f"[Cloud 24/7 SEO Daemon Error] {e}")
+            time.sleep(900)  # Runs every 15 minutes on Render cloud
+
+    t = threading.Thread(target=daemon_loop, daemon=True)
+    t.start()
+    print("[Cloud Daemon] 24/7 Autonomous SEO & Growth Agent Thread Active on Cloud Server!")
+
+
 def run_server():
     load_all_data()
+    start_autonomous_cloud_growth_daemon()
     server_address = ('', PORT)
     httpd = ThreadingHTTPServer(server_address, MastermindRequestHandler)
     print("=" * 60)
@@ -700,6 +733,7 @@ def run_server():
     print(f"Programmatic SEO Sitemap: http://localhost:{PORT}/sitemap.xml")
     print(f"Viral Revenue Leak Engine: Active")
     print(f"Apollo Data Engine: Active")
+    print(f"24/7 Cloud Autonomous Growth Daemon: RUNNING")
     print("=" * 60)
     try:
         httpd.serve_forever()
