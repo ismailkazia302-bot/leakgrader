@@ -40,6 +40,8 @@ from engine.seo_engine import ProgrammaticSEOEngine
 from engine.payment_gateway import PaymentEngine, PLANS
 from engine.growth_bot import GrowthAndIndexingAgent
 from engine.backend_sentinel import BackendSentinelAgent
+from engine.competitor_spy import CompetitorSpyAgent
+from engine.pdf_dossier import ExecutiveDossierGenerator
 
 # Configuration
 PORT = int(os.environ.get("PORT", 8090))
@@ -70,6 +72,8 @@ CONTENT_CREW = ContentCrewEngine(api_key=GEMINI_API_KEY, model="gemini-3.6-flash
 AUDIT_ENGINE = ViralAuditEngine(api_key=GEMINI_API_KEY, model="gemini-3.6-flash")
 SEO_ENGINE = ProgrammaticSEOEngine(base_url="http://localhost:8090")
 PAYMENT_ENGINE = PaymentEngine()
+COMPETITOR_SPY = CompetitorSpyAgent(api_key=GEMINI_API_KEY, model="gemini-3.6-flash")
+DOSSIER_GEN = ExecutiveDossierGenerator()
 
 def save_index():
     try:
@@ -280,6 +284,22 @@ class MastermindRequestHandler(BaseHTTPRequestHandler):
             self.wfile.write(report_html.encode("utf-8"))
             return
 
+        elif path.startswith("/report/dossier/") or path == "/api/audit/dossier":
+            query = unquote(parsed.query)
+            target = "Apex Enterprise"
+            if "company=" in query:
+                target = query.split("company=")[-1].split("&")[0]
+            elif path.startswith("/report/dossier/"):
+                target = path.replace("/report/dossier/", "").replace("-", " ").title()
+
+            audit_res = AUDIT_ENGINE.run_instant_audit(target)
+            dossier_html = DOSSIER_GEN.generate_dossier_html(audit_res)
+            self.send_response(200)
+            self.send_header("Content-Type", "text/html; charset=utf-8")
+            self.end_headers()
+            self.wfile.write(dossier_html.encode("utf-8"))
+            return
+
         elif path == "/api/seo/directory":
             routes = SEO_ENGINE.get_all_directory_pages(limit=100)
             self._set_headers(200)
@@ -375,6 +395,19 @@ class MastermindRequestHandler(BaseHTTPRequestHandler):
 
             self._set_headers(200)
             self.wfile.write(json.dumps({"success": True, "audit": audit_result}).encode("utf-8"))
+            return
+
+        # --- COMPETITOR BATTLECARD ENGINE ---
+        elif path == "/api/competitor/battlecard":
+            body = self.rfile.read(content_length)
+            data = json.loads(body.decode("utf-8")) if content_length > 0 else {}
+            my_domain = data.get("my_domain", "Apex Enterprise")
+            comp_domain = data.get("competitor_domain", "Rival Corp")
+            industry = data.get("industry", "General Business")
+
+            battle_result = COMPETITOR_SPY.run_battlecard(my_domain, comp_domain, industry)
+            self._set_headers(200)
+            self.wfile.write(json.dumps({"success": True, "battlecard": battle_result}).encode("utf-8"))
             return
 
         # --- 2. AUTOMATED CHECKOUT GATEWAY ---

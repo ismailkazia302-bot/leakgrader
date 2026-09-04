@@ -58,9 +58,36 @@ document.addEventListener('DOMContentLoaded', () => {
   // ====================================================
   const auditForm = document.getElementById('audit-form');
   const auditTargetInput = document.getElementById('audit-target-input');
+  const auditCompetitorInput = document.getElementById('audit-competitor-input');
   const btnRunAudit = document.getElementById('btn-run-audit');
+  const btnAuditText = document.getElementById('btn-audit-text');
+  const btnModeSingle = document.getElementById('btn-mode-single');
+  const btnModeVs = document.getElementById('btn-mode-vs');
   const auditResultsContainer = document.getElementById('audit-results-container');
   const sampleChips = document.querySelectorAll('.chip-sample');
+  let isCompetitorMode = false;
+
+  if (btnModeSingle && btnModeVs && auditCompetitorInput) {
+    btnModeSingle.addEventListener('click', () => {
+      isCompetitorMode = false;
+      btnModeSingle.style.background = 'rgba(56,189,248,0.15)';
+      btnModeSingle.style.color = '#38bdf8';
+      btnModeVs.style.background = 'rgba(255,255,255,0.04)';
+      btnModeVs.style.color = 'var(--text-muted)';
+      auditCompetitorInput.style.display = 'none';
+      if (btnAuditText) btnAuditText.textContent = 'Run Free Audit';
+    });
+
+    btnModeVs.addEventListener('click', () => {
+      isCompetitorMode = true;
+      btnModeVs.style.background = 'rgba(56,189,248,0.15)';
+      btnModeVs.style.color = '#38bdf8';
+      btnModeSingle.style.background = 'rgba(255,255,255,0.04)';
+      btnModeSingle.style.color = 'var(--text-muted)';
+      auditCompetitorInput.style.display = 'block';
+      if (btnAuditText) btnAuditText.textContent = 'Run Competitor Battle';
+    });
+  }
 
   sampleChips.forEach(chip => {
     chip.addEventListener('click', () => {
@@ -76,9 +103,97 @@ document.addEventListener('DOMContentLoaded', () => {
     auditForm.addEventListener('submit', (e) => {
       e.preventDefault();
       const target = auditTargetInput.value.trim();
+      const comp = auditCompetitorInput ? auditCompetitorInput.value.trim() : '';
       if (!target) return;
-      triggerAudit(target);
+      if (isCompetitorMode && comp) {
+        triggerBattlecard(target, comp);
+      } else {
+        triggerAudit(target);
+      }
     });
+  }
+
+  async function triggerBattlecard(myDomain, compDomain) {
+    if (!btnRunAudit || !auditResultsContainer) return;
+    btnRunAudit.disabled = true;
+    btnRunAudit.innerHTML = '<i data-lucide="loader-2" class="icon-sm spin"></i><span>Simulating Battle...</span>';
+    if (window.lucide) lucide.createIcons();
+
+    auditResultsContainer.innerHTML = `
+      <div class="card-3d-tilt" style="padding: 48px 24px; text-align: center; display: flex; flex-direction: column; align-items: center; gap: 16px;">
+        <div style="width: 56px; height: 56px; border-radius: 50%; background: rgba(56, 189, 248, 0.15); display: flex; align-items: center; justify-content: center; border: 1px solid rgba(56,189,248,0.3);">
+          <i data-lucide="swords" class="icon-md spin" style="color:#38bdf8;"></i>
+        </div>
+        <h3 style="font-size: 16px; font-weight: 800; color: #ffffff;">Benchmarking ${myDomain} vs ${compDomain}...</h3>
+        <p style="font-size: 12px; color: var(--text-body);">Simulating head-to-head response speed, lead capture friction & market share leaks...</p>
+      </div>
+    `;
+    if (window.lucide) lucide.createIcons();
+
+    try {
+      const res = await fetch('/api/competitor/battlecard', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: jsonSafe({ my_domain: myDomain, competitor_domain: compDomain })
+      });
+      const data = await res.json();
+      const b = data.battlecard || {};
+      const my = b.my_business || {};
+      const comp = b.competitor_business || {};
+
+      auditResultsContainer.innerHTML = `
+        <div class="scorecard-wrapper-3d">
+          <div style="text-align:center; margin-bottom:24px;">
+            <span class="badge-tag cyan">⚔️ HEAD-TO-HEAD BATTLECARD</span>
+            <h2 style="font-size:24px; font-weight:900; color:#fff; margin-top:8px;">${b.summary_insight}</h2>
+            <p style="font-size:13px; color:var(--text-muted);">${my.company_name} vs ${comp.company_name}</p>
+          </div>
+
+          <div style="display:grid; grid-template-columns: 1fr 1fr; gap:20px; margin-bottom:24px;">
+            <div class="card-3d-tilt" style="padding:24px; border:2px solid ${b.leader_tag === 'CLIENT_ADVANTAGE' ? '#38bdf8' : 'rgba(255,255,255,0.08)'}; background:rgba(8,11,20,0.8);">
+              <div style="display:flex; justify-content:space-between; align-items:center;">
+                <strong style="font-size:16px; color:#fff;">${my.company_name} (Your Site)</strong>
+                <span style="font-size:24px; font-weight:900; color:#38bdf8;">${my.ai_readiness_score}/100</span>
+              </div>
+              <p style="font-size:12px; color:var(--text-muted); margin-top:8px;">Monthly Leak: <span style="color:#fb7185; font-weight:700;">${my.estimated_monthly_leak}</span></p>
+              <div style="margin-top:12px; font-size:11px; color:#34d399;">● ${my.has_whatsapp ? 'WhatsApp Closer Active' : 'Static Forms Used'}</div>
+            </div>
+
+            <div class="card-3d-tilt" style="padding:24px; border:2px solid ${b.leader_tag === 'COMPETITOR_ADVANTAGE' ? '#fb7185' : 'rgba(255,255,255,0.08)'}; background:rgba(8,11,20,0.8);">
+              <div style="display:flex; justify-content:space-between; align-items:center;">
+                <strong style="font-size:16px; color:#fff;">${comp.company_name} (Competitor)</strong>
+                <span style="font-size:24px; font-weight:900; color:#fb7185;">${comp.ai_readiness_score}/100</span>
+              </div>
+              <p style="font-size:12px; color:var(--text-muted); margin-top:8px;">Monthly Leak: <span style="color:#fb7185; font-weight:700;">${comp.estimated_monthly_leak}</span></p>
+              <div style="margin-top:12px; font-size:11px; color:var(--text-muted);">● ${comp.has_whatsapp ? 'WhatsApp Closer Active' : 'Static Forms Used'}</div>
+            </div>
+          </div>
+
+          <!-- Tactical Market Share Advantages -->
+          <div class="card-3d-tilt" style="padding:24px; background:rgba(12,14,20,0.9); border:1px solid var(--border-subtle); margin-bottom:24px;">
+            <h3 style="font-size:15px; font-weight:800; color:#fff; margin-bottom:12px;"><i data-lucide="zap" class="icon-xs" style="color:#38bdf8;"></i> Tactical Steps to Out-Convert ${comp.company_name}:</h3>
+            <ul style="list-style:none; display:flex; flex-direction:column; gap:8px;">
+              ${(b.tactical_advantages || []).map(adv => `<li style="font-size:12px; color:var(--text-muted); display:flex; gap:8px; align-items:flex-start;"><i data-lucide="check-circle" class="icon-xs" style="color:#34d399; margin-top:3px;"></i> <span>${adv}</span></li>`).join('')}
+            </ul>
+          </div>
+
+          <div style="display:flex; justify-content:center; gap:12px; flex-wrap:wrap;">
+            <a href="/report/dossier/${encodeURIComponent(my.company_name.toLowerCase().replace(/[^a-z0-9]+/g, '-'))}" target="_blank" class="btn-action-3d" style="background:#38bdf8; color:#000; border:none; padding:12px 24px; font-size:13px; font-weight:800; border-radius:10px; text-decoration:none;">
+              📄 Download Boardroom Dossier (PDF)
+            </a>
+            <a href="https://api.whatsapp.com/send?text=Check%20out%20the%20head-to-head%20revenue%20battlecard%20on%20LeakGrader%3A%20${b.share_url}" target="_blank" class="btn-action-3d" style="background:#25D366; color:white; border:none; padding:12px 24px; font-size:13px; font-weight:800; border-radius:10px; text-decoration:none;">
+              Share Battlecard on WhatsApp
+            </a>
+          </div>
+        </div>
+      `;
+      if (window.lucide) lucide.createIcons();
+    } catch(err) {
+      console.error(err);
+    } finally {
+      btnRunAudit.disabled = false;
+      if (btnAuditText) btnAuditText.textContent = 'Run Competitor Battle';
+    }
   }
 
   async function triggerAudit(urlOrCompany) {
@@ -199,14 +314,20 @@ document.addEventListener('DOMContentLoaded', () => {
 
           <div class="card-3d-tilt unlock-banner-3d">
             <div class="banner-content-flex">
-              <div class="banner-badge-gold"><i data-lucide="crown"></i> FULL AUDIT REPORT</div>
-              <h2>Download Complete 15-Point Diagnostic & Verified Contacts</h2>
-              <p>Get direct phone & email contacts for decision-makers, complete funnel breakdown, and ready-to-send pitch scripts.</p>
+              <div class="banner-badge-gold"><i data-lucide="crown"></i> FULL AUDIT REPORT & BOARDROOM DOSSIER</div>
+              <h2>Download Complete 15-Point Diagnostic & Boardroom PDF</h2>
+              <p>Get the executive-grade dark-mode dossier with full leak teardown, tech-stack breakdown, and 90-day ROI projection.</p>
             </div>
-            <button class="btn-gold-3d" id="btn-unlock-dynamic" type="button">
-              <i data-lucide="lock" class="icon-sm"></i>
-              <span>Unlock Full Report ($9)</span>
-            </button>
+            <div style="display:flex; gap:10px; flex-wrap:wrap;">
+              <a href="/report/dossier/${cleanSlug}" target="_blank" class="btn-action-3d" style="background:#38bdf8; color:#000; border:none; padding:12px 20px; font-size:13px; font-weight:800; border-radius:10px; text-decoration:none; display:inline-flex; align-items:center; gap:6px;">
+                <i data-lucide="file-text" class="icon-sm"></i>
+                <span>📄 View / Print PDF Dossier</span>
+              </a>
+              <button class="btn-gold-3d" id="btn-unlock-dynamic" type="button">
+                <i data-lucide="lock" class="icon-sm"></i>
+                <span>Unlock Full Report ($9)</span>
+              </button>
+            </div>
           </div>
 
           <!-- VIRAL 1-CLICK SHARE & EMBED BADGE LOOP -->

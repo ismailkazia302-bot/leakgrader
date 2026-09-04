@@ -207,12 +207,18 @@
               Enter any company domain below. Our autonomous AI simulates after-hours visitor dropoff, lead capture friction, and response latency to calculate your exact financial loss.
             </p>
 
+            <div style="display:flex; justify-content:center; gap:8px; margin-bottom:16px;">
+              <button type="button" id="btn-mode-single" class="chip-sample active-chip" style="padding:6px 16px; border-radius:20px; font-weight:700; background:rgba(56,189,248,0.15); border:1px solid rgba(56,189,248,0.3); color:#38bdf8; cursor:pointer;">⚡ Single Site Audit</button>
+              <button type="button" id="btn-mode-vs" class="chip-sample" style="padding:6px 16px; border-radius:20px; font-weight:700; background:rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,0.08); color:var(--text-muted); cursor:pointer;">⚔️ Compare vs Competitor</button>
+            </div>
+
             <form id="audit-form" class="audit-input-bar-3d">
               <i data-lucide="globe" class="globe-icon-glow"></i>
-              <input type="text" id="audit-target-input" placeholder="Enter company domain (e.g. stripe.com, airbnb.com, luxehaven.ae)..." autocomplete="off" required>
+              <input type="text" id="audit-target-input" placeholder="Your domain (e.g. stripe.com, luxehaven.ae)..." autocomplete="off" required>
+              <input type="text" id="audit-competitor-input" placeholder="Competitor domain (e.g. paypal.com, damac.com)..." autocomplete="off" style="display:none; border-left:1px solid rgba(255,255,255,0.1); padding-left:12px;">
               <button type="submit" id="btn-run-audit" class="btn-3d-glow">
                 <i data-lucide="zap" class="icon-sm"></i>
-                <span>Run Free Audit</span>
+                <span id="btn-audit-text">Run Free Audit</span>
               </button>
             </form>
 
