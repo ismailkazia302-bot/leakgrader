@@ -107,6 +107,155 @@ class LeadPulseAgent:
         self.api_key = api_key or os.environ.get("GEMINI_API_KEY", "")
         self.model = "gemini-1.5-flash"
 
+    def _normalize_industry(self, industry: str) -> str:
+        ind = industry.strip().lower()
+        if any(k in ind for k in ["resturant", "restuarant", "restraunt", "restrant", "restaurant", "dining", "food", "cafe", "bistro"]):
+            return "Restaurant"
+        if any(k in ind for k in ["saloon", "salon", "barber", "parlour", "spa", "hair"]):
+            return "Salon & Spa"
+        if any(k in ind for k in ["realestate", "real estate", "property", "properties", "developer", "realtor"]):
+            return "Real Estate"
+        if any(k in ind for k in ["gym", "fitness", "crossfit", "workout", "trainer"]):
+            return "Fitness & Gym"
+        if any(k in ind for k in ["dentist", "dental", "orthodont", "teeth"]):
+            return "Dental Clinic"
+        return industry.strip().title()
+
+    def _resolve_location_geography(self, location: str) -> dict:
+        """
+        Geocodes the location to discover exact Country, Country Code, State, and Dialing format for ANY city in the world.
+        """
+        loc_clean = location.strip()
+        loc_low = loc_clean.lower()
+
+        geo_meta = {
+            "country_code": "",
+            "country": "",
+            "state": "",
+            "city": loc_clean.title(),
+            "is_india": False,
+            "is_me": False,
+            "is_saudi": False,
+            "is_uae": False,
+            "is_uk": False,
+            "is_us": False,
+            "is_ca": False,
+            "is_au": False,
+            "is_de": False,
+            "is_fr": False,
+            "phone_code": "+1",
+            "phone_template": "+1 (212) 555-{num4}",
+            "tld": ".com",
+            "curr_symbol": "$",
+            "name_pool_key": "western"
+        }
+
+        # 1. Geocode via OpenStreetMap Nominatim
+        try:
+            q = urllib.parse.quote(loc_clean)
+            url = f"https://nominatim.openstreetmap.org/search?q={q}&format=json&addressdetails=1&limit=1"
+            req = urllib.request.Request(url, headers={"User-Agent": "LeakGraderGeoResolver/3.0", "Accept-Language": "en"})
+            with urllib.request.urlopen(req, timeout=4) as resp:
+                data = json.loads(resp.read().decode("utf-8"))
+                if data and len(data) > 0:
+                    addr = data[0].get("address", {})
+                    geo_meta["country_code"] = (addr.get("country_code") or "").lower()
+                    geo_meta["country"] = addr.get("country", "")
+                    geo_meta["state"] = addr.get("state", "")
+                    geo_meta["city"] = addr.get("city") or addr.get("town") or addr.get("village") or addr.get("county") or loc_clean.title()
+        except Exception:
+            pass
+
+        cc = geo_meta["country_code"]
+        cname = geo_meta["country"].lower()
+        sname = geo_meta["state"].lower()
+
+        # 2. Match exact regional attributes
+        indian_states = ["goa", "maharashtra", "delhi", "karnataka", "tamil nadu", "gujarat", "rajasthan", "kerala", "uttar pradesh", "west bengal", "telangana", "andhra", "punjab", "haryana", "bihar", "madhya pradesh", "odisha", "assam"]
+        if cc == "in" or "india" in cname or any(s in sname for s in indian_states) or any(s in loc_low for s in indian_states) or any(s in loc_low for s in ["mumbai", "delhi", "bangalore", "bengaluru", "hyderabad", "chennai", "pune", "kolkata", "ahmedabad", "jaipur", "gurgaon", "noida", "goa", "panaji", "siolim", "mapusa", "margao", "vasco", "chandigarh", "kochi", "indore", "surat"]):
+            geo_meta["is_india"] = True
+            geo_meta["name_pool_key"] = "south_asia"
+            geo_meta["curr_symbol"] = "₹"
+            geo_meta["tld"] = ".in" if random.random() > 0.5 else ".co.in"
+            if "goa" in loc_low or "goa" in sname:
+                geo_meta["phone_template"] = "+91 832 245 {num4}"
+            elif "delhi" in loc_low or "delhi" in sname:
+                geo_meta["phone_template"] = "+91 11 4356 {num4}"
+            elif "mumbai" in loc_low or "mumbai" in sname:
+                geo_meta["phone_template"] = "+91 22 6789 {num4}"
+            else:
+                geo_meta["phone_template"] = random.choice(GEO_PHONE_PRESETS["india"]["formats"])
+
+        elif cc == "sa" or "saudi" in cname or any(k in loc_low for k in ["saudi", "riyadh", "dammam", "jeddah", "mecca", "medina", "khobar", "dhahran", "tabuk", "jubail", "taif"]):
+            geo_meta["is_me"] = True
+            geo_meta["is_saudi"] = True
+            geo_meta["name_pool_key"] = "middle_east"
+            geo_meta["curr_symbol"] = "SAR "
+            geo_meta["tld"] = ".sa" if random.random() > 0.5 else ".com.sa"
+            if "dammam" in loc_low or "khobar" in loc_low or "dhahran" in loc_low or "eastern" in sname:
+                geo_meta["phone_template"] = "+966 13 890 {num4}"
+            elif "riyadh" in loc_low:
+                geo_meta["phone_template"] = "+966 11 488 {num4}"
+            elif "jeddah" in loc_low or "mecca" in loc_low:
+                geo_meta["phone_template"] = "+966 12 650 {num4}"
+            else:
+                geo_meta["phone_template"] = "+966 50 123 {num4}"
+
+        elif cc == "ae" or "emirates" in cname or any(k in loc_low for k in ["dubai", "uae", "abu dhabi", "sharjah", "ajman", "ras al khaimah", "fujairah"]):
+            geo_meta["is_me"] = True
+            geo_meta["is_uae"] = True
+            geo_meta["name_pool_key"] = "middle_east"
+            geo_meta["curr_symbol"] = "AED "
+            geo_meta["tld"] = ".ae"
+            if "abu dhabi" in loc_low:
+                geo_meta["phone_template"] = "+971 2 644 {num4}"
+            else:
+                geo_meta["phone_template"] = "+971 4 388 {num4}"
+
+        elif cc in ["qa", "kw", "om", "bh"] or any(k in loc_low for k in ["doha", "qatar", "kuwait", "bahrain", "oman", "muscat", "manama"]):
+            geo_meta["is_me"] = True
+            geo_meta["name_pool_key"] = "middle_east"
+            geo_meta["curr_symbol"] = "$"
+            geo_meta["tld"] = ".com"
+            geo_meta["phone_template"] = "+974 44 12 {num4}" if "qatar" in loc_low or cc == "qa" else "+965 22 45 {num4}"
+
+        elif cc in ["gb", "uk"] or "united kingdom" in cname or any(k in loc_low for k in ["london", "uk", "manchester", "birmingham", "leeds", "glasgow", "edinburgh", "bristol"]):
+            geo_meta["is_uk"] = True
+            geo_meta["name_pool_key"] = "western"
+            geo_meta["curr_symbol"] = "£"
+            geo_meta["tld"] = ".co.uk"
+            geo_meta["phone_template"] = "+44 20 7946 {num4}" if "london" in loc_low else "+44 161 496 {num4}"
+
+        elif cc == "au" or "australia" in cname or any(k in loc_low for k in ["sydney", "melbourne", "australia", "brisbane", "perth", "adelaide"]):
+            geo_meta["is_au"] = True
+            geo_meta["name_pool_key"] = "western"
+            geo_meta["curr_symbol"] = "A$"
+            geo_meta["tld"] = ".com.au"
+            geo_meta["phone_template"] = "+61 2 8900 {num4}"
+
+        elif cc == "ca" or "canada" in cname or any(k in loc_low for k in ["toronto", "vancouver", "canada", "montreal", "calgary", "ottawa"]):
+            geo_meta["is_ca"] = True
+            geo_meta["name_pool_key"] = "western"
+            geo_meta["curr_symbol"] = "C$"
+            geo_meta["tld"] = ".ca"
+            geo_meta["phone_template"] = "+1 (416) 555-{num4}"
+
+        elif cc == "de" or "germany" in cname or any(k in loc_low for k in ["berlin", "munich", "germany", "frankfurt", "hamburg"]):
+            geo_meta["is_de"] = True
+            geo_meta["name_pool_key"] = "western"
+            geo_meta["curr_symbol"] = "€"
+            geo_meta["tld"] = ".de"
+            geo_meta["phone_template"] = "+49 30 2094 {num4}"
+
+        elif cc == "fr" or "france" in cname or any(k in loc_low for k in ["paris", "france", "lyon", "marseille"]):
+            geo_meta["is_fr"] = True
+            geo_meta["name_pool_key"] = "western"
+            geo_meta["curr_symbol"] = "€"
+            geo_meta["tld"] = ".fr"
+            geo_meta["phone_template"] = "+33 1 42 68 {num2} {num2}"
+
+        return geo_meta
+
     def generate_targeted_leads(self, industry: str = "Real Estate", location: str = "Dubai", my_service: str = "24/7 AI Closer", count: int = 5) -> list:
         """
         Generates enriched, live researched B2B leads using:
@@ -115,10 +264,12 @@ class LeadPulseAgent:
         3. Dynamic Geo-Accurate Synthesizer.
         """
         count = max(1, min(int(count), 15))
+        norm_industry = self._normalize_industry(industry)
+        geo_meta = self._resolve_location_geography(location)
 
         # 1. Primary: Live Real-Time Web & Business Directory Search for real businesses
         try:
-            live_leads = self._search_live_web_businesses(industry, location, my_service, count)
+            live_leads = self._search_live_web_businesses(norm_industry, location, my_service, count, geo_meta)
             if live_leads and len(live_leads) >= count:
                 return live_leads[:count]
         except Exception:
@@ -127,14 +278,14 @@ class LeadPulseAgent:
         # 2. Secondary: Live Gemini API Call
         if self.api_key:
             try:
-                gemini_leads = self._call_gemini_lead_engine(industry, location, my_service, count)
+                gemini_leads = self._call_gemini_lead_engine(norm_industry, location, my_service, count)
                 if gemini_leads and len(gemini_leads) > 0:
                     return gemini_leads
             except Exception:
                 pass
 
         # 3. Resilient Fallback: Geo-Accurate Synthesizer (merged with any live results)
-        fallback_leads = self._generate_geo_accurate_fallback_leads(industry, location, my_service, count)
+        fallback_leads = self._generate_geo_accurate_fallback_leads(norm_industry, location, my_service, count, geo_meta)
         if live_leads and len(live_leads) > 0:
             combined = live_leads + [f for f in fallback_leads if f["company_name"] not in [l["company_name"] for l in live_leads]]
             return combined[:count]
@@ -427,54 +578,31 @@ RETURN VALID JSON ARRAY of objects with this schema:
                     item["website"] = f"https://{item.get('website', 'company.com')}"
             return leads_list
 
-    def _generate_geo_accurate_fallback_leads(self, industry: str, location: str, my_service: str, count: int) -> list:
+    def _generate_geo_accurate_fallback_leads(self, industry: str, location: str, my_service: str, count: int, geo_meta: dict = None) -> list:
         """
         Creates geo-accurate, realistic enterprise prospects tailored to the exact city and sector.
         """
+        if not geo_meta:
+            geo_meta = self._resolve_location_geography(location)
+
         loc_low = location.lower()
         ind_low = industry.lower()
 
-        # 1. Detect Geographic Region
-        indian_states = ["goa", "maharashtra", "delhi", "karnataka", "tamil nadu", "gujarat", "rajasthan", "kerala", "uttar pradesh", "west bengal", "telangana", "andhra", "punjab", "haryana", "bihar", "madhya pradesh", "odisha", "assam"]
-        is_india = ("india" in loc_low or any(s in loc_low for s in indian_states) or any(s in loc_low for s in ["mumbai", "delhi", "bangalore", "bengaluru", "hyderabad", "chennai", "pune", "kolkata", "ahmedabad", "jaipur", "gurgaon", "noida", "goa", "panaji", "siolim", "mapusa", "margao", "vasco", "chandigarh", "kochi", "indore", "surat", "nagpur"]))
-        is_me = any(k in loc_low for k in ["dubai", "uae", "abu dhabi", "riyadh", "saudi", "doha", "qatar", "kuwait", "bahrain", "oman", "jeddah", "sharjah"])
-        is_uk = any(k in loc_low for k in ["london", "uk", "manchester", "birmingham", "leeds", "glasgow", "edinburgh", "bristol"])
-        is_au = any(k in loc_low for k in ["sydney", "melbourne", "australia", "brisbane", "perth"])
-        is_ca = any(k in loc_low for k in ["toronto", "vancouver", "canada", "montreal", "calgary"])
-        is_de = any(k in loc_low for k in ["berlin", "munich", "germany", "frankfurt", "hamburg"])
-        is_fr = any(k in loc_low for k in ["paris", "france", "lyon", "marseille"])
+        is_india = geo_meta.get("is_india", False)
+        is_me = geo_meta.get("is_me", False)
+        is_saudi = geo_meta.get("is_saudi", False)
+        is_uae = geo_meta.get("is_uae", False)
+        is_uk = geo_meta.get("is_uk", False)
+        is_au = geo_meta.get("is_au", False)
+        is_ca = geo_meta.get("is_ca", False)
+        is_de = geo_meta.get("is_de", False)
+        is_fr = geo_meta.get("is_fr", False)
 
-        # 2. Resolve Geo Phone Format
-        phone_template = "+1 (212) 555-{num4}"
-        if is_india:
-            if "goa" in loc_low:
-                phone_template = "+91 832 245 {num4}"
-            elif "delhi" in loc_low:
-                phone_template = "+91 11 4356 {num4}"
-            elif "mumbai" in loc_low:
-                phone_template = "+91 22 6789 {num4}"
-            else:
-                phone_template = random.choice(GEO_PHONE_PRESETS["india"]["formats"])
-        elif is_me:
-            phone_template = "+971 4 388 {num4}" if "dubai" in loc_low else "+966 11 488 {num4}"
-        elif is_uk:
-            phone_template = "+44 20 7946 {num4}"
-        elif is_au:
-            phone_template = "+61 2 8900 {num4}"
-        elif is_ca:
-            phone_template = "+1 (416) 555-{num4}"
-        elif is_de:
-            phone_template = "+49 30 2094 {num4}"
-        elif is_fr:
-            phone_template = "+33 1 42 68 {num2} {num2}"
-
-        # 3. Resolve Regional Name Pool
-        if is_india:
-            name_pool = list(REGIONAL_NAMES["south_asia"])
-        elif is_me:
-            name_pool = list(REGIONAL_NAMES["middle_east"])
-        else:
-            name_pool = list(REGIONAL_NAMES["western"])
+        phone_template = geo_meta.get("phone_template", "+1 (212) 555-{num4}")
+        tld = geo_meta.get("tld", ".com")
+        curr_symbol = geo_meta.get("curr_symbol", "$")
+        name_pool_key = geo_meta.get("name_pool_key", "western")
+        name_pool = list(REGIONAL_NAMES.get(name_pool_key, REGIONAL_NAMES["western"]))
         random.shuffle(name_pool)
 
         city_clean = location.title().split(",")[0].strip()
@@ -487,8 +615,17 @@ RETURN VALID JSON ARRAY of objects with this schema:
         is_real_estate = any(k in ind_low for k in ["real", "estate", "prop", "villa", "realt", "builder", "developer"])
         is_tech = any(k in ind_low for k in ["saas", "tech", "cloud", "ai", "software", "app", "cyber"])
         is_legal = any(k in ind_low for k in ["law", "legal", "advocate", "attorney", "jurist"])
+        is_restaurant = any(k in ind_low for k in ["resturant", "restaurant", "dining", "food", "cafe", "bistro", "eatery", "grill", "lounge"])
+        is_small_retail = any(k in ind_low for k in ["saloon", "salon", "barber", "parlour", "hair", "spa", "bakery", "shop", "boutique", "laundry", "car wash", "trainer", "pet", "gents"])
 
-        if is_gym:
+        if is_restaurant:
+            if is_saudi or is_me:
+                adjectives = ["Al-Qasr", "Al-Nakheel", "Horizon", "Al-Bustan", "Sultan", "Heritage", "Layali", "Al-Safwa", "Royal Lounge", "Oasis"]
+            elif is_india:
+                adjectives = ["Barbeque", "Spice Garden", "Royal Dine", "Saffron", "Mainland", "Copper", "Coastal", "Urban Feast"]
+            else:
+                adjectives = ["The Grand", "Bistro", "Signature", "Heritage", "Artisan", "Prime", "L'Etoile", "Summit"]
+        elif is_gym:
             adjectives = ["Cult", "Gold's", "Iron", "Titan", "FitZone", "Olympus", "Pulse", "Elevate", "Anytime", "Spartan"] if is_india else ["Equinox", "F45", "Gold's", "Titan", "FitZone", "Pulse", "Olympus", "Elevate", "Anytime", "Iron"]
         elif is_dental or is_medical:
             adjectives = list(COMPANY_ADJECTIVES_INDIA if is_india else COMPANY_ADJECTIVES_GLOBAL)
@@ -508,10 +645,20 @@ RETURN VALID JSON ARRAY of objects with this schema:
             person = name_pool[i % len(name_pool)]
             adj = adjectives[i % len(adjectives)]
             
-            # Title adaptation if doctor vs fitness/business founder
+            # Title adaptation
             title = person["title"]
             contact_first = person["first"]
-            if is_gym:
+            if is_restaurant:
+                contact_first = contact_first.replace("Dr. ", "")
+                rest_titles = ["Owner & Managing Director", "General Manager", "Managing Partner", "Director of Food & Beverage", "Executive Director"]
+                title = rest_titles[i % len(rest_titles)]
+                comp_name = f"{adj} Restaurant & Lounge {city_clean}" if i % 2 == 0 else f"{adj} Hospitality Group {city_clean}"
+            elif is_small_retail:
+                contact_first = contact_first.replace("Dr. ", "")
+                titles = ["Owner & Founder", "Proprietor", "Managing Partner", "General Manager"]
+                title = titles[i % len(titles)]
+                comp_name = f"{adj} Salon & Spa {city_clean}" if i % 2 == 0 else f"{adj} Lounge {city_clean}"
+            elif is_gym:
                 contact_first = contact_first.replace("Dr. ", "")
                 gym_titles = ["Founder & Managing Director", "Managing Partner", "Chief Operating Officer", "Head of Membership & Expansion", "Director of Operations"]
                 title = gym_titles[i % len(gym_titles)]
@@ -538,19 +685,6 @@ RETURN VALID JSON ARRAY of objects with this schema:
                 comp_name = f"{adj} {ind_clean} Group {city_clean}"
             
             domain_slug = comp_name.lower().replace(" ", "").replace("&", "").replace("-", "").replace(".", "").replace("'", "")[:15]
-            if is_india:
-                tld = ".in" if i % 2 == 0 else ".co.in"
-            elif is_me and "dubai" in loc_low:
-                tld = ".ae"
-            elif is_uk:
-                tld = ".co.uk"
-            elif is_au:
-                tld = ".com.au"
-            elif is_ca:
-                tld = ".ca"
-            else:
-                tld = ".com"
-                
             domain = f"{domain_slug}{tld}"
 
             # Generate geo-accurate phone
@@ -566,25 +700,36 @@ RETURN VALID JSON ARRAY of objects with this schema:
             email = f"{first_clean}.{last_clean}@{domain}"
 
             if is_india:
-                if is_gym:
-                    revenue = f"₹{random.randint(8, 28)} Cr / yr"
-                    pain_term = "dropped membership signups & trial bookings"
-                elif is_dental:
-                    revenue = f"₹{random.randint(15, 65)} Cr / yr"
-                    pain_term = "dropped patient inquiries & cosmetic consultations"
+                if is_small_retail:
+                    revenue = f"₹{random.randint(25, 85)} Lakhs / yr"
+                    pain_term = "dropped walk-in appointments & weekend bookings"
+                elif is_restaurant or is_gym:
+                    revenue = f"₹{random.randint(2, 8)} Cr / yr"
+                    pain_term = "dropped table reservations & weekend inquiries"
                 else:
                     revenue = f"₹{random.randint(12, 50)} Cr / yr"
                     pain_term = "dropped customer/client inquiries"
+            elif is_me or is_saudi:
+                if is_small_retail or is_restaurant:
+                    revenue = f"{curr_symbol}{random.randint(2, 7)}M / yr"
+                    pain_term = "dropped after-hours reservations & catering bookings"
+                else:
+                    revenue = f"{curr_symbol}{random.randint(10, 40)}M / yr"
+                    pain_term = "dropped client inquiries & after-hours leads"
             else:
-                revenue = f"${random.randint(10, 48)}M / yr"
-                pain_term = "dropped customer/client inquiries"
+                if is_small_retail or is_restaurant:
+                    revenue = f"{curr_symbol}{random.randint(800, 2500)}k / yr"
+                    pain_term = "dropped table reservations & event bookings"
+                else:
+                    revenue = f"{curr_symbol}{random.randint(10, 48)}M / yr"
+                    pain_term = "dropped customer/client inquiries"
                 
             pain = f"Losing high-intent after-hours inbound inquiries on {comp_name} due to slow response latency."
 
             pitch = (
                 f"Hi {contact_first},\n\n"
-                f"I analyzed {comp_name}'s conversion pipeline in {location} and noticed inquiries submitted after business hours currently face response lag.\n\n"
-                f"We deployed a 24/7 autonomous AI WhatsApp closer for similar {industry} businesses that cut reply times to 30 seconds and recovered ~₹18-35 Lakhs/mo in {pain_term}.\n\n"
+                f"I analyzed {comp_name}'s customer inquiry pipeline in {location.title()} and noticed inquiries submitted after business hours currently face response lag.\n\n"
+                f"We deployed a 24/7 autonomous AI WhatsApp closer that cut reply times to 30 seconds and recovered lost revenue from {pain_term}.\n\n"
                 f"Would you be open to a 5-minute walkthrough of your live diagnostic?\n\n"
                 f"Best regards,\nLeakGrader Growth Intelligence"
             )
@@ -599,11 +744,9 @@ RETURN VALID JSON ARRAY of objects with this schema:
                 "phone": phone_num,
                 "location": location.title(),
                 "website": f"https://{domain}",
-                "industry": industry.title(),
+                "industry": ind_clean,
                 "primary_pain_point": pain,
                 "pitch_script": pitch
-            })
-
         return leads
 
     def export_leads_to_csv(self, leads: list) -> str:
