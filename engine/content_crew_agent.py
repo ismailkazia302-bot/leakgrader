@@ -173,6 +173,7 @@ Transforming your inbound funnel from a passive contact form into an autonomous 
                 ]
             },
             "full_article_markdown": fallback_markdown,
+            "article_markdown": fallback_markdown,
             "seo_audit": {
                 "seo_score": 98,
                 "meta_title": f"{topic[:48]} | 2026 Strategy Guide",

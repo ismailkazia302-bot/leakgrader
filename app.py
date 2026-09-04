@@ -44,12 +44,14 @@ from engine.competitor_spy import CompetitorSpyAgent
 from engine.pdf_dossier import ExecutiveDossierGenerator
 from engine.analytics_dashboard import FounderAnalyticsDashboard
 from engine.email_vault import EmailVaultEngine
+from engine.master_website_manager import MasterWebsiteManager
 
 # Configuration
 PORT = int(os.environ.get("PORT", 8090))
 GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY", "")
 GROWTH_AGENT = GrowthAndIndexingAgent()
 SENTINEL_AGENT = BackendSentinelAgent()
+WEBSITE_MANAGER = MasterWebsiteManager()
 STORAGE_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "storage")
 WEB_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "web")
 
@@ -429,6 +431,12 @@ class MastermindRequestHandler(BaseHTTPRequestHandler):
             self.wfile.write(json.dumps({"total_pages": len(routes), "pages": routes}).encode("utf-8"))
             return
 
+        elif path in ["/api/manager/status", "/api/website-manager/status"]:
+            report = WEBSITE_MANAGER.run_full_management_cycle()
+            self._set_headers(200)
+            self.wfile.write(json.dumps(report).encode("utf-8"))
+            return
+
         # 2. OmniBrain Document Endpoints
         elif path == "/api/documents":
             doc_list = []
@@ -598,6 +606,12 @@ class MastermindRequestHandler(BaseHTTPRequestHandler):
             save_leads()
             self._set_headers(200)
             self.wfile.write(json.dumps({"success": True}).encode("utf-8"))
+            return
+
+        elif path in ["/api/manager/solve-all", "/api/website-manager/auto-heal"]:
+            report = WEBSITE_MANAGER.run_full_management_cycle()
+            self._set_headers(200)
+            self.wfile.write(json.dumps({"success": True, "report": report}).encode("utf-8"))
             return
 
         # --- 4. OMNIBRAIN AI ENDPOINTS ---
