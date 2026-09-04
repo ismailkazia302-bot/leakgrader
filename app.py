@@ -561,18 +561,19 @@ class MastermindRequestHandler(BaseHTTPRequestHandler):
         elif path == "/api/leads/generate":
             body = self.rfile.read(content_length)
             data = json.loads(body.decode("utf-8"))
-            industry = data.get("industry", "Real Estate Agencies")
+            industry = data.get("industry", "Real Estate")
             location = data.get("location", "Dubai, UAE")
-            service = data.get("service", "Autonomous AI Lead Generation & WhatsApp Bots")
+            service = data.get("service", "24/7 AI Sales Closer")
             count = int(data.get("count", 5))
 
             new_leads = LEAD_AGENT.generate_leads(industry, location, service, count)
             global LEADS
-            LEADS.extend(new_leads)
+            existing_ids = [n.get("id") for n in new_leads]
+            LEADS = new_leads + [x for x in LEADS if x.get("id") not in existing_ids][:30]
             save_leads()
 
             self._set_headers(200)
-            self.wfile.write(json.dumps({"success": True, "generated_count": len(new_leads), "leads": LEADS}).encode("utf-8"))
+            self.wfile.write(json.dumps({"success": True, "generated_count": len(new_leads), "leads": new_leads}).encode("utf-8"))
             return
 
         elif path == "/api/leads/clear":
