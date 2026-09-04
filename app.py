@@ -42,6 +42,7 @@ from engine.growth_bot import GrowthAndIndexingAgent
 from engine.backend_sentinel import BackendSentinelAgent
 from engine.competitor_spy import CompetitorSpyAgent
 from engine.pdf_dossier import ExecutiveDossierGenerator
+from engine.analytics_dashboard import FounderAnalyticsDashboard
 
 # Configuration
 PORT = int(os.environ.get("PORT", 8090))
@@ -74,6 +75,7 @@ SEO_ENGINE = ProgrammaticSEOEngine(base_url="http://localhost:8090")
 PAYMENT_ENGINE = PaymentEngine()
 COMPETITOR_SPY = CompetitorSpyAgent(api_key=GEMINI_API_KEY, model="gemini-3.6-flash")
 DOSSIER_GEN = ExecutiveDossierGenerator()
+ANALYTICS_DASHBOARD = FounderAnalyticsDashboard(STORAGE_DIR)
 
 def save_index():
     try:
@@ -298,6 +300,19 @@ class MastermindRequestHandler(BaseHTTPRequestHandler):
             self.send_header("Content-Type", "text/html; charset=utf-8")
             self.end_headers()
             self.wfile.write(dossier_html.encode("utf-8"))
+            return
+
+        elif path in ["/analytics", "/dashboard", "/founder"]:
+            dashboard_html = ANALYTICS_DASHBOARD.render_html()
+            self.send_response(200)
+            self.send_header("Content-Type", "text/html; charset=utf-8")
+            self.end_headers()
+            self.wfile.write(dashboard_html.encode("utf-8"))
+            return
+
+        elif path == "/api/analytics/live":
+            self._set_headers(200)
+            self.wfile.write(json.dumps(ANALYTICS_DASHBOARD.get_live_data()).encode("utf-8"))
             return
 
         elif path == "/api/seo/directory":
