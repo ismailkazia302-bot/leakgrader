@@ -15,7 +15,7 @@ from app import (
     ALL_DOCUMENTS, ALL_CHUNKS, BOOKINGS, LEADS, AUDITS,
     RETRIEVER, INTELLIGENCE, LEAD_AGENT, BOOKING_AGENT,
     CONTENT_CREW, AUDIT_ENGINE, SEO_ENGINE, PAYMENT_ENGINE, GROWTH_AGENT, PLANS,
-    ANALYTICS_DASHBOARD, WEBSITE_MANAGER,
+    ANALYTICS_DASHBOARD, WEBSITE_MANAGER, SOCIAL_POSTER,
     WEB_DIR, save_index, save_bookings, save_leads, save_audits, load_all_data
 )
 
@@ -182,6 +182,32 @@ def application(environ, start_response):
             start_response(status, response_headers)
             return [json.dumps({"success": True, "report": rep}).encode('utf-8')]
 
+        # Route: /api/social/generate
+        elif path == '/api/social/generate':
+            bundle = SOCIAL_POSTER.generate_next_social_post()
+            status = '200 OK'
+            response_headers = [('Content-Type', 'application/json; charset=utf-8'), ('Access-Control-Allow-Origin', '*')]
+            start_response(status, response_headers)
+            return [json.dumps({"success": True, "post": bundle}).encode('utf-8')]
+
+        # Route: /api/social/dispatch
+        elif path == '/api/social/dispatch':
+            post_id = body_json.get('post_id')
+            res = SOCIAL_POSTER.dispatch_post(post_id=post_id)
+            status = '200 OK'
+            response_headers = [('Content-Type', 'application/json; charset=utf-8'), ('Access-Control-Allow-Origin', '*')]
+            start_response(status, response_headers)
+            return [json.dumps({"success": True, "result": res}).encode('utf-8')]
+
+        # Route: /api/social/config
+        elif path == '/api/social/config':
+            webhook_url = body_json.get('webhook_url', '')
+            res = SOCIAL_POSTER.update_config(webhook_url=webhook_url)
+            status = '200 OK'
+            response_headers = [('Content-Type', 'application/json; charset=utf-8'), ('Access-Control-Allow-Origin', '*')]
+            start_response(status, response_headers)
+            return [json.dumps({"success": True, "config": res}).encode('utf-8')]
+
     # 2. Handle GET endpoints
     if path in ['/analytics', '/dashboard', '/founder']:
         dashboard_html = ANALYTICS_DASHBOARD.render_html()
@@ -202,6 +228,13 @@ def application(environ, start_response):
         response_headers = [('Content-Type', 'application/json; charset=utf-8'), ('Access-Control-Allow-Origin', '*')]
         start_response(status, response_headers)
         return [json.dumps(rep).encode('utf-8')]
+
+    elif path == '/api/social/feed':
+        feed = SOCIAL_POSTER.get_feed()
+        status = '200 OK'
+        response_headers = [('Content-Type', 'application/json; charset=utf-8'), ('Access-Control-Allow-Origin', '*')]
+        start_response(status, response_headers)
+        return [json.dumps(feed).encode('utf-8')]
 
     elif path == '/robots.txt':
         robots_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "web", "robots.txt")

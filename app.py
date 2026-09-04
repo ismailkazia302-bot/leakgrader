@@ -45,6 +45,7 @@ from engine.pdf_dossier import ExecutiveDossierGenerator
 from engine.analytics_dashboard import FounderAnalyticsDashboard
 from engine.email_vault import EmailVaultEngine
 from engine.master_website_manager import MasterWebsiteManager
+from engine.social_auto_poster import SocialAutoPoster
 
 # Configuration
 PORT = int(os.environ.get("PORT", 8090))
@@ -54,6 +55,7 @@ SENTINEL_AGENT = BackendSentinelAgent()
 WEBSITE_MANAGER = MasterWebsiteManager()
 STORAGE_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "storage")
 WEB_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "web")
+SOCIAL_POSTER = SocialAutoPoster(STORAGE_DIR)
 
 os.makedirs(STORAGE_DIR, exist_ok=True)
 INDEX_FILE = os.path.join(STORAGE_DIR, "knowledge_index.json")
@@ -462,6 +464,12 @@ class MastermindRequestHandler(BaseHTTPRequestHandler):
             self.wfile.write(json.dumps(report).encode("utf-8"))
             return
 
+        elif path == "/api/social/feed":
+            feed = SOCIAL_POSTER.get_feed()
+            self._set_headers(200)
+            self.wfile.write(json.dumps(feed).encode("utf-8"))
+            return
+
         # 2. OmniBrain Document Endpoints
         elif path == "/api/documents":
             doc_list = []
@@ -642,6 +650,40 @@ class MastermindRequestHandler(BaseHTTPRequestHandler):
             report = WEBSITE_MANAGER.run_full_management_cycle()
             self._set_headers(200)
             self.wfile.write(json.dumps({"success": True, "report": report}).encode("utf-8"))
+            return
+
+        elif path == "/api/social/generate":
+            bundle = SOCIAL_POSTER.generate_next_social_post()
+            self._set_headers(200)
+            self.wfile.write(json.dumps({"success": True, "post": bundle}).encode("utf-8"))
+            return
+
+        elif path == "/api/social/dispatch":
+            content_length = int(self.headers.get("Content-Length", 0))
+            post_id = None
+            if content_length > 0:
+                try:
+                    payload = json.loads(self.rfile.read(content_length).decode("utf-8"))
+                    post_id = payload.get("post_id")
+                except Exception:
+                    pass
+            res = SOCIAL_POSTER.dispatch_post(post_id=post_id)
+            self._set_headers(200)
+            self.wfile.write(json.dumps({"success": True, "result": res}).encode("utf-8"))
+            return
+
+        elif path == "/api/social/config":
+            content_length = int(self.headers.get("Content-Length", 0))
+            webhook_url = ""
+            if content_length > 0:
+                try:
+                    payload = json.loads(self.rfile.read(content_length).decode("utf-8"))
+                    webhook_url = payload.get("webhook_url", "")
+                except Exception:
+                    pass
+            res = SOCIAL_POSTER.update_config(webhook_url=webhook_url)
+            self._set_headers(200)
+            self.wfile.write(json.dumps({"success": True, "config": res}).encode("utf-8"))
             return
 
         # --- 4. OMNIBRAIN AI ENDPOINTS ---

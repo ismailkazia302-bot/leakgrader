@@ -99,6 +99,8 @@ class FounderAnalyticsDashboard:
             "total_pageviews": 0,
             "recent_visits": []
         })
+        social_vault = self._read_json("social_posts_vault.json", {"queued": [], "published": [], "total_dispatches": 0})
+        social_config = self._read_json("social_config.json", {"webhook_url": ""})
 
         unique_dict = telemetry.get("unique_visitors", {})
         unique_count = len(unique_dict)
@@ -125,6 +127,10 @@ class FounderAnalyticsDashboard:
             "backlinks_feed": backlinks[::-1][:25],
             "outreach_feed": outreach[::-1][:15],
             "audits_feed": audits[::-1][:10],
+            "social_queued": social_vault.get("queued", []),
+            "social_published": social_vault.get("published", []),
+            "social_dispatches": social_vault.get("total_dispatches", 0),
+            "social_webhook": social_config.get("webhook_url", ""),
             "last_updated": time.strftime("%Y-%m-%d %H:%M:%S UTC")
         }
 
@@ -169,6 +175,39 @@ class FounderAnalyticsDashboard:
               <td style="padding:12px 14px;"><span style="background:rgba(16,185,129,0.15); color:#34d399; padding:3px 8px; border-radius:6px; font-weight:800; font-size:11px;">100% DISPATCHED</span></td>
             </tr>""" for o in data["outreach_feed"]
         ])
+
+        # Build Social Rows
+        published_posts = data.get("social_published", [])
+        if not published_posts:
+            social_rows = """<tr><td colspan="5" style="padding:16px; text-align:center; color:#64748b;">No social dispatches published yet. Generating automatically on growth sprints.</td></tr>"""
+        else:
+            social_rows = "".join([
+                f"""<tr style="border-bottom: 1px solid rgba(255,255,255,0.05);">
+                  <td style="padding:12px 14px; font-weight:800; color:#fff;">{p.get('niche', 'B2B')}</td>
+                  <td style="padding:12px 14px; color:#38bdf8; font-weight:600;">{p.get('market', 'Global')}</td>
+                  <td style="padding:12px 14px; color:#f43f5e; font-weight:700;">{p.get('estimated_leak_highlight', '$38k/mo')}</td>
+                  <td style="padding:12px 14px; font-size:11px; color:#64748b;">{p.get('dispatched_at', p.get('created_at', ''))}</td>
+                  <td style="padding:12px 14px;">
+                    <a href="{p.get('twitter', {}).get('intent_url', '#')}" target="_blank" style="background:#0284c7; color:#fff; padding:3px 7px; border-radius:4px; font-size:10px; font-weight:700; text-decoration:none; margin-right:4px;">X</a>
+                    <a href="{p.get('linkedin', {}).get('intent_url', '#')}" target="_blank" style="background:#0a66c2; color:#fff; padding:3px 7px; border-radius:4px; font-size:10px; font-weight:700; text-decoration:none; margin-right:4px;">LinkedIn</a>
+                    <a href="{p.get('reddit', {}).get('intent_url', '#')}" target="_blank" style="background:#ff4500; color:#fff; padding:3px 7px; border-radius:4px; font-size:10px; font-weight:700; text-decoration:none;">Reddit</a>
+                  </td>
+                </tr>""" for p in published_posts[:8]
+            ])
+
+        queued_posts = data.get("social_queued", [])
+        current_post = queued_posts[0] if queued_posts else (published_posts[0] if published_posts else {})
+        tw_text = current_post.get("twitter", {}).get("text", "Automating website revenue leak diagnostics.")
+        tw_intent = current_post.get("twitter", {}).get("intent_url", "https://twitter.com/intent/tweet")
+        li_headline = current_post.get("linkedin", {}).get("headline", "Why Websites Leak Revenue After Hours")
+        li_content = current_post.get("linkedin", {}).get("content", "")
+        li_intent = current_post.get("linkedin", {}).get("intent_url", "https://www.linkedin.com/sharing/share-offsite/")
+        rd_title = current_post.get("reddit", {}).get("title", "Website Lead Leakage Case Study")
+        rd_intent = current_post.get("reddit", {}).get("intent_url", "https://www.reddit.com/submit")
+        post_niche = current_post.get("niche", "B2B & High-Ticket Commercial")
+        post_leak = current_post.get("estimated_leak_highlight", "$38,000/mo")
+        webhook_cfg = data.get("social_webhook", "")
+        webhook_status_text = "🟢 Active & Configured" if webhook_cfg else "⚪ 1-Click Direct Intents Active"
 
         return f"""<!DOCTYPE html>
 <html lang="en">
@@ -354,10 +393,10 @@ class FounderAnalyticsDashboard:
         <span style="font-size:11px; color:#94A3B8;">Dubai, London, NY, SG</span>
       </div>
 
-      <div class="kpi-card">
-        <div class="kpi-title">Self-Healing Sentinel</div>
-        <div class="kpi-val" style="color:var(--emerald); font-size:22px; margin:16px 0 10px;">99.999%</div>
-        <span style="font-size:11px; color:#94A3B8;">Sub-10ms Failover Protected</span>
+      <div class="kpi-card" style="border:1px solid rgba(192,132,252,0.3); background:linear-gradient(135deg, rgba(88,28,135,0.2), rgba(6,8,14,0.9));">
+        <div class="kpi-title" style="color:#C084FC;">Social Posts Dispatched</div>
+        <div class="kpi-val" style="color:#fff;">{data['social_dispatches']}</div>
+        <span style="font-size:11px; color:#34D399; font-weight:800;">● Queued: {len(data.get('social_queued', []))} Ready</span>
       </div>
     </div>
 
@@ -381,6 +420,106 @@ class FounderAnalyticsDashboard:
           </thead>
           <tbody>
             {visitor_rows}
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- 📢 Autonomous Social Media Auto-Poster Section -->
+    <div class="section-card" style="border: 1px solid rgba(192,132,252,0.35); background: linear-gradient(180deg, rgba(15,23,42,0.95), rgba(10,12,18,0.95));">
+      <div class="section-header">
+        <div>
+          <div class="section-title" style="color:#fff; display:flex; align-items:center; gap:8px;">
+            📢 Autonomous Social Media Auto-Poster
+            <span style="background:rgba(16,185,129,0.15); color:#10b981; border:1px solid rgba(16,185,129,0.3); font-size:10px; padding:2px 8px; border-radius:12px; font-weight:800;">AUTONOMOUS ON</span>
+          </div>
+          <p style="font-size:11px; color:#94a3b8; margin-top:3px;">Auto-generates high-converting teardowns across Twitter/X, LinkedIn & Reddit with 1-click sharing & Webhook support</p>
+        </div>
+        <div style="display:flex; gap:8px;">
+          <button id="btn-gen-social" onclick="generateSocialPost()" style="background:linear-gradient(135deg, #0284c7, #0055ff); color:#fff; border:none; padding:7px 12px; border-radius:6px; font-size:11px; font-weight:700; cursor:pointer;">⚡ Generate Fresh Post</button>
+          <button id="btn-dispatch-social" onclick="dispatchSocialPost()" style="background:linear-gradient(135deg, #10b981, #059669); color:#fff; border:none; padding:7px 12px; border-radius:6px; font-size:11px; font-weight:700; cursor:pointer;">🚀 Dispatch to Webhook</button>
+        </div>
+      </div>
+
+      <!-- Current Post Cards Grid -->
+      <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(280px, 1fr)); gap:14px; margin-bottom:20px;">
+        
+        <!-- Twitter/X Card -->
+        <div style="background:rgba(0,0,0,0.4); border:1px solid rgba(56,189,248,0.25); border-radius:12px; padding:16px; display:flex; flex-direction:column; justify-content:space-between;">
+          <div>
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+              <span style="color:#38bdf8; font-weight:800; font-size:12px; display:flex; align-items:center; gap:6px;">🐦 Twitter / X Viral Post</span>
+              <span style="font-size:10px; color:#64748b;">{post_niche}</span>
+            </div>
+            <p style="font-size:11.5px; color:#f1f5f9; line-height:1.5; white-space:pre-line; max-height:160px; overflow-y:auto; padding-right:4px;">{tw_text}</p>
+          </div>
+          <div style="margin-top:14px; padding-top:10px; border-top:1px solid rgba(255,255,255,0.06); display:flex; justify-content:space-between; align-items:center;">
+            <span style="font-size:10px; color:#f43f5e; font-weight:700;">Leak: {post_leak}</span>
+            <a href="{tw_intent}" target="_blank" style="background:#0284c7; color:#fff; padding:6px 12px; border-radius:6px; font-size:11px; font-weight:700; text-decoration:none; display:inline-flex; align-items:center; gap:4px;">Tweet on X ➔</a>
+          </div>
+        </div>
+
+        <!-- LinkedIn Card -->
+        <div style="background:rgba(0,0,0,0.4); border:1px solid rgba(10,102,194,0.3); border-radius:12px; padding:16px; display:flex; flex-direction:column; justify-content:space-between;">
+          <div>
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+              <span style="color:#60a5fa; font-weight:800; font-size:12px; display:flex; align-items:center; gap:6px;">💼 LinkedIn Teardown</span>
+              <span style="font-size:10px; color:#64748b;">Thought Leadership</span>
+            </div>
+            <strong style="font-size:12px; color:#fff; display:block; margin-bottom:6px;">{li_headline}</strong>
+            <p style="font-size:11px; color:#cbd5e1; line-height:1.5; max-height:120px; overflow-y:auto;">{li_content[:240]}...</p>
+          </div>
+          <div style="margin-top:14px; padding-top:10px; border-top:1px solid rgba(255,255,255,0.06); display:flex; justify-content:space-between; align-items:center;">
+            <span style="font-size:10px; color:#94a3b8;">High-Ticket B2B</span>
+            <a href="{li_intent}" target="_blank" style="background:#0a66c2; color:#fff; padding:6px 12px; border-radius:6px; font-size:11px; font-weight:700; text-decoration:none; display:inline-flex; align-items:center; gap:4px;">Post to LinkedIn ➔</a>
+          </div>
+        </div>
+
+        <!-- Reddit Card -->
+        <div style="background:rgba(0,0,0,0.4); border:1px solid rgba(255,69,0,0.3); border-radius:12px; padding:16px; display:flex; flex-direction:column; justify-content:space-between;">
+          <div>
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+              <span style="color:#fb923c; font-weight:800; font-size:12px; display:flex; align-items:center; gap:6px;">🔴 Reddit Community Post</span>
+              <span style="font-size:10px; color:#64748b;">r/SaaS</span>
+            </div>
+            <strong style="font-size:12px; color:#fff; display:block; margin-bottom:6px;">{rd_title}</strong>
+            <p style="font-size:11px; color:#94a3b8; line-height:1.4;">Organic case study format with zero spam vibe, built to drive community engagement and referral clicks.</p>
+          </div>
+          <div style="margin-top:14px; padding-top:10px; border-top:1px solid rgba(255,255,255,0.06); display:flex; justify-content:space-between; align-items:center;">
+            <span style="font-size:10px; color:#94a3b8;">r/SaaS & Entrepreneur</span>
+            <a href="{rd_intent}" target="_blank" style="background:#ea580c; color:#fff; padding:6px 12px; border-radius:6px; font-size:11px; font-weight:700; text-decoration:none; display:inline-flex; align-items:center; gap:4px;">Post to Reddit ➔</a>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Webhook Configuration Strip -->
+      <div style="background:rgba(255,255,255,0.02); border:1px solid rgba(255,255,255,0.06); border-radius:8px; padding:10px 14px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
+        <div style="display:flex; align-items:center; gap:10px;">
+          <span style="font-size:11px; color:#94a3b8; font-weight:700;">Direct Auto-Dispatch Webhook:</span>
+          <span style="font-size:11px; font-weight:700; color:{'#10b981' if webhook_cfg else '#94a3b8'};">{webhook_status_text}</span>
+        </div>
+        <div style="display:flex; gap:6px; align-items:center; flex:1; max-width:480px;">
+          <input type="text" id="social-webhook-input" placeholder="Discord / Slack / Telegram / Make.com Webhook URL..." value="{webhook_cfg}" style="flex:1; background:#000; border:1px solid rgba(255,255,255,0.15); border-radius:6px; padding:6px 10px; font-size:11px; color:#fff; outline:none;">
+          <button onclick="saveSocialWebhook()" style="background:rgba(255,255,255,0.08); border:1px solid rgba(255,255,255,0.15); color:#fff; padding:6px 12px; border-radius:6px; font-size:11px; font-weight:700; cursor:pointer;">Save</button>
+        </div>
+      </div>
+
+      <!-- Published History Mini-Table -->
+      <h4 style="font-size:12px; color:#94a3b8; margin:16px 0 8px; text-transform:uppercase; font-weight:800;">Recent Social Dispatches</h4>
+      <div style="overflow-x:auto;">
+        <table>
+          <thead>
+            <tr>
+              <th>Target Niche</th>
+              <th>Target Market</th>
+              <th>Leak Highlight</th>
+              <th>Dispatched Time</th>
+              <th>Instant Share</th>
+            </tr>
+          </thead>
+          <tbody>
+            {social_rows}
           </tbody>
         </table>
       </div>
@@ -437,5 +576,57 @@ class FounderAnalyticsDashboard:
     </div>
 
   </div>
+
+  <script>
+    async function generateSocialPost() {{
+      const btn = document.getElementById('btn-gen-social');
+      if (btn) btn.innerText = '⚡ Generating...';
+      try {{
+        const res = await fetch('/api/social/generate', {{ method: 'POST' }});
+        const data = await res.json();
+        if (data.success) location.reload();
+      }} catch (e) {{
+        alert('Error generating post: ' + e);
+      }}
+    }}
+
+    async function dispatchSocialPost() {{
+      const btn = document.getElementById('btn-dispatch-social');
+      if (btn) btn.innerText = '🚀 Dispatching...';
+      try {{
+        const res = await fetch('/api/social/dispatch', {{
+          method: 'POST',
+          headers: {{ 'Content-Type': 'application/json' }},
+          body: JSON.stringify({{}})
+        }});
+        const data = await res.json();
+        if (data.success) {{
+          alert('Dispatched! Webhook Status: ' + data.result.webhook_status);
+          location.reload();
+        }}
+      }} catch (e) {{
+        alert('Error dispatching: ' + e);
+      }}
+    }}
+
+    async function saveSocialWebhook() {{
+      const inp = document.getElementById('social-webhook-input');
+      const val = inp ? inp.value.trim() : '';
+      try {{
+        const res = await fetch('/api/social/config', {{
+          method: 'POST',
+          headers: {{ 'Content-Type': 'application/json' }},
+          body: JSON.stringify({{ webhook_url: val }})
+        }});
+        const data = await res.json();
+        if (data.success) {{
+          alert('Webhook configuration updated!');
+          location.reload();
+        }}
+      }} catch (e) {{
+        alert('Error saving webhook: ' + e);
+      }}
+    }}
+  </script>
 </body>
 </html>"""
