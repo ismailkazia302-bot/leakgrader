@@ -282,6 +282,20 @@ class MastermindRequestHandler(BaseHTTPRequestHandler):
             self.wfile.write(json.dumps({"status": "healthy", "service": "Mastermind Global AI Platform (All 7 Engines Online)"}).encode("utf-8"))
             return
 
+        elif path == "/robots.txt":
+            robots_file = os.path.join(WEB_DIR, "robots.txt")
+            if os.path.exists(robots_file):
+                with open(robots_file, "rb") as f:
+                    content = f.read()
+            else:
+                content = b"User-agent: *\nAllow: /\nSitemap: https://leakgrader.com/sitemap.xml\n"
+            self.send_response(200)
+            self.send_header("Content-Type", "text/plain; charset=utf-8")
+            self.send_header("Cache-Control", "public, max-age=86400")
+            self.end_headers()
+            self.wfile.write(content)
+            return
+
         # 1. Programmatic SEO XML Sitemap
         elif path == "/sitemap.xml":
             sitemap_xml = SEO_ENGINE.generate_sitemap_xml()
