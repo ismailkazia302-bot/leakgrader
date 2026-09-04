@@ -96,7 +96,7 @@
   <!-- ⚡ HIGH-RESOLUTION GLOWING SVG FAVICON -->
   <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%2338bdf8'><path d='M13 2L3 14h9l-1 8 10-12h-9l1-8z'/></svg>">
 
-  <link rel="stylesheet" href="/style.css?v=2060">
+  <link rel="stylesheet" href="/style.css?v=2065">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;700;800&display=swap" rel="stylesheet">
@@ -176,20 +176,6 @@
             <span class="pulse-green-dot"></span>
             <span><strong>14,820+</strong> Audits Run</span>
           </div>
-          <div class="currency-selector-box" title="Switch Display Currency">
-            <i data-lucide="coins" class="icon-xs" style="color:#38bdf8;"></i>
-            <select id="currency-selector" class="currency-select-3d">
-              <option value="USD">USD ($)</option>
-              <option value="SAR">SAR (ر.س)</option>
-              <option value="AED">AED (د.إ)</option>
-              <option value="GBP">GBP (£)</option>
-              <option value="EUR">EUR (€)</option>
-            </select>
-          </div>
-          <a href="/analytics" target="_blank" class="credit-pill-3d" style="text-decoration:none; color:inherit; cursor:pointer; background:rgba(56,189,248,0.1); border:1px solid rgba(56,189,248,0.3);">
-            <i data-lucide="bar-chart-2" class="icon-xs" style="color:#38bdf8;"></i>
-            <span><strong style="color:#38bdf8;">📊 Live Analytics</strong></span>
-          </a>
           <button id="btn-open-pricing" class="btn-upgrade-3d">
             <i data-lucide="sparkles" class="icon-xs"></i>
             <span>View Pricing</span>
@@ -346,79 +332,82 @@
               </div>
             </div>
 
-            <!-- 📧 HIGH-CONVERTING EMAIL DOSSIER & CRO DISPATCH VAULT -->
-            <div class="email-dossier-capture-box" id="email-capture-section">
-              <div style="display:flex; justify-content:space-between; align-items:flex-start; flex-wrap:wrap; gap:12px;">
-                <div>
-                  <span class="badge-tag cyan" style="margin-bottom:6px;"><i data-lucide="mail" class="icon-xs"></i> EXECUTIVE CRO INTELLIGENCE</span>
-                  <h3 style="font-size:16px; font-weight:800; color:#ffffff; margin-top:4px;">Get Weekly Revenue Leak Teardowns & PDF Dossiers</h3>
-                  <p style="font-size:12px; color:var(--text-muted); margin-top:2px;">Join 14,800+ founders receiving weekly conversion audits, high-ticket niche teardowns, and actionable AI closer blueprints.</p>
-                </div>
+            <!-- 📧 HIGH-CONVERTING EXECUTIVE NEWSLETTER VAULT -->
+            <div id="email-capture-section" style="margin-top:48px; background:linear-gradient(135deg, rgba(12,18,32,0.95) 0%, rgba(8,12,22,0.95) 100%); border:1px solid rgba(56,189,248,0.3); border-radius:20px; padding:36px 24px; text-align:center; box-shadow:0 20px 50px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.1); backdrop-filter:blur(20px);">
+              <div style="display:inline-flex; align-items:center; gap:6px; background:rgba(56,189,248,0.12); border:1px solid rgba(56,189,248,0.3); padding:5px 14px; border-radius:999px; font-size:11px; font-weight:800; color:#38bdf8; margin-bottom:14px; letter-spacing:0.04em;">
+                <i data-lucide="mail" style="width:14px; height:14px;"></i>
+                <span>EXECUTIVE CRO INTELLIGENCE</span>
               </div>
-              <form id="newsletter-form" class="email-capture-form">
-                <input type="email" id="newsletter-email-input" class="email-capture-input" placeholder="Enter your work email (e.g. founder@company.com)..." required>
-                <button type="submit" id="btn-newsletter-submit" class="btn-email-submit">
-                  <i data-lucide="send" class="icon-xs"></i>
-                  <span>Subscribe & Get Report</span>
+              <h3 style="font-size:22px; font-weight:900; color:#ffffff; margin:0 0 8px; letter-spacing:-0.02em;">Get Weekly Revenue Leak Teardowns & PDF Dossiers</h3>
+              <p style="font-size:13px; color:#94a3b8; max-width:560px; margin:0 auto 22px; line-height:1.6;">Join 14,800+ founders receiving actionable website conversion audits, competitor breakdowns, and 24/7 AI closer blueprints.</p>
+              
+              <form id="newsletter-form" style="display:flex; max-width:480px; margin:0 auto; gap:10px; flex-wrap:wrap; justify-content:center;">
+                <input type="email" id="newsletter-email-input" placeholder="Enter your work email..." required style="flex:1; min-width:240px; background:#000000; border:1px solid rgba(255,255,255,0.15); border-radius:10px; padding:12px 16px; color:#ffffff; font-size:13px; outline:none; font-family:var(--font-sans); box-shadow:inset 0 2px 4px rgba(0,0,0,0.5);">
+                <button type="submit" id="btn-newsletter-submit" style="background:linear-gradient(135deg, #0284c7 0%, #0055ff 100%); color:#ffffff; border:1px solid rgba(255,255,255,0.25); border-radius:10px; padding:12px 22px; font-size:13px; font-weight:800; cursor:pointer; display:inline-flex; align-items:center; gap:8px; box-shadow:0 4px 20px rgba(0,85,255,0.35); transition:transform 0.15s ease;">
+                  <i data-lucide="send" style="width:14px; height:14px;"></i>
+                  <span>Subscribe Free</span>
                 </button>
               </form>
-              <div id="newsletter-status-msg" style="display:none; font-size:12px; font-weight:700; color:#34d399;"></div>
+              
+              <div id="newsletter-status-msg" style="display:none; margin-top:14px; font-size:12px; font-weight:700; color:#34d399; text-align:center;"></div>
+              <div style="font-size:11px; color:#64748b; margin-top:14px; display:flex; justify-content:center; align-items:center; gap:6px;">
+                <i data-lucide="shield-check" style="width:13px; height:13px; color:#34d399;"></i>
+                <span>100% Privacy guaranteed. Zero spam. Unsubscribe at any time.</span>
+              </div>
             </div>
 
-            <!-- 🏛️ ENTERPRISE FOOTER -->
-            <footer class="linear-footer" style="border-top:1px solid var(--border-subtle); padding:40px 0 24px; margin-top:60px;">
-              <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(180px, 1fr)); gap:32px; margin-bottom:32px;">
+            <!-- 🏛️ ENTERPRISE FOOTER (VISITOR-FOCUSED & CLEAN) -->
+            <footer class="linear-footer" style="border-top:1px solid var(--border-subtle); padding:48px 0 24px; margin-top:60px;">
+              <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(200px, 1fr)); gap:36px; margin-bottom:36px;">
                 <div>
                   <div style="display:flex; align-items:center; gap:8px; margin-bottom:12px;">
-                    <div class="logo-mark-3d" style="width:24px; height:24px;"><i data-lucide="sparkles" style="width:12px; height:12px; color:#fff;"></i></div>
-                    <strong style="font-size:14px; font-weight:800; color:#fff;">LeakGrader</strong>
+                    <div class="logo-mark-3d" style="width:26px; height:26px;"><i data-lucide="sparkles" style="width:13px; height:13px; color:#fff;"></i></div>
+                    <strong style="font-size:15px; font-weight:900; color:#fff;">LeakGrader<span style="color:#38bdf8;">.com</span></strong>
                   </div>
-                  <p style="font-size:11px; color:var(--text-muted); line-height:1.6;">Autonomous website revenue leak diagnostic & 24/7 conversion closer for high-growth enterprises.</p>
-                  <div style="display:flex; gap:10px; margin-top:12px;">
-                    <a href="https://github.com/ismailkazia302-bot/leakgrader" target="_blank" style="color:var(--text-muted); font-size:12px;"><i data-lucide="github" class="icon-xs"></i></a>
-                    <a href="https://twitter.com/LeakGrader" target="_blank" style="color:var(--text-muted); font-size:12px;"><i data-lucide="twitter" class="icon-xs"></i></a>
+                  <p style="font-size:12px; color:var(--text-muted); line-height:1.6; margin-bottom:16px;">Autonomous website revenue leak diagnostic & 24/7 AI conversational sales closer platform.</p>
+                  <div style="display:flex; gap:12px;">
+                    <a href="https://github.com/ismailkazia302-bot/leakgrader" target="_blank" style="color:var(--text-muted); font-size:13px;"><i data-lucide="github" class="icon-xs"></i></a>
+                    <a href="https://twitter.com/LeakGrader" target="_blank" style="color:var(--text-muted); font-size:13px;"><i data-lucide="twitter" class="icon-xs"></i></a>
                   </div>
                 </div>
 
                 <div>
-                  <h4 style="font-size:11px; font-weight:800; text-transform:uppercase; color:#fff; margin-bottom:12px; letter-spacing:0.05em;">Product Suites</h4>
-                  <ul style="list-style:none; padding:0; margin:0; display:flex; flex-direction:column; gap:8px; font-size:11px; color:var(--text-muted);">
+                  <h4 style="font-size:11px; font-weight:800; text-transform:uppercase; color:#fff; margin-bottom:14px; letter-spacing:0.06em;">Platform Features</h4>
+                  <ul style="list-style:none; padding:0; margin:0; display:flex; flex-direction:column; gap:9px; font-size:12px; color:var(--text-muted);">
                     <li><a href="#" style="color:inherit; text-decoration:none;">10s Revenue Leak Scanner</a></li>
-                    <li><a href="#" style="color:inherit; text-decoration:none;">B2B Verified Prospector</a></li>
                     <li><a href="#" style="color:inherit; text-decoration:none;">24/7 AI WhatsApp Closer</a></li>
-                    <li><a href="#" style="color:inherit; text-decoration:none;">Doc Vault Second Brain</a></li>
-                    <li><a href="#" style="color:inherit; text-decoration:none;">ContentCrew SEO Writer</a></li>
+                    <li><a href="#" style="color:inherit; text-decoration:none;">B2B Verified Prospector</a></li>
+                    <li><a href="#" style="color:inherit; text-decoration:none;">Competitor Battlecard Diagnostic</a></li>
+                    <li><a href="#" style="color:inherit; text-decoration:none;">Executive PDF Boardroom Dossier</a></li>
                   </ul>
                 </div>
 
                 <div>
-                  <h4 style="font-size:11px; font-weight:800; text-transform:uppercase; color:#fff; margin-bottom:12px; letter-spacing:0.05em;">Top Global Hubs</h4>
-                  <ul style="list-style:none; padding:0; margin:0; display:flex; flex-direction:column; gap:8px; font-size:11px; color:var(--text-muted);">
-                    <li><a href="/directory/dubai/real-estate" style="color:inherit; text-decoration:none;">Dubai Real Estate Diagnostic</a></li>
-                    <li><a href="/directory/london/dental-clinics" style="color:inherit; text-decoration:none;">London Dental Clinics CRO</a></li>
-                    <li><a href="/directory/new-york/b2b-saas" style="color:inherit; text-decoration:none;">New York SaaS Optimization</a></li>
-                    <li><a href="/directory/singapore/wealth-management" style="color:inherit; text-decoration:none;">Singapore Wealth Advisory</a></li>
-                    <li><a href="/sitemap.xml" target="_blank" style="color:#38bdf8; text-decoration:none;">View All 37,124 Directory Hubs →</a></li>
+                  <h4 style="font-size:11px; font-weight:800; text-transform:uppercase; color:#fff; margin-bottom:14px; letter-spacing:0.06em;">Resources & Info</h4>
+                  <ul style="list-style:none; padding:0; margin:0; display:flex; flex-direction:column; gap:9px; font-size:12px; color:var(--text-muted);">
+                    <li><a href="#agent-audit" style="color:inherit; text-decoration:none;">Run Instant Audit</a></li>
+                    <li><a href="#faq" style="color:inherit; text-decoration:none;">Frequently Asked Questions</a></li>
+                    <li><a href="mailto:ismailkazia301@gmail.com" style="color:inherit; text-decoration:none;">Contact Sales & Support</a></li>
+                    <li><a href="/robots.txt" style="color:inherit; text-decoration:none;">Developer & AI Bot Directives</a></li>
                   </ul>
                 </div>
 
                 <div>
-                  <h4 style="font-size:11px; font-weight:800; text-transform:uppercase; color:#fff; margin-bottom:12px; letter-spacing:0.05em;">Trust & Compliance</h4>
-                  <ul style="list-style:none; padding:0; margin:0; display:flex; flex-direction:column; gap:8px; font-size:11px; color:var(--text-muted);">
-                    <li><span style="color:#34d399;"><i data-lucide="shield-check" class="icon-xs"></i> 256-Bit SSL Encrypted</span></li>
-                    <li><span style="color:#38bdf8;"><i data-lucide="check" class="icon-xs"></i> GDPR & SOC-2 Ready</span></li>
-                    <li><span style="color:#a855f7;"><i data-lucide="zap" class="icon-xs"></i> Sub-100ms Global Edge</span></li>
-                    <li><a href="/robots.txt" style="color:inherit; text-decoration:none;">Robots.txt & AI Crawlers</a></li>
+                  <h4 style="font-size:11px; font-weight:800; text-transform:uppercase; color:#fff; margin-bottom:14px; letter-spacing:0.06em;">Trust & Compliance</h4>
+                  <ul style="list-style:none; padding:0; margin:0; display:flex; flex-direction:column; gap:9px; font-size:12px; color:var(--text-muted);">
+                    <li><span style="color:#34d399; display:inline-flex; align-items:center; gap:6px;"><i data-lucide="shield-check" class="icon-xs"></i> 256-Bit SSL Encrypted</span></li>
+                    <li><span style="color:#38bdf8; display:inline-flex; align-items:center; gap:6px;"><i data-lucide="check" class="icon-xs"></i> GDPR & SOC-2 Ready</span></li>
+                    <li><span style="color:#a855f7; display:inline-flex; align-items:center; gap:6px;"><i data-lucide="zap" class="icon-xs"></i> 99.99% Uptime Guarantee</span></li>
                   </ul>
                 </div>
               </div>
 
-              <div style="border-top:1px solid rgba(255,255,255,0.04); padding-top:16px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px; font-size:11px; color:var(--text-muted);">
+              <div style="border-top:1px solid rgba(255,255,255,0.06); padding-top:20px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px; font-size:11.5px; color:var(--text-muted);">
                 <span>© 2026 LeakGrader Inc. All rights reserved.</span>
-                <div style="display:flex; gap:16px;">
+                <div style="display:flex; gap:20px;">
                   <a href="#" style="color:inherit; text-decoration:none;">Privacy Policy</a>
                   <a href="#" style="color:inherit; text-decoration:none;">Terms of Service</a>
-                  <a href="#" style="color:inherit; text-decoration:none;">System Status: Operational 🟢</a>
+                  <span style="color:#34d399;">System Status: Operational 🟢</span>
                 </div>
               </div>
             </footer>
@@ -802,6 +791,6 @@
   <!-- 🔔 LIVE SOCIAL PROOF TOAST CONTAINER -->
   <div id="toast-container" class="toast-container-3d"></div>
 
-  <script src="/app.js?v=2026"></script>
+  <script src="/app.js?v=2065"></script>
 </body>
 </html>
