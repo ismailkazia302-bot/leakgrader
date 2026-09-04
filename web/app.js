@@ -791,51 +791,9 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   // ====================================================
-  // 🔔 LIVE SOCIAL PROOF TOAST TICKER
+  // 🔔 LIVE NOTIFICATIONS
   // ====================================================
-  const SOCIAL_PROOF_EVENTS = [
-    { icon: 'radar', title: 'Live Audit Run', text: 'Executive in <strong>Dubai, UAE</strong> audited <strong>LuxeHaven Real Estate</strong> ($48k/mo leak detected)', time: 'Just now' },
-    { icon: 'sparkles', title: 'SaaS Pro Unlocked', text: 'Founder from <strong>London, UK</strong> unlocked <strong>LeakGrader Pro ($79/mo)</strong>', time: '2m ago' },
-    { icon: 'users', title: 'B2B Leads Enriched', text: 'Agency in <strong>San Francisco, CA</strong> enriched <strong>25 Verified Decision-Makers</strong>', time: '4m ago' },
-    { icon: 'bot', title: 'AI Closer Deployed', text: 'Enterprise in <strong>Riyadh, Saudi Arabia</strong> booked <strong>AI Closer Setup</strong>', time: '6m ago' },
-    { icon: 'zap', title: 'Competitor Battlecard', text: 'Battle simulated: <strong>Stripe vs PayPal</strong> (AI Closer Advantage: +34%)', time: '8m ago' },
-    { icon: 'file-text', title: 'Executive Dossier Exported', text: 'CTO in <strong>New York, NY</strong> generated <strong>Boardroom PDF Report</strong>', time: '11m ago' }
-  ];
-
-  let currentToastIdx = 0;
-  function triggerSocialProofToast() {
-    const toastContainer = document.getElementById('toast-container');
-    if (!toastContainer) return;
-
-    const event = SOCIAL_PROOF_EVENTS[currentToastIdx % SOCIAL_PROOF_EVENTS.length];
-    currentToastIdx++;
-
-    const toast = document.createElement('div');
-    toast.className = 'toast-notification-3d';
-    toast.innerHTML = `
-      <div class="toast-icon-pulse"><i data-lucide="${event.icon}" class="icon-xs"></i></div>
-      <div>
-        <div class="toast-content-3d">${event.text}</div>
-        <div class="toast-time">${event.title} • ${event.time}</div>
-      </div>
-    `;
-
-    toastContainer.appendChild(toast);
-    if (window.lucide) lucide.createIcons();
-
-    setTimeout(() => {
-      toast.classList.add('fade-out');
-      setTimeout(() => {
-        if (toast.parentNode) toast.parentNode.removeChild(toast);
-      }, 300);
-    }, 5000);
-  }
-
-  // Initial trigger after 3s, then recurring every 14s
-  setTimeout(() => {
-    triggerSocialProofToast();
-    setInterval(triggerSocialProofToast, 14000);
-  }, 3500);
+  // Fake social proof toasts disabled for 100% real user data integrity
 
   // Copy Buttons in Dossier
   const btnCopyEmail = document.getElementById('btn-drawer-copy-email');
@@ -915,36 +873,6 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  const DEFAULT_CONFIRMED_BOOKINGS = [
-    {
-      name: "Tariq Al-Mansoor",
-      email: "tariq@luxehaven.ae",
-      company: "LuxeHaven Real Estate",
-      budget: "$25,000",
-      time_slot: "Tomorrow @ 3:00 PM GST",
-      intent: "24/7 WhatsApp Closer for Off-Plan Luxury Villas",
-      status: "CONFIRMED"
-    },
-    {
-      name: "Dr. Jonathan Hayes",
-      email: "j.hayes@harleystreetdental.co.uk",
-      company: "Harley Street Dental Clinic",
-      budget: "$8,500",
-      time_slot: "Friday @ 11:00 AM BST",
-      intent: "Weekend After-Hours Patient Consultation Bot",
-      status: "CONFIRMED"
-    },
-    {
-      name: "Marcus Vance",
-      email: "marcus@cloudscale.io",
-      company: "CloudScale SaaS",
-      budget: "$18,000",
-      time_slot: "Monday @ 2:00 PM PST",
-      intent: "Autonomous Inbound Demo Qualification Layer",
-      status: "CONFIRMED"
-    }
-  ];
-
   // 1-Click Interactive Booking Test Chips
   document.querySelectorAll('.chip-quick-booking').forEach(chip => {
     chip.addEventListener('click', () => {
@@ -964,18 +892,33 @@ document.addEventListener('DOMContentLoaded', () => {
       const res = await fetch('/api/booking/list');
       const data = await res.json();
       const serverBookings = data.bookings || [];
-      const displayBookings = (serverBookings.length > 0) ? serverBookings : DEFAULT_CONFIRMED_BOOKINGS;
 
-      ledgerList.innerHTML = displayBookings.map(b => `
+      if (serverBookings.length === 0) {
+        ledgerList.innerHTML = `
+          <div class="empty-state" style="padding:48px 16px; text-align:center;">
+            <div style="width:44px; height:44px; border-radius:12px; background:rgba(52,211,153,0.12); border:1px solid rgba(52,211,153,0.3); color:#34d399; display:flex; align-items:center; justify-content:center; margin:0 auto 12px;">
+              <i data-lucide="calendar" style="width:20px; height:20px;"></i>
+            </div>
+            <h4 style="font-size:14px; font-weight:800; color:#ffffff; margin-bottom:6px;">No Booked Consultations Yet</h4>
+            <p style="color:var(--text-body); font-size:11.5px; max-width:300px; margin:0 auto 14px; line-height:1.5;">
+              Type a message in the <strong>AI Sales Closer</strong> on the left (e.g. <em>"I want to book a call tomorrow, budget $15,000"</em>) to see qualified meetings auto-posted here.
+            </p>
+          </div>
+        `;
+        if (window.lucide) lucide.createIcons();
+        return;
+      }
+
+      ledgerList.innerHTML = serverBookings.map(b => `
         <div class="card-3d-tilt" style="background:rgba(12,16,28,0.9); border:1px solid rgba(56,189,248,0.25); border-radius:12px; padding:14px 16px; display:flex; flex-direction:column; gap:8px; box-shadow:0 4px 15px rgba(0,0,0,0.4);">
           <div style="display:flex; justify-content:space-between; align-items:center;">
             <div style="display:flex; align-items:center; gap:8px;">
               <div style="width:26px; height:26px; border-radius:6px; background:rgba(56,189,248,0.15); color:#38bdf8; font-weight:800; font-size:11px; display:flex; align-items:center; justify-content:center;">
-                ${(b.name || 'Client').split(' ').map(n=>n[0]).join('').substring(0,2).toUpperCase()}
+                ${(b.name || b.client_name || 'Client').split(' ').map(n=>n[0]).join('').substring(0,2).toUpperCase()}
               </div>
               <div>
-                <strong style="color:#ffffff; font-size:12.5px; font-weight:800; display:block;">${b.name || 'Client Lead'}</strong>
-                <span style="color:#94a3b8; font-size:10.5px;">${b.company || b.email || 'Enterprise Lead'}</span>
+                <strong style="color:#ffffff; font-size:12.5px; font-weight:800; display:block;">${b.name || b.client_name || 'Client Lead'}</strong>
+                <span style="color:#94a3b8; font-size:10.5px;">${b.company || b.email || b.client_email || 'Enterprise Lead'}</span>
               </div>
             </div>
             <span class="badge-tag" style="background:rgba(52,211,153,0.15); color:#34d399; border:1px solid rgba(52,211,153,0.3); font-size:9.5px; font-weight:800; padding:2px 8px; border-radius:6px;">
@@ -984,12 +927,12 @@ document.addEventListener('DOMContentLoaded', () => {
           </div>
           
           <div style="display:flex; justify-content:space-between; align-items:center; font-size:11px; background:rgba(0,0,0,0.4); padding:6px 10px; border-radius:6px;">
-            <span style="color:#fbbf24; font-weight:800;"><i data-lucide="dollar-sign" style="width:11px; height:11px; display:inline;"></i> ${b.budget || '$15,000 Deal'}</span>
-            <span style="color:#94a3b8;"><i data-lucide="clock" style="width:11px; height:11px; display:inline;"></i> ${b.time_slot || b.timestamp || 'Tomorrow 3:00 PM'}</span>
+            <span style="color:#fbbf24; font-weight:800;"><i data-lucide="dollar-sign" style="width:11px; height:11px; display:inline;"></i> ${b.budget || b.budget_range || '$15,000 Deal'}</span>
+            <span style="color:#94a3b8;"><i data-lucide="clock" style="width:11px; height:11px; display:inline;"></i> ${b.time_slot || b.preferred_datetime || b.timestamp || 'Tomorrow 3:00 PM'}</span>
           </div>
 
           <div style="font-size:11px; color:#cbd5e1; line-height:1.4;">
-            <span style="color:#38bdf8; font-weight:700;">Goal:</span> ${b.intent || b.service_needed || 'Deploy 24/7 AI Sales Closer'}
+            <span style="color:#38bdf8; font-weight:700;">Goal:</span> ${b.intent || b.project_notes || b.service_needed || 'Deploy 24/7 AI Sales Closer'}
           </div>
         </div>
       `).join('');
