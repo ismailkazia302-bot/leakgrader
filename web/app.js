@@ -597,11 +597,24 @@ document.addEventListener('DOMContentLoaded', () => {
     if (label) label.textContent = `Showing all ${total} verified enterprise decision-makers`;
   }
 
+  const thCheckAll = document.getElementById('th-check-all');
+  if (thCheckAll) {
+    thCheckAll.addEventListener('change', (e) => {
+      const isChecked = e.target.checked;
+      document.querySelectorAll('.lead-row-check').forEach(chk => {
+        chk.checked = isChecked;
+      });
+    });
+  }
+
   if (btnClearLeads) {
-    btnClearLeads.addEventListener('click', () => {
+    btnClearLeads.addEventListener('click', async () => {
       CURRENT_LEADS = [];
       renderProspectsTable([]);
       updateLeadMetrics([]);
+      try {
+        await fetch('/api/leads/clear', { method: 'POST' });
+      } catch (e) {}
     });
   }
 
