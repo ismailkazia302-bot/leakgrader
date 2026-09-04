@@ -1478,13 +1478,36 @@ document.addEventListener('DOMContentLoaded', () => {
   // ====================================================
   // 10. HELPER UTILITIES
   // ====================================================
+  function formatMarkdown(text) {
+    if (!text) return '';
+    // If text already has HTML strong tags or formatting, don't double escape
+    if (text.includes('<strong>') || text.includes('<div') || text.includes('<p>')) {
+      return text;
+    }
+    let html = text
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;');
+    
+    // Bold
+    html = html.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+    // Italic
+    html = html.replace(/\*(.*?)\*/g, '<em>$1</em>');
+    // Inline code
+    html = html.replace(/`(.*?)`/g, '<code style="background:rgba(0,0,0,0.5); padding:2px 6px; border-radius:4px; font-size:11px; color:#38bdf8; font-family:var(--font-mono);">$1</code>');
+    // Line breaks
+    html = html.replace(/\n/g, '<br>');
+    return html;
+  }
+
   function appendChatMessage(container, role, text) {
     if (!container) return;
     const msgDiv = document.createElement('div');
     msgDiv.className = `message ${role}-message`;
+    const formatted = formatMarkdown(text);
     msgDiv.innerHTML = `
       <div class="message-avatar-3d"><i data-lucide="${role === 'user' ? 'user' : 'bot'}"></i></div>
-      <div class="message-body-3d">${text}</div>
+      <div class="message-body-3d" style="line-height:1.6;">${formatted}</div>
     `;
     container.appendChild(msgDiv);
     container.scrollTop = container.scrollHeight;
