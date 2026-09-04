@@ -291,7 +291,7 @@ class LeadPulseAgent:
             return combined[:count]
         return fallback_leads
 
-    def _search_live_web_businesses(self, industry: str, location: str, my_service: str, count: int) -> list:
+    def _search_live_web_businesses(self, industry: str, location: str, my_service: str, count: int, geo_meta: dict = None) -> list:
         """
         Queries live OpenStreetMap Nominatim & Public Global Business Registries to fetch REAL existing businesses in the target city.
         """
@@ -372,7 +372,13 @@ class LeadPulseAgent:
             random.shuffle(name_pool)
             person = name_pool[i % len(name_pool)]
 
-            # Detect Industry Scale
+            # Detect Industry Scale & Category
+            is_gym = any(k in ind_low or k in comp_name.lower() for k in ["gym", "fitness", "crossfit", "workout", "trainer"])
+            is_dental = any(k in ind_low or k in comp_name.lower() for k in ["dentist", "dental", "orthodont", "teeth", "oral"])
+            is_medical = any(k in ind_low or k in comp_name.lower() for k in ["clinic", "hospital", "doctor", "health", "care", "surgery"])
+            is_real_estate = any(k in ind_low or k in comp_name.lower() for k in ["real estate", "property", "properties", "developer", "realty", "realtor", "broker"])
+            is_tech = any(k in ind_low or k in comp_name.lower() for k in ["tech", "software", "saas", "cloud", "ai", "data", "digital", "systems"])
+            is_legal = any(k in ind_low or k in comp_name.lower() for k in ["law", "legal", "advocate", "attorney", "solicitor"])
             is_small_retail = any(k in ind_low or k in comp_name.lower() for k in ["saloon", "salon", "barber", "parlour", "hair", "spa", "cafe", "bakery", "shop", "boutique", "laundry", "car wash", "trainer", "pet", "gents"])
             is_mid_market = any(k in ind_low or k in comp_name.lower() for k in ["gym", "fitness", "dental", "dentist", "clinic", "restaurant", "lawyer", "advocate", "consultant", "agency", "school", "academy"])
 
