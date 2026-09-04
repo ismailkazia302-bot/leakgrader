@@ -13,6 +13,7 @@ import time
 import random
 import urllib.request
 import urllib.error
+import urllib.parse
 
 # Accurate regional phone codes and area formats
 GEO_PHONE_PRESETS = {

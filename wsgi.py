@@ -94,6 +94,15 @@ def application(environ, start_response):
                 start_response(status, response_headers)
                 return [json.dumps({"success": True, "generated_count": 0, "leads": [], "fallback": True}).encode('utf-8')]
 
+        # Route: /api/leads/clear
+        elif path == '/api/leads/clear':
+            LEADS.clear()
+            save_leads()
+            status = '200 OK'
+            response_headers = [('Content-Type', 'application/json; charset=utf-8'), ('Access-Control-Allow-Origin', '*')]
+            start_response(status, response_headers)
+            return [json.dumps({"success": True}).encode('utf-8')]
+
         # Route: /api/booking/chat
         elif path == '/api/booking/chat':
             try:
@@ -235,6 +244,23 @@ def application(environ, start_response):
         response_headers = [('Content-Type', 'application/json; charset=utf-8'), ('Access-Control-Allow-Origin', '*')]
         start_response(status, response_headers)
         return [json.dumps(feed).encode('utf-8')]
+
+    elif path == '/api/leads/list':
+        status = '200 OK'
+        response_headers = [('Content-Type', 'application/json; charset=utf-8'), ('Access-Control-Allow-Origin', '*')]
+        start_response(status, response_headers)
+        return [json.dumps({"success": True, "leads": LEADS}).encode('utf-8')]
+
+    elif path == '/api/leads/export-csv':
+        csv_data = LEAD_AGENT.export_leads_to_csv(LEADS)
+        status = '200 OK'
+        response_headers = [
+            ('Content-Type', 'text/csv; charset=utf-8'),
+            ('Content-Disposition', 'attachment; filename="verified_leads_export.csv"'),
+            ('Access-Control-Allow-Origin', '*')
+        ]
+        start_response(status, response_headers)
+        return [csv_data.encode('utf-8')]
 
     elif path == '/robots.txt':
         robots_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "web", "robots.txt")

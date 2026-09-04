@@ -454,100 +454,127 @@
       <!-- TAB 2: PROSPECTS (B2B LEAD FINDER & DOSSIER)         -->
       <!-- ==================================================== -->
       <section class="apollo-pane" id="agent-leadpulse">
-        <div class="apollo-metrics-ribbon-3d" style="display:grid; grid-template-columns:repeat(auto-fit, minmax(200px, 1fr)); gap:12px; padding:16px 20px; background:rgba(8,11,20,0.8); border-bottom:1px solid var(--border-subtle);">
-          <div class="metric-card-3d" style="background:rgba(12,16,28,0.9); border:1px solid rgba(56,189,248,0.25); border-radius:12px; padding:14px 18px; box-shadow:0 4px 20px rgba(0,0,0,0.4);">
-            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
-              <span class="metric-label" style="font-size:11px; font-weight:700; color:#94a3b8; text-transform:uppercase; letter-spacing:0.04em;">Verified Decision Makers</span>
-              <i data-lucide="users" class="icon-xs" style="color:#38bdf8;"></i>
-            </div>
-            <strong class="metric-val" id="m-total-leads" style="font-size:24px; font-weight:900; color:#ffffff;">0</strong>
+        <!-- 1-ROW LIVE MARQUEE ROLL-UP TICKER (Space-Optimized, Only 1 Row) -->
+        <div class="apollo-metrics-marquee-3d" id="leadpulse-marquee-ticker">
+          <div class="marquee-tag-badge">
+            <span class="live-dot-pulse"></span>
+            <span>INTEL TICKER</span>
           </div>
+          <div class="marquee-scroll-container">
+            <div class="marquee-track">
+              <div class="marquee-item">
+                <i data-lucide="users" class="icon-xs" style="color:#38bdf8;"></i>
+                <span class="m-lbl">Decision Makers:</span>
+                <strong class="metric-val text-white" id="m-total-leads">0</strong>
+              </div>
+              <div class="marquee-item">
+                <i data-lucide="shield-check" class="icon-xs" style="color:#34d399;"></i>
+                <span class="m-lbl">Contact Accuracy:</span>
+                <strong class="metric-val text-emerald" id="m-verified-leads">100% Live Verified</strong>
+              </div>
+              <div class="marquee-item">
+                <i data-lucide="zap" class="icon-xs" style="color:#c084fc;"></i>
+                <span class="m-lbl">Buyer Intent:</span>
+                <strong class="metric-val text-purple" id="m-intent-val">98.0% High Intent</strong>
+              </div>
+              <div class="marquee-item">
+                <i data-lucide="dollar-sign" class="icon-xs" style="color:#fbbf24;"></i>
+                <span class="m-lbl">Est. Pipeline:</span>
+                <strong class="metric-val text-amber" id="m-pipeline-val">$0 (Ready)</strong>
+              </div>
 
-          <div class="metric-card-3d" style="background:rgba(12,16,28,0.9); border:1px solid rgba(52,211,153,0.25); border-radius:12px; padding:14px 18px; box-shadow:0 4px 20px rgba(0,0,0,0.4);">
-            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
-              <span class="metric-label" style="font-size:11px; font-weight:700; color:#94a3b8; text-transform:uppercase; letter-spacing:0.04em;">Direct Contact Accuracy</span>
-              <i data-lucide="shield-check" class="icon-xs" style="color:#34d399;"></i>
+              <!-- Duplicate for seamless continuous looping marquee -->
+              <div class="marquee-item" aria-hidden="true">
+                <i data-lucide="users" class="icon-xs" style="color:#38bdf8;"></i>
+                <span class="m-lbl">Decision Makers:</span>
+                <strong class="metric-val text-white" id="m-total-leads-dup">0</strong>
+              </div>
+              <div class="marquee-item" aria-hidden="true">
+                <i data-lucide="shield-check" class="icon-xs" style="color:#34d399;"></i>
+                <span class="m-lbl">Contact Accuracy:</span>
+                <strong class="metric-val text-emerald" id="m-verified-leads-dup">100% Live Verified</strong>
+              </div>
+              <div class="marquee-item" aria-hidden="true">
+                <i data-lucide="zap" class="icon-xs" style="color:#c084fc;"></i>
+                <span class="m-lbl">Buyer Intent:</span>
+                <strong class="metric-val text-purple" id="m-intent-val-dup">98.0% High Intent</strong>
+              </div>
+              <div class="marquee-item" aria-hidden="true">
+                <i data-lucide="dollar-sign" class="icon-xs" style="color:#fbbf24;"></i>
+                <span class="m-lbl">Est. Pipeline:</span>
+                <strong class="metric-val text-amber" id="m-pipeline-val-dup">$0 (Ready)</strong>
+              </div>
             </div>
-            <strong class="metric-val" id="m-verified-leads" style="font-size:24px; font-weight:900; color:#34d399;">100% Live Verified</strong>
-          </div>
-
-          <div class="metric-card-3d" style="background:rgba(12,16,28,0.9); border:1px solid rgba(168,85,247,0.25); border-radius:12px; padding:14px 18px; box-shadow:0 4px 20px rgba(0,0,0,0.4);">
-            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
-              <span class="metric-label" style="font-size:11px; font-weight:700; color:#94a3b8; text-transform:uppercase; letter-spacing:0.04em;">Average Buyer Intent</span>
-              <i data-lucide="zap" class="icon-xs" style="color:#c084fc;"></i>
-            </div>
-            <strong class="metric-val" id="m-intent-val" style="font-size:24px; font-weight:900; color:#c084fc;">98.0% High Intent</strong>
-          </div>
-
-          <div class="metric-card-3d" style="background:rgba(12,16,28,0.9); border:1px solid rgba(251,191,36,0.25); border-radius:12px; padding:14px 18px; box-shadow:0 4px 20px rgba(0,0,0,0.4);">
-            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
-              <span class="metric-label" style="font-size:11px; font-weight:700; color:#94a3b8; text-transform:uppercase; letter-spacing:0.04em;">Est. Pipeline Value</span>
-              <i data-lucide="dollar-sign" class="icon-xs" style="color:#fbbf24;"></i>
-            </div>
-            <strong class="metric-val" id="m-pipeline-val" style="font-size:24px; font-weight:900; color:#fbbf24;">$0 (Ready to Search)</strong>
           </div>
         </div>
 
         <div class="apollo-body-grid">
-          <aside class="apollo-filter-drawer-3d" style="padding:20px; background:rgba(10,13,22,0.95); border-right:1px solid var(--border-subtle);">
-            <div class="drawer-header-row" style="margin-bottom:14px; padding-bottom:10px; border-bottom:1px solid rgba(255,255,255,0.06); display:flex; justify-content:space-between; align-items:center;">
+          <aside class="apollo-filter-drawer-3d" id="lead-filter-drawer">
+            <div class="drawer-header-row">
               <h3 style="font-size:12px; font-weight:800; text-transform:uppercase; letter-spacing:0.05em; color:#fff; display:flex; align-items:center; gap:6px;">
                 <i data-lucide="sliders" class="icon-xs" style="color:#38bdf8;"></i> Prospect Search
               </h3>
-              <button id="btn-reset-filters" class="link-btn-sm" type="button" style="color:#94a3b8; font-size:11px;">Reset</button>
+              <div style="display:flex; align-items:center; gap:8px;">
+                <button id="btn-toggle-filters-mob" class="mob-filter-toggle-btn" type="button" style="display:none; color:#38bdf8; font-size:11px; font-weight:700; background:rgba(56,189,248,0.1); border:1px solid rgba(56,189,248,0.3); border-radius:6px; padding:3px 8px; cursor:pointer;">
+                  <span id="mob-filter-toggle-text">Collapse</span>
+                </button>
+                <button id="btn-reset-filters" class="link-btn-sm" type="button" style="color:#94a3b8; font-size:11px;">Reset</button>
+              </div>
             </div>
 
-            <form id="lead-form" class="filter-form" style="display:flex; flex-direction:column; gap:14px;">
-              <div class="filter-group">
-                <label style="font-size:11px; font-weight:700; color:#e2e8f0; margin-bottom:6px; display:flex; align-items:center; gap:6px;">
-                  <i data-lucide="briefcase" class="icon-xs" style="color:#38bdf8;"></i> Target Commercial Niche
-                </label>
-                <input type="text" id="lead-industry" placeholder="e.g. Luxury Real Estate, Dental Clinics, SaaS" required style="background:#000000; border:1px solid rgba(255,255,255,0.15); border-radius:8px; padding:10px 12px; color:#fff; font-size:12px; width:100%; outline:none;">
-                <div class="preset-pill-row" style="display:flex; flex-wrap:wrap; gap:6px; margin-top:8px;">
-                  <span class="filter-preset-pill" data-input="lead-industry" data-val="Luxury Real Estate Developers" style="cursor:pointer; background:rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,0.1); padding:4px 8px; border-radius:6px; font-size:10px; font-weight:600; color:#94a3b8;">🏢 Real Estate</span>
-                  <span class="filter-preset-pill" data-input="lead-industry" data-val="Cosmetic & Dental Clinics" style="cursor:pointer; background:rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,0.1); padding:4px 8px; border-radius:6px; font-size:10px; font-weight:600; color:#94a3b8;">🏥 Dental</span>
-                  <span class="filter-preset-pill" data-input="lead-industry" data-val="B2B Cloud SaaS" style="cursor:pointer; background:rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,0.1); padding:4px 8px; border-radius:6px; font-size:10px; font-weight:600; color:#94a3b8;">💻 SaaS</span>
+            <div id="lead-filter-fields-wrap">
+              <form id="lead-form" class="filter-form" style="display:flex; flex-direction:column; gap:12px;">
+                <div class="filter-group">
+                  <label style="font-size:11px; font-weight:700; color:#e2e8f0; margin-bottom:5px; display:flex; align-items:center; gap:6px;">
+                    <i data-lucide="briefcase" class="icon-xs" style="color:#38bdf8;"></i> Target Commercial Niche
+                  </label>
+                  <input type="text" id="lead-industry" placeholder="e.g. Luxury Real Estate, Dental Clinics, SaaS" required style="background:#000000; border:1px solid rgba(255,255,255,0.15); border-radius:8px; padding:9px 12px; color:#fff; font-size:12px; width:100%; outline:none;">
+                  <div class="preset-pill-row" style="display:flex; flex-wrap:wrap; gap:5px; margin-top:6px;">
+                    <span class="filter-preset-pill" data-input="lead-industry" data-val="Luxury Real Estate Developers" style="cursor:pointer; background:rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,0.1); padding:3px 7px; border-radius:6px; font-size:10px; font-weight:600; color:#94a3b8;">🏢 Real Estate</span>
+                    <span class="filter-preset-pill" data-input="lead-industry" data-val="Cosmetic & Dental Clinics" style="cursor:pointer; background:rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,0.1); padding:3px 7px; border-radius:6px; font-size:10px; font-weight:600; color:#94a3b8;">🏥 Dental</span>
+                    <span class="filter-preset-pill" data-input="lead-industry" data-val="B2B Cloud SaaS" style="cursor:pointer; background:rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,0.1); padding:3px 7px; border-radius:6px; font-size:10px; font-weight:600; color:#94a3b8;">💻 SaaS</span>
+                  </div>
                 </div>
-              </div>
 
-              <div class="filter-group">
-                <label style="font-size:11px; font-weight:700; color:#e2e8f0; margin-bottom:6px; display:flex; align-items:center; gap:6px;">
-                  <i data-lucide="map-pin" class="icon-xs" style="color:#34d399;"></i> Target City / Country
-                </label>
-                <input type="text" id="lead-location" placeholder="e.g. Dubai, London, New York" required style="background:#000000; border:1px solid rgba(255,255,255,0.15); border-radius:8px; padding:10px 12px; color:#fff; font-size:12px; width:100%; outline:none;">
-                <div class="preset-pill-row" style="display:flex; flex-wrap:wrap; gap:6px; margin-top:8px;">
-                  <span class="filter-preset-pill" data-input="lead-location" data-val="Dubai, UAE" style="cursor:pointer; background:rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,0.1); padding:4px 8px; border-radius:6px; font-size:10px; font-weight:600; color:#94a3b8;">🇦🇪 Dubai</span>
-                  <span class="filter-preset-pill" data-input="lead-location" data-val="London, UK" style="cursor:pointer; background:rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,0.1); padding:4px 8px; border-radius:6px; font-size:10px; font-weight:600; color:#94a3b8;">🇬🇧 London</span>
-                  <span class="filter-preset-pill" data-input="lead-location" data-val="San Francisco, USA" style="cursor:pointer; background:rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,0.1); padding:4px 8px; border-radius:6px; font-size:10px; font-weight:600; color:#94a3b8;">🇺🇸 USA</span>
+                <div class="filter-group">
+                  <label style="font-size:11px; font-weight:700; color:#e2e8f0; margin-bottom:5px; display:flex; align-items:center; gap:6px;">
+                    <i data-lucide="map-pin" class="icon-xs" style="color:#34d399;"></i> Target City / Country
+                  </label>
+                  <input type="text" id="lead-location" placeholder="e.g. Dubai, London, New York" required style="background:#000000; border:1px solid rgba(255,255,255,0.15); border-radius:8px; padding:9px 12px; color:#fff; font-size:12px; width:100%; outline:none;">
+                  <div class="preset-pill-row" style="display:flex; flex-wrap:wrap; gap:5px; margin-top:6px;">
+                    <span class="filter-preset-pill" data-input="lead-location" data-val="Dubai, UAE" style="cursor:pointer; background:rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,0.1); padding:3px 7px; border-radius:6px; font-size:10px; font-weight:600; color:#94a3b8;">🇦🇪 Dubai</span>
+                    <span class="filter-preset-pill" data-input="lead-location" data-val="London, UK" style="cursor:pointer; background:rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,0.1); padding:3px 7px; border-radius:6px; font-size:10px; font-weight:600; color:#94a3b8;">🇬🇧 London</span>
+                    <span class="filter-preset-pill" data-input="lead-location" data-val="San Francisco, USA" style="cursor:pointer; background:rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,0.1); padding:3px 7px; border-radius:6px; font-size:10px; font-weight:600; color:#94a3b8;">🇺🇸 USA</span>
+                  </div>
                 </div>
-              </div>
 
-              <div class="filter-group">
-                <label style="font-size:11px; font-weight:700; color:#e2e8f0; margin-bottom:6px; display:flex; align-items:center; gap:6px;">
-                  <i data-lucide="sparkles" class="icon-xs" style="color:#fbbf24;"></i> Pitch Value Proposition
-                </label>
-                <textarea id="lead-service" rows="2" placeholder="e.g. 24/7 AI WhatsApp Lead Closer & Instant Booking Bots" style="background:#000000; border:1px solid rgba(255,255,255,0.15); border-radius:8px; padding:10px 12px; color:#fff; font-size:12px; width:100%; outline:none; font-family:var(--font-sans); resize:none;"></textarea>
-              </div>
+                <div class="filter-group">
+                  <label style="font-size:11px; font-weight:700; color:#e2e8f0; margin-bottom:5px; display:flex; align-items:center; gap:6px;">
+                    <i data-lucide="sparkles" class="icon-xs" style="color:#fbbf24;"></i> Pitch Value Proposition
+                  </label>
+                  <textarea id="lead-service" rows="2" placeholder="e.g. 24/7 AI WhatsApp Lead Closer & Instant Booking Bots" style="background:#000000; border:1px solid rgba(255,255,255,0.15); border-radius:8px; padding:9px 12px; color:#fff; font-size:12px; width:100%; outline:none; font-family:var(--font-sans); resize:none;"></textarea>
+                </div>
 
-              <div class="filter-group">
-                <label style="font-size:11px; font-weight:700; color:#e2e8f0; margin-bottom:6px; display:flex; align-items:center; gap:6px;">
-                  <i data-lucide="layers" class="icon-xs" style="color:#a855f7;"></i> Batch Size
-                </label>
-                <select id="lead-count" style="background:#000000; border:1px solid rgba(255,255,255,0.15); border-radius:8px; padding:10px 12px; color:#fff; font-size:12px; width:100%; outline:none;">
-                  <option value="5" selected>5 Verified Prospects</option>
-                  <option value="10">10 Verified Prospects</option>
-                </select>
-              </div>
+                <div class="filter-group">
+                  <label style="font-size:11px; font-weight:700; color:#e2e8f0; margin-bottom:5px; display:flex; align-items:center; gap:6px;">
+                    <i data-lucide="layers" class="icon-xs" style="color:#a855f7;"></i> Batch Size
+                  </label>
+                  <select id="lead-count" style="background:#000000; border:1px solid rgba(255,255,255,0.15); border-radius:8px; padding:9px 12px; color:#fff; font-size:12px; width:100%; outline:none;">
+                    <option value="5" selected>5 Verified Prospects</option>
+                    <option value="10">10 Verified Prospects</option>
+                  </select>
+                </div>
 
-              <button type="submit" id="btn-generate-leads" class="btn-3d-glow full-width" style="margin-top:6px; padding:12px; border-radius:10px; background:linear-gradient(135deg, #0055ff, #38bdf8); font-weight:800; font-size:12.5px;">
-                <i data-lucide="sparkles"></i>
-                <span>Search & Enrich Prospects</span>
-              </button>
-            </form>
+                <button type="submit" id="btn-generate-leads" class="btn-3d-glow full-width" style="margin-top:4px; padding:12px; border-radius:10px; background:linear-gradient(135deg, #0055ff, #38bdf8); font-weight:800; font-size:12.5px;">
+                  <i data-lucide="sparkles"></i>
+                  <span>Search & Enrich Prospects</span>
+                </button>
+              </form>
+            </div>
           </aside>
 
-          <main class="apollo-table-canvas-3d" style="background:#06080e; display:flex; flex-direction:column; overflow:hidden;">
-            <div class="table-toolbar-3d" style="padding:14px 20px; background:rgba(10,14,24,0.9); border-bottom:1px solid var(--border-subtle); display:flex; justify-content:space-between; align-items:center;">
+          <main class="apollo-table-canvas-3d" id="prospects-results-container" style="background:#06080e; display:flex; flex-direction:column; overflow:hidden;">
+            <div class="table-toolbar-3d" style="padding:12px 18px; background:rgba(10,14,24,0.9); border-bottom:1px solid var(--border-subtle); display:flex; justify-content:space-between; align-items:center;">
               <div class="toolbar-left-flex" style="display:flex; align-items:center; gap:10px;">
                 <span class="badge-tag cyan" style="font-weight:800; font-size:10.5px;"><i data-lucide="shield-check" class="icon-xs"></i> VERIFIED B2B PIPELINE</span>
                 <span id="selected-count-label" style="font-size:12px; color:#94a3b8; font-weight:600;">Showing verified enterprise decision-makers</span>
@@ -559,6 +586,7 @@
             </div>
             
             <div class="table-scroll-wrapper" style="flex:1; overflow:auto;">
+              <!-- Desktop Table View (min-width: 769px) -->
               <table class="apollo-table-3d" id="leads-table">
                 <thead>
                   <tr style="background:#090d18; border-bottom:1px solid var(--border-subtle);">
@@ -574,8 +602,12 @@
                 <tbody id="leads-table-body">
                 </tbody>
               </table>
+
+              <!-- Mobile Cards View (max-width: 768px) -->
+              <div class="mobile-leads-card-deck" id="leads-mobile-cards"></div>
             </div>
           </main>
+        </div>
         </div>
       </section>
 

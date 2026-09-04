@@ -382,12 +382,28 @@ document.addEventListener('DOMContentLoaded', () => {
   const leadForm = document.getElementById('lead-form');
   const btnGenerateLeads = document.getElementById('btn-generate-leads');
   const leadsTableBody = document.getElementById('leads-table-body');
+  const leadsMobileCards = document.getElementById('leads-mobile-cards');
   const btnExportCsv = document.getElementById('btn-export-csv');
   const btnClearLeads = document.getElementById('btn-clear-leads');
   const btnResetFilters = document.getElementById('btn-reset-filters');
   const presetPills = document.querySelectorAll('.filter-preset-pill');
+  const btnToggleFiltersMob = document.getElementById('btn-toggle-filters-mob');
+  const leadFilterFieldsWrap = document.getElementById('lead-filter-fields-wrap');
+  const mobFilterToggleText = document.getElementById('mob-filter-toggle-text');
+  const prospectsResultsContainer = document.getElementById('prospects-results-container');
 
   let CURRENT_LEADS = [];
+
+  // Mobile Filter Toggle (Collapse/Expand)
+  if (btnToggleFiltersMob && leadFilterFieldsWrap) {
+    btnToggleFiltersMob.addEventListener('click', () => {
+      const isHidden = leadFilterFieldsWrap.style.display === 'none';
+      leadFilterFieldsWrap.style.display = isHidden ? 'block' : 'none';
+      if (mobFilterToggleText) {
+        mobFilterToggleText.textContent = isHidden ? 'Collapse' : 'Expand';
+      }
+    });
+  }
 
   presetPills.forEach(pill => {
     pill.addEventListener('click', () => {
@@ -431,6 +447,13 @@ document.addEventListener('DOMContentLoaded', () => {
         CURRENT_LEADS = (data.leads && data.leads.length > 0) ? data.leads : [];
         renderProspectsTable(CURRENT_LEADS);
         updateLeadMetrics(CURRENT_LEADS);
+
+        // Auto-scroll directly to results so user on mobile or desktop sees the leads immediately!
+        if (prospectsResultsContainer) {
+          setTimeout(() => {
+            prospectsResultsContainer.scrollIntoView({ behavior: 'smooth', block: 'start' });
+          }, 100);
+        }
       } catch (err) {
         console.error(err);
       } finally {
@@ -442,86 +465,171 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   function renderProspectsTable(leads) {
-    if (!leadsTableBody) return;
-    if (!leads || leads.length === 0) {
-      leadsTableBody.innerHTML = `
-        <tr>
-          <td colspan="7">
-            <div class="empty-state" style="padding:60px 20px; text-align:center;">
-              <div style="width:48px; height:48px; border-radius:12px; background:rgba(56,189,248,0.12); border:1px solid rgba(56,189,248,0.3); color:#38bdf8; display:flex; align-items:center; justify-content:center; margin:0 auto 14px;">
-                <i data-lucide="sparkles" style="width:24px; height:24px;"></i>
+    // 1. Render Desktop Table View
+    if (leadsTableBody) {
+      if (!leads || leads.length === 0) {
+        leadsTableBody.innerHTML = `
+          <tr>
+            <td colspan="7">
+              <div class="empty-state" style="padding:60px 20px; text-align:center;">
+                <div style="width:48px; height:48px; border-radius:12px; background:rgba(56,189,248,0.12); border:1px solid rgba(56,189,248,0.3); color:#38bdf8; display:flex; align-items:center; justify-content:center; margin:0 auto 14px;">
+                  <i data-lucide="sparkles" style="width:24px; height:24px;"></i>
+                </div>
+                <h3 style="font-size:16px; font-weight:800; color:#ffffff; margin-bottom:6px;">Ready to Search & Enrich Live B2B Decision-Makers</h3>
+                <p style="color:var(--text-body); font-size:12.5px; max-width:520px; margin:0 auto 18px; line-height:1.6;">
+                  Select your target commercial niche and city on the left, then click <strong>"Search & Enrich Prospects"</strong> to generate verified C-level executives, phone numbers, and pitch scripts.
+                </p>
+                <div style="display:flex; justify-content:center; gap:8px; flex-wrap:wrap;">
+                  <button type="button" class="btn-sample-search" onclick="document.getElementById('lead-industry').value='Luxury Real Estate'; document.getElementById('lead-location').value='Dubai, UAE'; document.getElementById('lead-form').dispatchEvent(new Event('submit'));" style="background:rgba(56,189,248,0.1); border:1px solid rgba(56,189,248,0.3); color:#38bdf8; font-weight:700; font-size:11px; padding:6px 12px; border-radius:6px; cursor:pointer;">
+                    🏢 Search: Dubai Real Estate
+                  </button>
+                  <button type="button" class="btn-sample-search" onclick="document.getElementById('lead-industry').value='Dental Clinics'; document.getElementById('lead-location').value='London, UK'; document.getElementById('lead-form').dispatchEvent(new Event('submit'));" style="background:rgba(52,211,153,0.1); border:1px solid rgba(52,211,153,0.3); color:#34d399; font-weight:700; font-size:11px; padding:6px 12px; border-radius:6px; cursor:pointer;">
+                    🏥 Search: London Dental Clinics
+                  </button>
+                </div>
               </div>
-              <h3 style="font-size:16px; font-weight:800; color:#ffffff; margin-bottom:6px;">Ready to Search & Enrich Live B2B Decision-Makers</h3>
-              <p style="color:var(--text-body); font-size:12.5px; max-width:520px; margin:0 auto 18px; line-height:1.6;">
-                Select your target commercial niche and city on the left, then click <strong>"Search & Enrich Prospects"</strong> to generate verified C-level executives, phone numbers, and pitch scripts.
-              </p>
-              <div style="display:flex; justify-content:center; gap:8px; flex-wrap:wrap;">
-                <button type="button" class="btn-sample-search" onclick="document.getElementById('lead-industry').value='Luxury Real Estate'; document.getElementById('lead-location').value='Dubai, UAE'; document.getElementById('lead-form').dispatchEvent(new Event('submit'));" style="background:rgba(56,189,248,0.1); border:1px solid rgba(56,189,248,0.3); color:#38bdf8; font-weight:700; font-size:11px; padding:6px 12px; border-radius:6px; cursor:pointer;">
-                  🏢 Search: Dubai Real Estate
+            </td>
+          </tr>
+        `;
+      } else {
+        leadsTableBody.innerHTML = leads.map((l, index) => {
+          const initials = (l.contact_name || 'Prospect').split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase();
+          return `
+            <tr data-index="${index}" style="border-bottom:1px solid rgba(255,255,255,0.04); transition:background 0.15s ease;">
+              <td style="padding:14px 16px;"><input type="checkbox" class="lead-row-check" checked></td>
+              <td style="padding:14px 16px;">
+                <div class="prospect-cell" style="display:flex; align-items:center; gap:12px;">
+                  <div class="avatar-badge" style="width:36px; height:36px; border-radius:10px; background:linear-gradient(135deg, #1e293b, #0f172a); border:1px solid rgba(56,189,248,0.3); color:#38bdf8; font-weight:900; font-size:12px; display:flex; align-items:center; justify-content:center;">${initials}</div>
+                  <div class="prospect-name-box">
+                    <strong style="color:#ffffff; font-size:13px; font-weight:800; display:block;">${l.contact_name || 'Decision Maker'}</strong>
+                    <span style="color:#94a3b8; font-size:11px;">${l.title || 'Executive'}</span>
+                  </div>
+                </div>
+              </td>
+              <td style="padding:14px 16px;">
+                <div class="company-cell">
+                  <strong style="color:#ffffff; font-size:12.5px; font-weight:700; display:block;">${l.company_name || 'Enterprise'}</strong>
+                  <span style="color:#10b981; font-weight:800; font-size:11px;">${l.estimated_revenue || '$15M - $30M / yr'}</span>
+                </div>
+              </td>
+              <td style="padding:14px 16px;">
+                <div class="contact-cell" style="display:flex; flex-direction:column; gap:4px;">
+                  <span class="badge-verified-email" style="display:inline-flex; align-items:center; gap:5px; color:#34d399; font-size:11.5px; font-family:var(--font-mono); font-weight:700;">
+                    <i data-lucide="check-circle" class="icon-xs" style="width:12px; height:12px;"></i> ${l.email || 'name@company.com'}
+                  </span>
+                  <span class="phone-tag" style="color:#94a3b8; font-size:11px; display:inline-flex; align-items:center; gap:4px;">
+                    <i data-lucide="phone" class="icon-xs" style="width:11px; height:11px;"></i> ${l.phone || '+1 555 019 2834'}
+                  </span>
+                </div>
+              </td>
+              <td style="padding:14px 16px;">
+                <div style="font-size:11.5px; color:#94a3b8;">
+                  <div style="font-weight:600; color:#e2e8f0; margin-bottom:2px;">${l.location || 'Global'}</div>
+                  <a href="${l.website?.startsWith('http') ? l.website : 'https://' + (l.website || 'company.com')}" target="_blank" style="color:#38bdf8; text-decoration:none; display:inline-flex; align-items:center; gap:3px; font-size:11px;">${l.website?.replace('https://', '') || 'website.com'} <i data-lucide="external-link" style="width:10px; height:10px;"></i></a>
+                </div>
+              </td>
+              <td style="padding:14px 16px;">
+                <div>
+                  <span class="intent-badge" style="background:rgba(168,85,247,0.15); border:1px solid rgba(168,85,247,0.3); color:#c084fc; font-size:10px; font-weight:800; padding:2px 8px; border-radius:6px; display:inline-block;">🔥 98% High Intent</span>
+                  <p style="font-size:11px; color:#cbd5e1; margin-top:4px; max-width:220px; line-height:1.4;">${l.primary_pain_point || 'After-hours response lag'}</p>
+                </div>
+              </td>
+              <td style="text-align: right; padding:14px 16px;">
+                <button class="btn-view-dossier" data-index="${index}" type="button" style="background:linear-gradient(135deg, rgba(56,189,248,0.15), rgba(0,85,255,0.2)); border:1px solid rgba(56,189,248,0.4); color:#38bdf8; font-weight:800; padding:8px 14px; border-radius:8px; font-size:11.5px; cursor:pointer; display:inline-flex; align-items:center; gap:6px; transition:all 0.15s ease;">
+                  <i data-lucide="file-text" style="width:12px; height:12px;"></i>
+                  <span>Pitch Script</span>
                 </button>
-                <button type="button" class="btn-sample-search" onclick="document.getElementById('lead-industry').value='Dental Clinics'; document.getElementById('lead-location').value='London, UK'; document.getElementById('lead-form').dispatchEvent(new Event('submit'));" style="background:rgba(52,211,153,0.1); border:1px solid rgba(52,211,153,0.3); color:#34d399; font-weight:700; font-size:11px; padding:6px 12px; border-radius:6px; cursor:pointer;">
-                  🏥 Search: London Dental Clinics
-                </button>
-              </div>
-            </div>
-          </td>
-        </tr>
-      `;
-      if (window.lucide) lucide.createIcons();
-      return;
+              </td>
+            </tr>
+          `;
+        }).join('');
+      }
     }
 
-    leadsTableBody.innerHTML = leads.map((l, index) => {
-      const initials = (l.contact_name || 'Prospect').split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase();
-      return `
-        <tr data-index="${index}" style="border-bottom:1px solid rgba(255,255,255,0.04); transition:background 0.15s ease;">
-          <td style="padding:14px 16px;"><input type="checkbox" class="lead-row-check" checked></td>
-          <td style="padding:14px 16px;">
-            <div class="prospect-cell" style="display:flex; align-items:center; gap:12px;">
-              <div class="avatar-badge" style="width:36px; height:36px; border-radius:10px; background:linear-gradient(135deg, #1e293b, #0f172a); border:1px solid rgba(56,189,248,0.3); color:#38bdf8; font-weight:900; font-size:12px; display:flex; align-items:center; justify-content:center;">${initials}</div>
-              <div class="prospect-name-box">
-                <strong style="color:#ffffff; font-size:13px; font-weight:800; display:block;">${l.contact_name || 'Decision Maker'}</strong>
-                <span style="color:#94a3b8; font-size:11px;">${l.title || 'Executive'}</span>
+    // 2. Render Handheld Mobile Cards Deck (Optimized for Mobile Screens)
+    if (leadsMobileCards) {
+      if (!leads || leads.length === 0) {
+        leadsMobileCards.innerHTML = `
+          <div class="empty-state" style="padding:32px 16px; text-align:center; background:rgba(12,16,28,0.7); border:1px dashed rgba(56,189,248,0.25); border-radius:12px;">
+            <div style="width:42px; height:42px; border-radius:10px; background:rgba(56,189,248,0.12); border:1px solid rgba(56,189,248,0.3); color:#38bdf8; display:flex; align-items:center; justify-content:center; margin:0 auto 10px;">
+              <i data-lucide="sparkles" style="width:20px; height:20px;"></i>
+            </div>
+            <h4 style="font-size:14px; font-weight:800; color:#ffffff; margin-bottom:4px;">No Prospects Loaded Yet</h4>
+            <p style="color:#94a3b8; font-size:12px; margin-bottom:14px; line-height:1.5;">Tap below or search above to load live decision-makers:</p>
+            <div style="display:flex; flex-direction:column; gap:8px;">
+              <button type="button" class="btn-sample-search" onclick="document.getElementById('lead-industry').value='Luxury Real Estate'; document.getElementById('lead-location').value='Dubai, UAE'; document.getElementById('lead-form').dispatchEvent(new Event('submit'));" style="background:rgba(56,189,248,0.12); border:1px solid rgba(56,189,248,0.3); color:#38bdf8; font-weight:700; font-size:12px; padding:8px 12px; border-radius:8px; cursor:pointer;">
+                🏢 Search: Dubai Real Estate
+              </button>
+              <button type="button" class="btn-sample-search" onclick="document.getElementById('lead-industry').value='Dental Clinics'; document.getElementById('lead-location').value='London, UK'; document.getElementById('lead-form').dispatchEvent(new Event('submit'));" style="background:rgba(52,211,153,0.12); border:1px solid rgba(52,211,153,0.3); color:#34d399; font-weight:700; font-size:12px; padding:8px 12px; border-radius:8px; cursor:pointer;">
+                🏥 Search: London Dental Clinics
+              </button>
+            </div>
+          </div>
+        `;
+      } else {
+        leadsMobileCards.innerHTML = leads.map((l, index) => {
+          const initials = (l.contact_name || 'Prospect').split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase();
+          const cleanPhone = (l.phone || '').replace(/[^0-9+]/g, '');
+          const waPitch = `Hi ${l.contact_name || 'there'}! Saw ${l.company_name || 'your business'} online. We deployed an autonomous AI Sales Closer that captures after-hours leads in 30 seconds. Can I send a 30-sec demo?`;
+          return `
+            <div class="mobile-lead-card-3d" data-index="${index}">
+              <div class="mobile-lead-header">
+                <div class="mobile-lead-profile">
+                  <div class="mobile-lead-avatar">${initials}</div>
+                  <div class="mobile-lead-title-box">
+                    <strong>${l.contact_name || 'Decision Maker'}</strong>
+                    <span>${l.title || 'Executive'}</span>
+                  </div>
+                </div>
+                <span class="intent-badge" style="font-size:9.5px; padding:2px 7px;">🔥 98% Intent</span>
+              </div>
+
+              <div class="mobile-lead-meta-row">
+                <span class="mobile-meta-pill"><i data-lucide="building" style="width:11px; height:11px;"></i> ${l.company_name || 'Enterprise'}</span>
+                <span class="mobile-meta-pill rev"><i data-lucide="dollar-sign" style="width:11px; height:11px;"></i> ${l.estimated_revenue || '$15M - $30M / yr'}</span>
+                <span class="mobile-meta-pill"><i data-lucide="map-pin" style="width:11px; height:11px;"></i> ${l.location || 'Global'}</span>
+              </div>
+
+              <div class="mobile-lead-contacts">
+                <div class="mobile-contact-item">
+                  <i data-lucide="check-circle" style="width:12px; height:12px; color:#34d399;"></i>
+                  <span>${l.email || 'name@company.com'}</span>
+                </div>
+                <div class="mobile-contact-item">
+                  <i data-lucide="phone" style="width:12px; height:12px; color:#38bdf8;"></i>
+                  <span>${l.phone || '+1 555 019 2834'}</span>
+                </div>
+              </div>
+
+              <div class="mobile-lead-pain-box">
+                <strong style="color:#ffffff;">Primary Leak:</strong> ${l.primary_pain_point || 'After-hours lead response delay'}
+              </div>
+
+              <div class="mobile-lead-actions-grid">
+                ${cleanPhone ? `
+                  <a href="https://wa.me/${cleanPhone.replace('+', '')}?text=${encodeURIComponent(waPitch)}" target="_blank" class="btn-card-action wa">
+                    <i data-lucide="message-circle" style="width:13px; height:13px;"></i> WhatsApp
+                  </a>
+                  <a href="tel:${cleanPhone}" class="btn-card-action call">
+                    <i data-lucide="phone" style="width:13px; height:13px;"></i> Call
+                  </a>
+                ` : `
+                  <a href="mailto:${l.email || ''}?subject=Capturing ${encodeURIComponent(l.company_name || 'your')} after-hours buyers" class="btn-card-action wa">
+                    <i data-lucide="mail" style="width:13px; height:13px;"></i> Email
+                  </a>
+                  <a href="${l.website?.startsWith('http') ? l.website : 'https://' + (l.website || 'company.com')}" target="_blank" class="btn-card-action call">
+                    <i data-lucide="globe" style="width:13px; height:13px;"></i> Web
+                  </a>
+                `}
+                <button type="button" class="btn-card-action pitch btn-view-dossier" data-index="${index}">
+                  <i data-lucide="file-text" style="width:13px; height:13px;"></i> Pitch Script
+                </button>
               </div>
             </div>
-          </td>
-          <td style="padding:14px 16px;">
-            <div class="company-cell">
-              <strong style="color:#ffffff; font-size:12.5px; font-weight:700; display:block;">${l.company_name || 'Enterprise'}</strong>
-              <span style="color:#10b981; font-weight:800; font-size:11px;">${l.estimated_revenue || '$15M - $30M / yr'}</span>
-            </div>
-          </td>
-          <td style="padding:14px 16px;">
-            <div class="contact-cell" style="display:flex; flex-direction:column; gap:4px;">
-              <span class="badge-verified-email" style="display:inline-flex; align-items:center; gap:5px; color:#34d399; font-size:11.5px; font-family:var(--font-mono); font-weight:700;">
-                <i data-lucide="check-circle" class="icon-xs" style="width:12px; height:12px;"></i> ${l.email || 'name@company.com'}
-              </span>
-              <span class="phone-tag" style="color:#94a3b8; font-size:11px; display:inline-flex; align-items:center; gap:4px;">
-                <i data-lucide="phone" class="icon-xs" style="width:11px; height:11px;"></i> ${l.phone || '+1 555 019 2834'}
-              </span>
-            </div>
-          </td>
-          <td style="padding:14px 16px;">
-            <div style="font-size:11.5px; color:#94a3b8;">
-              <div style="font-weight:600; color:#e2e8f0; margin-bottom:2px;">${l.location || 'Global'}</div>
-              <a href="${l.website?.startsWith('http') ? l.website : 'https://' + (l.website || 'company.com')}" target="_blank" style="color:#38bdf8; text-decoration:none; display:inline-flex; align-items:center; gap:3px; font-size:11px;">${l.website?.replace('https://', '') || 'website.com'} <i data-lucide="external-link" style="width:10px; height:10px;"></i></a>
-            </div>
-          </td>
-          <td style="padding:14px 16px;">
-            <div>
-              <span class="intent-badge" style="background:rgba(168,85,247,0.15); border:1px solid rgba(168,85,247,0.3); color:#c084fc; font-size:10px; font-weight:800; padding:2px 8px; border-radius:6px; display:inline-block;">🔥 98% High Intent</span>
-              <p style="font-size:11px; color:#cbd5e1; margin-top:4px; max-width:220px; line-height:1.4;">${l.primary_pain_point || 'After-hours response lag'}</p>
-            </div>
-          </td>
-          <td style="text-align: right; padding:14px 16px;">
-            <button class="btn-view-dossier" data-index="${index}" type="button" style="background:linear-gradient(135deg, rgba(56,189,248,0.15), rgba(0,85,255,0.2)); border:1px solid rgba(56,189,248,0.4); color:#38bdf8; font-weight:800; padding:8px 14px; border-radius:8px; font-size:11.5px; cursor:pointer; display:inline-flex; align-items:center; gap:6px; transition:all 0.15s ease;">
-              <i data-lucide="file-text" style="width:12px; height:12px;"></i>
-              <span>Pitch Script</span>
-            </button>
-          </td>
-        </tr>
-      `;
-    }).join('');
+          `;
+        }).join('');
+      }
+    }
 
     if (window.lucide) lucide.createIcons();
 
@@ -535,17 +643,31 @@ document.addEventListener('DOMContentLoaded', () => {
 
   function updateLeadMetrics(leads) {
     const mTotal = document.getElementById('m-total-leads');
+    const mTotalDup = document.getElementById('m-total-leads-dup');
     const mVerified = document.getElementById('m-verified-leads');
+    const mVerifiedDup = document.getElementById('m-verified-leads-dup');
     const mIntent = document.getElementById('m-intent-val');
+    const mIntentDup = document.getElementById('m-intent-val-dup');
     const mPipeline = document.getElementById('m-pipeline-val');
+    const mPipelineDup = document.getElementById('m-pipeline-val-dup');
     const label = document.getElementById('selected-count-label');
 
-    const total = leads.length;
-    if (mTotal) mTotal.textContent = total;
-    if (mVerified) mVerified.textContent = total > 0 ? `${total} (100% Verified)` : '100% Live Verified';
-    if (mIntent) mIntent.textContent = '98.0% High Intent';
-    if (mPipeline) mPipeline.textContent = total > 0 ? `$${(total * 25000).toLocaleString()}` : '$0 (Ready to Search)';
-    if (label) label.textContent = total > 0 ? `Showing all ${total} verified enterprise decision-makers` : 'Ready to search verified enterprise decision-makers';
+    const total = (leads && leads.length) ? leads.length : 0;
+    const totalText = `${total}`;
+    const verifiedText = total > 0 ? `${total} (100% Verified)` : '100% Live Verified';
+    const intentText = '98.0% High Intent';
+    const pipelineText = total > 0 ? `$${(total * 25000).toLocaleString()}` : '$0 (Ready)';
+    const labelText = total > 0 ? `Showing all ${total} verified enterprise decision-makers` : 'Ready to search verified enterprise decision-makers';
+
+    if (mTotal) mTotal.textContent = totalText;
+    if (mTotalDup) mTotalDup.textContent = totalText;
+    if (mVerified) mVerified.textContent = verifiedText;
+    if (mVerifiedDup) mVerifiedDup.textContent = verifiedText;
+    if (mIntent) mIntent.textContent = intentText;
+    if (mIntentDup) mIntentDup.textContent = intentText;
+    if (mPipeline) mPipeline.textContent = pipelineText;
+    if (mPipelineDup) mPipelineDup.textContent = pipelineText;
+    if (label) label.textContent = labelText;
   }
 
   const thCheckAll = document.getElementById('th-check-all');
@@ -569,9 +691,25 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  // Initial Prospects Render
-  renderProspectsTable(CURRENT_LEADS);
-  updateLeadMetrics(CURRENT_LEADS);
+  // Fetch initial leads if already present in backend
+  async function loadInitialLeads() {
+    try {
+      const res = await fetch('/api/leads/list');
+      const data = await res.json();
+      if (data && data.leads && data.leads.length > 0) {
+        CURRENT_LEADS = data.leads;
+        renderProspectsTable(CURRENT_LEADS);
+        updateLeadMetrics(CURRENT_LEADS);
+      } else {
+        renderProspectsTable([]);
+        updateLeadMetrics([]);
+      }
+    } catch (e) {
+      renderProspectsTable([]);
+      updateLeadMetrics([]);
+    }
+  }
+  loadInitialLeads();
 
   if (btnExportCsv) {
     btnExportCsv.addEventListener('click', () => {
