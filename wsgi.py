@@ -16,6 +16,7 @@ from app import (
     RETRIEVER, INTELLIGENCE, LEAD_AGENT, BOOKING_AGENT,
     CONTENT_CREW, AUDIT_ENGINE, SEO_ENGINE, PAYMENT_ENGINE, GROWTH_AGENT, PLANS,
     ANALYTICS_DASHBOARD, WEBSITE_MANAGER, SOCIAL_POSTER,
+    TRAFFIC_BLASTER, VIRAL_REEL_STUDIO,
     WEB_DIR, save_index, save_bookings, save_leads, save_audits, load_all_data
 )
 
@@ -217,6 +218,39 @@ def application(environ, start_response):
             start_response(status, response_headers)
             return [json.dumps({"success": True, "config": res}).encode('utf-8')]
 
+        # Route: /api/reels/generate
+        elif path == '/api/reels/generate':
+            reel = VIRAL_REEL_STUDIO.generate_reel()
+            status = '200 OK'
+            response_headers = [('Content-Type', 'application/json; charset=utf-8'), ('Access-Control-Allow-Origin', '*')]
+            start_response(status, response_headers)
+            return [json.dumps({"status": "SUCCESS", "reel": reel}).encode('utf-8')]
+
+        # Route: /api/reels/dispatch
+        elif path == '/api/reels/dispatch':
+            reel_id = body_json.get("reel_id", "")
+            res = VIRAL_REEL_STUDIO.dispatch_reel(reel_id)
+            status = '200 OK'
+            response_headers = [('Content-Type', 'application/json; charset=utf-8'), ('Access-Control-Allow-Origin', '*')]
+            start_response(status, response_headers)
+            return [json.dumps(res).encode('utf-8')]
+
+        # Route: /api/reels/credentials
+        elif path == '/api/reels/credentials':
+            res = VIRAL_REEL_STUDIO.save_credentials(body_json)
+            status = '200 OK'
+            response_headers = [('Content-Type', 'application/json; charset=utf-8'), ('Access-Control-Allow-Origin', '*')]
+            start_response(status, response_headers)
+            return [json.dumps(res).encode('utf-8')]
+
+        # Route: /api/traffic/blast
+        elif path == '/api/traffic/blast':
+            res = TRAFFIC_BLASTER.trigger_traffic_blast()
+            status = '200 OK'
+            response_headers = [('Content-Type', 'application/json; charset=utf-8'), ('Access-Control-Allow-Origin', '*')]
+            start_response(status, response_headers)
+            return [json.dumps(res).encode('utf-8')]
+
     # 2. Handle GET endpoints
     if path in ['/analytics', '/dashboard', '/founder']:
         dashboard_html = ANALYTICS_DASHBOARD.render_html()
@@ -244,6 +278,20 @@ def application(environ, start_response):
         response_headers = [('Content-Type', 'application/json; charset=utf-8'), ('Access-Control-Allow-Origin', '*')]
         start_response(status, response_headers)
         return [json.dumps(feed).encode('utf-8')]
+
+    elif path == '/api/reels/feed':
+        feed = VIRAL_REEL_STUDIO.get_feed()
+        status = '200 OK'
+        response_headers = [('Content-Type', 'application/json; charset=utf-8'), ('Access-Control-Allow-Origin', '*')]
+        start_response(status, response_headers)
+        return [json.dumps(feed).encode('utf-8')]
+
+    elif path == '/api/traffic/blast':
+        blaster_data = TRAFFIC_BLASTER.get_latest_report()
+        status = '200 OK'
+        response_headers = [('Content-Type', 'application/json; charset=utf-8'), ('Access-Control-Allow-Origin', '*')]
+        start_response(status, response_headers)
+        return [json.dumps({"status": "SUCCESS", "latest_blast": blaster_data, "total_blasts": len(TRAFFIC_BLASTER.history)}).encode('utf-8')]
 
     elif path == '/api/leads/list':
         status = '200 OK'
@@ -401,6 +449,13 @@ def application(environ, start_response):
             if ga_id:
                 content = content.replace(b'{{GA_MEASUREMENT_ID}}', ga_id.encode('utf-8'))
         return [content]
+
+    # If API request was not matched, return JSON 404 (never return HTML doctype for API calls)
+    if path.startswith('/api/'):
+        status = '404 Not Found'
+        response_headers = [('Content-Type', 'application/json; charset=utf-8'), ('Access-Control-Allow-Origin', '*')]
+        start_response(status, response_headers)
+        return [json.dumps({"error": f"API endpoint {path} not found", "status": "ERROR"}).encode('utf-8')]
 
     # Fallback to index.html for single-page app routing
     fallback_index = os.path.join(WEB_DIR_PATH, 'index.html')

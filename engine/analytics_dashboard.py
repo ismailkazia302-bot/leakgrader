@@ -772,10 +772,13 @@ class FounderAnalyticsDashboard:
       if (btn) btn.innerText = '⚡ Generating...';
       try {{
         const res = await fetch('/api/social/generate', {{ method: 'POST' }});
+        if (!res.ok) throw new Error('HTTP ' + res.status);
         const data = await res.json();
         if (data.success) location.reload();
       }} catch (e) {{
-        alert('Error generating post: ' + e);
+        alert('Error generating post: ' + e.message);
+      }} finally {{
+        if (btn) btn.innerText = '⚡ Generate Next Viral Post';
       }}
     }}
 
@@ -788,13 +791,16 @@ class FounderAnalyticsDashboard:
           headers: {{ 'Content-Type': 'application/json' }},
           body: JSON.stringify({{}})
         }});
+        if (!res.ok) throw new Error('HTTP ' + res.status);
         const data = await res.json();
         if (data.success) {{
-          alert('Dispatched! Webhook Status: ' + data.result.webhook_status);
+          alert('Dispatched! Webhook Status: ' + (data.result?.webhook_status || 'OK'));
           location.reload();
         }}
       }} catch (e) {{
-        alert('Error dispatching: ' + e);
+        alert('Error dispatching: ' + e.message);
+      }} finally {{
+        if (btn) btn.innerText = '🚀 Dispatch Now to Social Webhooks';
       }}
     }}
 
@@ -807,13 +813,14 @@ class FounderAnalyticsDashboard:
           headers: {{ 'Content-Type': 'application/json' }},
           body: JSON.stringify({{ webhook_url: val }})
         }});
+        if (!res.ok) throw new Error('HTTP ' + res.status);
         const data = await res.json();
         if (data.success) {{
           alert('Webhook configuration updated!');
           location.reload();
         }}
       }} catch (e) {{
-        alert('Error saving webhook: ' + e);
+        alert('Error saving webhook: ' + e.message);
       }}
     }}
 
@@ -824,13 +831,14 @@ class FounderAnalyticsDashboard:
           headers: {{ 'Content-Type': 'application/json' }},
           body: JSON.stringify({{}})
         }});
+        if (!res.ok) throw new Error('HTTP ' + res.status);
         const data = await res.json();
-        if (data.status === 'SUCCESS') {{
-          alert('⚡ Fresh Viral Reel Script & Storyboard Generated: ' + data.reel.angle);
+        if (data.status === 'SUCCESS' || data.success) {{
+          alert('⚡ Fresh Viral Reel Script & Storyboard Generated: ' + (data.reel?.angle || 'Ready'));
           location.reload();
         }}
       }} catch (e) {{
-        alert('Error generating reel: ' + e);
+        alert('Error generating reel: ' + e.message);
       }}
     }}
 
@@ -842,13 +850,18 @@ class FounderAnalyticsDashboard:
           headers: {{ 'Content-Type': 'application/json' }},
           body: JSON.stringify({{ reel_id: reelId }})
         }});
+        if (!res.ok) throw new Error('HTTP ' + res.status);
         const data = await res.json();
-        if (data.status === 'SUCCESS') {{
-          alert('🚀 Dispatched! Webhook Status: ' + (data.report.webhook_triggered ? 'SENT (HTTP ' + data.report.webhook_status + ')' : 'NO WEBHOOK (Ready for 1-Click Copy)'));
+        if (data.status === 'SUCCESS' || data.success) {{
+          const isWebhook = data.report && data.report.webhook_triggered;
+          const statusMsg = isWebhook ? ('SENT (HTTP ' + data.report.webhook_status + ')') : 'READY (1-Click Copy Below)';
+          alert('🚀 Viral Reel Ready & Logged!\nPublish Status: ' + statusMsg);
           location.reload();
+        }} else {{
+          alert('Notice: ' + (data.message || 'Dispatched'));
         }}
       }} catch (e) {{
-        alert('Error dispatching reel: ' + e);
+        alert('Error dispatching reel: ' + e.message);
       }}
     }}
 
@@ -860,13 +873,14 @@ class FounderAnalyticsDashboard:
           headers: {{ 'Content-Type': 'application/json' }},
           body: JSON.stringify({{ auto_publisher_webhook: webhook }})
         }});
+        if (!res.ok) throw new Error('HTTP ' + res.status);
         const data = await res.json();
-        if (data.status === 'SUCCESS') {{
+        if (data.status === 'SUCCESS' || data.success) {{
           alert('Reel Auto-Publisher Webhook Saved Successfully!');
           location.reload();
         }}
       }} catch (e) {{
-        alert('Error saving credentials: ' + e);
+        alert('Error saving credentials: ' + e.message);
       }}
     }}
 
