@@ -525,6 +525,94 @@ class FounderAnalyticsDashboard:
       </div>
     </div>
 
+    <!-- High-DA Startup Directories Launch Kit Section -->
+    <div class="section-card" style="border:1px solid rgba(56,189,248,0.25); background:linear-gradient(180deg, rgba(56,189,248,0.05) 0%, rgba(15,18,25,0.95) 100%);">
+      <div class="section-header">
+        <div>
+          <div class="section-title">🚀 Fast Backlinks & High-DA Directory Submission Kit</div>
+          <p style="font-size:12px; color:#94a3b8; margin-top:4px;">Submit LeakGrader to these top high-authority directories to boost Moz/Ahrefs DA from 0 to 40+ and get instant organic traffic.</p>
+        </div>
+        <span style="font-size:11px; background:rgba(16,185,129,0.15); color:#10b981; border:1px solid rgba(16,185,129,0.3); padding:4px 10px; border-radius:20px; font-weight:700;">6 High-Impact Platforms</span>
+      </div>
+
+      <!-- Quick Copy Data Block -->
+      <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap:12px; margin-bottom:20px; background:rgba(0,0,0,0.4); padding:16px; border-radius:10px; border:1px solid rgba(255,255,255,0.06);">
+        <div>
+          <div style="font-size:10px; text-transform:uppercase; color:#94a3b8; font-weight:800;">Product Title</div>
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-top:4px;">
+            <code style="font-size:12px; color:#38bdf8;">LeakGrader</code>
+            <button onclick="navigator.clipboard.writeText('LeakGrader'); alert('Copied!');" style="background:rgba(255,255,255,0.1); border:none; color:#fff; padding:3px 8px; border-radius:4px; font-size:10px; cursor:pointer;">Copy</button>
+          </div>
+        </div>
+        <div>
+          <div style="font-size:10px; text-transform:uppercase; color:#94a3b8; font-weight:800;">Tagline (Under 60 chars)</div>
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-top:4px;">
+            <code style="font-size:11px; color:#38bdf8;">10s Website Revenue Leak Scanner & 24/7 AI Closer</code>
+            <button onclick="navigator.clipboard.writeText('10s Website Revenue Leak Scanner & 24/7 AI Closer'); alert('Copied!');" style="background:rgba(255,255,255,0.1); border:none; color:#fff; padding:3px 8px; border-radius:4px; font-size:10px; cursor:pointer;">Copy</button>
+          </div>
+        </div>
+        <div style="grid-column: 1 / -1;">
+          <div style="font-size:10px; text-transform:uppercase; color:#94a3b8; font-weight:800;">Short Pitch / Description</div>
+          <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-top:4px; gap:8px;">
+            <code style="font-size:11px; color:#e2e8f0; line-height:1.4;">LeakGrader audits any business website in 10 seconds to detect after-hours lead dropoff and response lag, calculating exact revenue loss. Includes an autonomous 24/7 conversational AI sales closer that qualifies leads and books meetings in under 30 seconds.</code>
+            <button onclick="navigator.clipboard.writeText('LeakGrader audits any business website in 10 seconds to detect after-hours lead dropoff and response lag, calculating exact revenue loss. Includes an autonomous 24/7 conversational AI sales closer that qualifies leads and books meetings in under 30 seconds.'); alert('Copied!');" style="background:rgba(255,255,255,0.1); border:none; color:#fff; padding:4px 10px; border-radius:4px; font-size:10px; cursor:pointer; white-space:nowrap;">Copy Pitch</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Directory Links Table -->
+      <div style="overflow-x:auto;">
+        <table>
+          <thead>
+            <tr>
+              <th>Directory Platform</th>
+              <th>Domain Authority (DA)</th>
+              <th>Backlink Type</th>
+              <th>Review Time</th>
+              <th>Action</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><strong>Uneed.best</strong> <span style="font-size:10px; color:#94a3b8;">Top Daily Tools</span></td>
+              <td><span style="color:#10b981; font-weight:800;">DA 68</span></td>
+              <td>Dofollow permanent</td>
+              <td>24 - 48 Hours</td>
+              <td><a href="https://www.uneed.best/submit-a-tool" target="_blank" style="background:#0284c7; color:#fff; padding:4px 10px; border-radius:6px; font-size:11px; font-weight:700; text-decoration:none;">Submit to Uneed &rarr;</a></td>
+            </tr>
+            <tr>
+              <td><strong>SaaSHub</strong> <span style="font-size:10px; color:#94a3b8;">Software Alternatives</span></td>
+              <td><span style="color:#10b981; font-weight:800;">DA 74</span></td>
+              <td>Dofollow permanent</td>
+              <td>Instant / 24 Hours</td>
+              <td><a href="https://www.saashub.com/submit" target="_blank" style="background:#0284c7; color:#fff; padding:4px 10px; border-radius:6px; font-size:11px; font-weight:700; text-decoration:none;">Submit to SaaSHub &rarr;</a></td>
+            </tr>
+            <tr>
+              <td><strong>LaunchingNext</strong> <span style="font-size:10px; color:#94a3b8;">Trending Startups</span></td>
+              <td><span style="color:#10b981; font-weight:800;">DA 62</span></td>
+              <td>Dofollow permanent</td>
+              <td>2 - 3 Days</td>
+              <td><a href="https://www.launchingnext.com/submit/" target="_blank" style="background:#0284c7; color:#fff; padding:4px 10px; border-radius:6px; font-size:11px; font-weight:700; text-decoration:none;">Submit to LaunchingNext &rarr;</a></td>
+            </tr>
+            <tr>
+              <td><strong>BetaList</strong> <span style="font-size:10px; color:#94a3b8;">Early Access Products</span></td>
+              <td><span style="color:#10b981; font-weight:800;">DA 71</span></td>
+              <td>High Authority Mention</td>
+              <td>3 - 5 Days</td>
+              <td><a href="https://betalist.com/submit" target="_blank" style="background:#0284c7; color:#fff; padding:4px 10px; border-radius:6px; font-size:11px; font-weight:700; text-decoration:none;">Submit to BetaList &rarr;</a></td>
+            </tr>
+            <tr>
+              <td><strong>Product Hunt</strong> <span style="font-size:10px; color:#94a3b8;">#1 Tech Community</span></td>
+              <td><span style="color:#10b981; font-weight:800;">DA 91</span></td>
+              <td>Massive Viral Influx</td>
+              <td>Scheduled Launch</td>
+              <td><a href="https://www.producthunt.com/posts/new" target="_blank" style="background:#ea580c; color:#fff; padding:4px 10px; border-radius:6px; font-size:11px; font-weight:700; text-decoration:none;">Submit to Product Hunt &rarr;</a></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
     <!-- Live Backlink Ledger Section -->
     <div class="section-card">
       <div class="section-header">

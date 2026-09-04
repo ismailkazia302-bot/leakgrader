@@ -298,16 +298,7 @@ class MastermindRequestHandler(BaseHTTPRequestHandler):
             self.wfile.write(content)
             return
 
-        # 1. Programmatic SEO XML Sitemap
-        elif path == "/sitemap.xml":
-            sitemap_xml = SEO_ENGINE.generate_sitemap_xml()
-            self.send_response(200)
-            self.send_header("Content-Type", "application/xml; charset=utf-8")
-            self.end_headers()
-            self.wfile.write(sitemap_xml.encode("utf-8"))
-            return
-
-        # 1. Viral Growth & Programmatic SEO Endpoints
+        # 1. Programmatic SEO XML Sitemap & Google Search Console Verification
         elif path == "/sitemap.xml":
             sitemap_xml = SEO_ENGINE.generate_sitemap_xml()
             self.send_response(200)
@@ -315,6 +306,14 @@ class MastermindRequestHandler(BaseHTTPRequestHandler):
             self.send_header("Cache-Control", "public, max-age=86400")
             self.end_headers()
             self.wfile.write(sitemap_xml.encode("utf-8"))
+            return
+
+        elif path.startswith("/google") and path.endswith(".html"):
+            # Auto-respond to Google Search Console HTML file verification requests
+            self.send_response(200)
+            self.send_header("Content-Type", "text/html; charset=utf-8")
+            self.end_headers()
+            self.wfile.write(f"google-site-verification: {path.lstrip('/')}".encode("utf-8"))
             return
 
         elif path.startswith("/badge/") and path.endswith(".svg"):
@@ -555,6 +554,11 @@ class MastermindRequestHandler(BaseHTTPRequestHandler):
                 ga_id = os.environ.get("GA_MEASUREMENT_ID", "")
                 if ga_id:
                     content = content.replace(b"{{GA_MEASUREMENT_ID}}", ga_id.encode("utf-8"))
+                g_verify = os.environ.get("GOOGLE_SITE_VERIFICATION", "")
+                if g_verify:
+                    content = content.replace(b"{{GOOGLE_SITE_VERIFICATION}}", g_verify.encode("utf-8"))
+                else:
+                    content = content.replace(b'<meta name="google-site-verification" content="{{GOOGLE_SITE_VERIFICATION}}">', b"")
             self.wfile.write(content)
         else:
             self._set_headers(404, "text/plain")
