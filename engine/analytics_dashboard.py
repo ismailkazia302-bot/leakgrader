@@ -176,8 +176,14 @@ class FounderAnalyticsDashboard:
   <meta charset="UTF-8">
   <title>Founder Live Command Center & Analytics | LeakGrader.com</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800;900&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
-  <meta http-equiv="refresh" content="15">
+  <!-- 📈 GOOGLE ANALYTICS 4 (GA4) -->
+  <script async src="https://www.googletagmanager.com/gtag/js?id=G-8FJ97MPDWD"></script>
+  <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){{dataLayer.push(arguments);}}
+    gtag('js', new Date());
+    gtag('config', 'G-8FJ97MPDWD');
+  </script>
   <style>
     :root {{
       --bg: #08090C;
