@@ -189,59 +189,54 @@ class LeadPulseAgent:
         if not raw_businesses:
             return []
 
-        # Detect Geographic Region
-        is_india = any(k in loc_low for k in ["india", "mumbai", "delhi", "bangalore", "bengaluru", "hyderabad", "chennai", "pune", "kolkata", "ahmedabad", "jaipur", "gurgaon", "noida"])
-        is_me = any(k in loc_low for k in ["dubai", "uae", "abu dhabi", "riyadh", "saudi", "doha", "qatar", "kuwait", "bahrain", "oman", "jeddah"])
-        is_uk = any(k in loc_low for k in ["london", "uk", "manchester", "birmingham", "leeds", "glasgow", "edinburgh", "bristol"])
-        is_au = any(k in loc_low for k in ["sydney", "melbourne", "australia", "brisbane", "perth"])
-        is_ca = any(k in loc_low for k in ["toronto", "vancouver", "canada", "montreal", "calgary"])
-
-        # Phone template
-        phone_template = "+1 (212) 555-{num4}"
-        if is_india:
-            phone_template = random.choice(GEO_PHONE_PRESETS["india"]["formats"])
-        elif is_me:
-            phone_template = "+971 4 388 {num4}"
-        elif is_uk:
-            phone_template = "+44 20 7946 {num4}"
-
-        for city_key, conf in GEO_PHONE_PRESETS.items():
-            if city_key in loc_low:
-                phone_template = random.choice(conf["formats"])
-                break
-
-        # Name Pool
-        if is_india:
-            name_pool = list(REGIONAL_NAMES["south_asia"])
-        elif is_me:
-            name_pool = list(REGIONAL_NAMES["middle_east"])
-        else:
-            name_pool = list(REGIONAL_NAMES["western"])
-        random.shuffle(name_pool)
-
-        is_gym = any(k in ind_low for k in ["gym", "fitness", "crossfit", "workout", "trainer", "yoga", "pilates"])
-        is_dental = any(k in ind_low for k in ["dent", "ortho", "teeth", "smile"])
-        is_medical = any(k in ind_low for k in ["clinic", "hospital", "health", "pharma", "doctor", "care", "medic"])
-        is_real_estate = any(k in ind_low for k in ["real", "estate", "prop", "villa", "realt", "builder", "developer"])
-        is_tech = any(k in ind_low for k in ["saas", "tech", "cloud", "ai", "software", "app", "cyber"])
-        is_legal = any(k in ind_low for k in ["law", "legal", "advocate", "attorney", "jurist"])
-
         enriched_leads = []
         for i, biz in enumerate(raw_businesses[:count]):
-            person = name_pool[i % len(name_pool)]
             comp_name = biz["name"]
-            addr_obj = biz["address"]
-            suburb = addr_obj.get("suburb") or addr_obj.get("neighbourhood") or addr_obj.get("city_district") or addr_obj.get("city") or clean_loc.title()
+            addr_obj = biz.get("address", {})
+            country_code = (addr_obj.get("country_code") or "").lower()
+            country_name = (addr_obj.get("country") or "").lower()
+            state_name = (addr_obj.get("state") or "").lower()
+            suburb = addr_obj.get("suburb") or addr_obj.get("neighbourhood") or addr_obj.get("quarter") or addr_obj.get("village") or addr_obj.get("city_district") or addr_obj.get("city") or clean_loc.title()
+
+            # Dynamic Country Detection from Real Address Data
+            indian_states = ["goa", "maharashtra", "delhi", "karnataka", "tamil nadu", "gujarat", "rajasthan", "kerala", "uttar pradesh", "west bengal", "telangana", "andhra", "punjab", "haryana", "bihar", "madhya pradesh", "odisha", "assam"]
+            is_india_biz = (country_code == "in" or "india" in country_name or any(s in state_name for s in indian_states) or any(s in loc_low for s in indian_states) or any(s in loc_low for s in ["mumbai", "delhi", "bangalore", "bengaluru", "hyderabad", "chennai", "pune", "kolkata", "ahmedabad", "jaipur", "gurgaon", "noida", "goa", "panaji", "siolim", "mapusa", "margao", "vasco", "chandigarh", "kochi", "indore", "surat"]))
             
-            # Format title
-            title = person["title"]
+            me_codes = ["ae", "sa", "qa", "kw", "om", "bh"]
+            is_me_biz = (country_code in me_codes or any(k in loc_low for k in ["dubai", "uae", "abu dhabi", "riyadh", "saudi", "doha", "qatar", "kuwait", "bahrain", "oman", "jeddah", "sharjah"]))
+            
+            is_uk_biz = (country_code in ["gb", "uk"] or any(k in loc_low for k in ["london", "uk", "manchester", "birmingham", "leeds", "glasgow", "edinburgh", "bristol"]))
+            is_au_biz = (country_code == "au" or any(k in loc_low for k in ["sydney", "melbourne", "australia", "brisbane", "perth"]))
+            is_ca_biz = (country_code == "ca" or any(k in loc_low for k in ["toronto", "vancouver", "canada", "montreal", "calgary"]))
+            is_de_biz = (country_code == "de" or any(k in loc_low for k in ["berlin", "munich", "germany", "frankfurt", "hamburg"]))
+            is_fr_biz = (country_code == "fr" or any(k in loc_low for k in ["paris", "france", "lyon", "marseille"]))
+
+            # Select Name Pool
+            if is_india_biz:
+                name_pool = list(REGIONAL_NAMES["south_asia"])
+            elif is_me_biz:
+                name_pool = list(REGIONAL_NAMES["middle_east"])
+            else:
+                name_pool = list(REGIONAL_NAMES["western"])
+            random.shuffle(name_pool)
+            person = name_pool[i % len(name_pool)]
+
+            # Detect Industry Scale
+            is_small_retail = any(k in ind_low or k in comp_name.lower() for k in ["saloon", "salon", "barber", "parlour", "hair", "spa", "cafe", "bakery", "shop", "boutique", "laundry", "car wash", "trainer", "pet", "gents"])
+            is_mid_market = any(k in ind_low or k in comp_name.lower() for k in ["gym", "fitness", "dental", "dentist", "clinic", "restaurant", "lawyer", "advocate", "consultant", "agency", "school", "academy"])
+
+            # Resolve Title
             contact_first = person["first"]
-            if is_gym:
+            if is_small_retail:
+                contact_first = contact_first.replace("Dr. ", "")
+                titles = ["Owner & Founder", "Proprietor", "Managing Partner", "General Manager"]
+                title = titles[i % len(titles)]
+            elif is_gym:
                 contact_first = contact_first.replace("Dr. ", "")
                 gym_titles = ["Founder & Managing Director", "Managing Partner", "Chief Operating Officer", "Head of Membership & Expansion", "Director of Operations"]
                 title = gym_titles[i % len(gym_titles)]
             elif is_dental or is_medical:
-                pass
+                title = person["title"]
             elif is_real_estate:
                 contact_first = contact_first.replace("Dr. ", "")
                 re_titles = ["Managing Director", "Chief Executive Officer", "VP of Sales & Acquisitions", "Managing Partner", "Head of Commercial Sales"]
@@ -252,24 +247,48 @@ class LeadPulseAgent:
                 title = tech_titles[i % len(tech_titles)]
             elif is_legal:
                 contact_first = contact_first.replace("Dr. ", "Adv. ")
+                title = "Managing Partner"
             else:
                 contact_first = contact_first.replace("Dr. ", "")
+                title = "Managing Director"
 
+            # Domain & TLD
             domain_slug = re.sub(r"[^a-zA-Z0-9]", "", comp_name.lower())[:15]
-            if is_india:
+            if is_india_biz:
                 tld = ".in" if i % 2 == 0 else ".co.in"
-            elif is_me and "dubai" in loc_low:
-                tld = ".ae"
-            elif is_uk:
+                if "goa" in loc_low or "goa" in state_name:
+                    phone_template = "+91 832 245 {num4}" if i % 2 == 0 else "+91 98221 {num5}"
+                elif "delhi" in loc_low or "delhi" in state_name:
+                    phone_template = "+91 11 4356 {num4}" if i % 2 == 0 else "+91 98110 {num5}"
+                elif "mumbai" in loc_low or "mumbai" in state_name:
+                    phone_template = "+91 22 6789 {num4}" if i % 2 == 0 else "+91 98201 {num5}"
+                else:
+                    phone_template = random.choice(GEO_PHONE_PRESETS["india"]["formats"])
+            elif is_me_biz:
+                tld = ".ae" if "dubai" in loc_low or country_code == "ae" else ".sa" if "saudi" in loc_low or country_code == "sa" else ".com"
+                phone_template = "+971 4 388 {num4}" if "dubai" in loc_low or country_code == "ae" else "+966 11 488 {num4}"
+            elif is_uk_biz:
                 tld = ".co.uk"
-            elif is_au:
+                phone_template = "+44 20 7946 {num4}"
+            elif is_au_biz:
                 tld = ".com.au"
-            elif is_ca:
+                phone_template = "+61 2 8900 {num4}"
+            elif is_ca_biz:
                 tld = ".ca"
+                phone_template = "+1 (416) 555-{num4}"
+            elif is_de_biz:
+                tld = ".de"
+                phone_template = "+49 30 2094 {num4}"
+            elif is_fr_biz:
+                tld = ".fr"
+                phone_template = "+33 1 42 68 {num2} {num2}"
             else:
                 tld = ".com"
+                phone_template = "+1 (212) 555-{num4}"
+                
             domain = f"{domain_slug}{tld}"
 
+            # Format Phone Number
             phone_num = phone_template.format(
                 num5=random.randint(10000, 99999),
                 num4=random.randint(1000, 9999),
@@ -281,26 +300,50 @@ class LeadPulseAgent:
             last_clean = person["last"].replace("Al-", "").lower()
             email = f"{first_clean}.{last_clean}@{domain}"
 
-            if is_india:
-                if is_gym:
-                    revenue = f"₹{random.randint(8, 28)} Cr / yr"
-                    pain_term = "dropped membership signups & trial bookings"
-                elif is_dental:
-                    revenue = f"₹{random.randint(15, 65)} Cr / yr"
-                    pain_term = "dropped patient inquiries & cosmetic consultations"
+            # Realistic Turnover in Local Currency
+            if is_india_biz:
+                if is_small_retail:
+                    revenue = f"₹{random.randint(25, 85)} Lakhs / yr"
+                    pain_term = "dropped walk-in appointments & phone bookings"
+                elif is_mid_market:
+                    revenue = f"₹{random.randint(2, 9)} Cr / yr"
+                    pain_term = "dropped customer signups & appointment bookings"
                 else:
-                    revenue = f"₹{random.randint(12, 50)} Cr / yr"
-                    pain_term = "dropped customer/client inquiries"
+                    revenue = f"₹{random.randint(15, 65)} Cr / yr"
+                    pain_term = "dropped high-value client inquiries"
+            elif is_me_biz:
+                if is_small_retail:
+                    revenue = f"AED {random.randint(300, 950)}k / yr"
+                    pain_term = "dropped customer appointments & weekend bookings"
+                elif is_mid_market:
+                    revenue = f"AED {random.randint(2, 8)}M / yr"
+                    pain_term = "dropped customer inquiries & trial bookings"
+                else:
+                    revenue = f"$ {random.randint(12, 45)}M / yr"
+                    pain_term = "dropped enterprise investor inquiries"
+            elif is_uk_biz:
+                if is_small_retail:
+                    revenue = f"£{random.randint(150, 450)}k / yr"
+                elif is_mid_market:
+                    revenue = f"£{random.randint(1, 5)}M / yr"
+                else:
+                    revenue = f"£{random.randint(8, 30)}M / yr"
+                pain_term = "dropped customer inquiries & after-hours leads"
             else:
-                revenue = f"${random.randint(10, 48)}M / yr"
+                if is_small_retail:
+                    revenue = f"${random.randint(200, 650)}k / yr"
+                elif is_mid_market:
+                    revenue = f"${random.randint(2, 6)}M / yr"
+                else:
+                    revenue = f"${random.randint(10, 45)}M / yr"
                 pain_term = "dropped customer/client inquiries"
 
             pain = f"Losing high-intent after-hours inbound inquiries on {comp_name} ({suburb}) due to slow response latency."
 
             pitch = (
                 f"Hi {contact_first},\n\n"
-                f"I analyzed {comp_name}'s conversion pipeline in {suburb}, {clean_loc.title()} and noticed inquiries submitted after business hours currently face response lag.\n\n"
-                f"We deployed a 24/7 autonomous AI WhatsApp closer for similar {clean_ind} businesses that cut reply times to 30 seconds and recovered ~₹18-35 Lakhs/mo in {pain_term}.\n\n"
+                f"I analyzed {comp_name}'s customer inquiry flow in {suburb}, {clean_loc.title()} and noticed inquiries submitted after business hours face response lag.\n\n"
+                f"We deployed a 24/7 autonomous AI WhatsApp closer that cut reply times to 30 seconds and recovered lost revenue from {pain_term}.\n\n"
                 f"Would you be open to a 5-minute walkthrough of your live diagnostic?\n\n"
                 f"Best regards,\nLeakGrader Growth Intelligence"
             )
@@ -313,7 +356,7 @@ class LeadPulseAgent:
                 "estimated_revenue": revenue,
                 "email": email,
                 "phone": phone_num,
-                "location": f"{suburb}, {clean_loc.title()}" if suburb != clean_loc.title() else clean_loc.title(),
+                "location": f"{suburb}, {clean_loc.title()}" if suburb.lower() not in clean_loc.lower() else clean_loc.title(),
                 "website": f"https://{domain}",
                 "industry": clean_ind.title(),
                 "primary_pain_point": pain,
@@ -392,25 +435,38 @@ RETURN VALID JSON ARRAY of objects with this schema:
         ind_low = industry.lower()
 
         # 1. Detect Geographic Region
-        is_india = any(k in loc_low for k in ["india", "mumbai", "delhi", "bangalore", "bengaluru", "hyderabad", "chennai", "pune", "kolkata", "ahmedabad", "jaipur", "gurgaon", "noida"])
-        is_me = any(k in loc_low for k in ["dubai", "uae", "abu dhabi", "riyadh", "saudi", "doha", "qatar", "kuwait", "bahrain", "oman", "jeddah"])
+        indian_states = ["goa", "maharashtra", "delhi", "karnataka", "tamil nadu", "gujarat", "rajasthan", "kerala", "uttar pradesh", "west bengal", "telangana", "andhra", "punjab", "haryana", "bihar", "madhya pradesh", "odisha", "assam"]
+        is_india = ("india" in loc_low or any(s in loc_low for s in indian_states) or any(s in loc_low for s in ["mumbai", "delhi", "bangalore", "bengaluru", "hyderabad", "chennai", "pune", "kolkata", "ahmedabad", "jaipur", "gurgaon", "noida", "goa", "panaji", "siolim", "mapusa", "margao", "vasco", "chandigarh", "kochi", "indore", "surat", "nagpur"]))
+        is_me = any(k in loc_low for k in ["dubai", "uae", "abu dhabi", "riyadh", "saudi", "doha", "qatar", "kuwait", "bahrain", "oman", "jeddah", "sharjah"])
         is_uk = any(k in loc_low for k in ["london", "uk", "manchester", "birmingham", "leeds", "glasgow", "edinburgh", "bristol"])
         is_au = any(k in loc_low for k in ["sydney", "melbourne", "australia", "brisbane", "perth"])
         is_ca = any(k in loc_low for k in ["toronto", "vancouver", "canada", "montreal", "calgary"])
+        is_de = any(k in loc_low for k in ["berlin", "munich", "germany", "frankfurt", "hamburg"])
+        is_fr = any(k in loc_low for k in ["paris", "france", "lyon", "marseille"])
 
         # 2. Resolve Geo Phone Format
         phone_template = "+1 (212) 555-{num4}"
         if is_india:
-            phone_template = random.choice(GEO_PHONE_PRESETS["india"]["formats"])
+            if "goa" in loc_low:
+                phone_template = "+91 832 245 {num4}"
+            elif "delhi" in loc_low:
+                phone_template = "+91 11 4356 {num4}"
+            elif "mumbai" in loc_low:
+                phone_template = "+91 22 6789 {num4}"
+            else:
+                phone_template = random.choice(GEO_PHONE_PRESETS["india"]["formats"])
         elif is_me:
-            phone_template = "+971 4 388 {num4}"
+            phone_template = "+971 4 388 {num4}" if "dubai" in loc_low else "+966 11 488 {num4}"
         elif is_uk:
             phone_template = "+44 20 7946 {num4}"
-
-        for city_key, conf in GEO_PHONE_PRESETS.items():
-            if city_key in loc_low:
-                phone_template = random.choice(conf["formats"])
-                break
+        elif is_au:
+            phone_template = "+61 2 8900 {num4}"
+        elif is_ca:
+            phone_template = "+1 (416) 555-{num4}"
+        elif is_de:
+            phone_template = "+49 30 2094 {num4}"
+        elif is_fr:
+            phone_template = "+33 1 42 68 {num2} {num2}"
 
         # 3. Resolve Regional Name Pool
         if is_india:
