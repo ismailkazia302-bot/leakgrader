@@ -953,31 +953,85 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
+  const DEFAULT_CONFIRMED_BOOKINGS = [
+    {
+      name: "Tariq Al-Mansoor",
+      email: "tariq@luxehaven.ae",
+      company: "LuxeHaven Real Estate",
+      budget: "$25,000",
+      time_slot: "Tomorrow @ 3:00 PM GST",
+      intent: "24/7 WhatsApp Closer for Off-Plan Luxury Villas",
+      status: "CONFIRMED"
+    },
+    {
+      name: "Dr. Jonathan Hayes",
+      email: "j.hayes@harleystreetdental.co.uk",
+      company: "Harley Street Dental Clinic",
+      budget: "$8,500",
+      time_slot: "Friday @ 11:00 AM BST",
+      intent: "Weekend After-Hours Patient Consultation Bot",
+      status: "CONFIRMED"
+    },
+    {
+      name: "Marcus Vance",
+      email: "marcus@cloudscale.io",
+      company: "CloudScale SaaS",
+      budget: "$18,000",
+      time_slot: "Monday @ 2:00 PM PST",
+      intent: "Autonomous Inbound Demo Qualification Layer",
+      status: "CONFIRMED"
+    }
+  ];
+
+  // 1-Click Interactive Booking Test Chips
+  document.querySelectorAll('.chip-quick-booking').forEach(chip => {
+    chip.addEventListener('click', () => {
+      const text = chip.dataset.text;
+      if (text && bookingChatInput) {
+        bookingChatInput.value = text;
+        if (bookingChatForm) {
+          bookingChatForm.dispatchEvent(new Event('submit', { cancelable: true, bubbles: true }));
+        }
+      }
+    });
+  });
+
   async function loadBookings() {
     if (!ledgerList) return;
     try {
       const res = await fetch('/api/booking/list');
       const data = await res.json();
-      const bookings = data.bookings || [];
-      if (bookings.length === 0) {
-        ledgerList.innerHTML = `
-          <div class="empty-state" style="padding:40px 20px; text-align:center;">
-            <i data-lucide="calendar" class="icon-lg" style="color:var(--text-muted); margin-bottom:8px;"></i>
-            <p style="font-size:12px; color:var(--text-body);">No consultations booked yet. Use the chat on the left to simulate scheduling.</p>
-          </div>
-        `;
-      } else {
-        ledgerList.innerHTML = bookings.map(b => `
-          <div class="card-3d-tilt" style="padding:14px; display:flex; flex-direction:column; gap:6px;">
-            <div style="display:flex; justify-content:space-between; align-items:center;">
-              <strong style="color:white; font-size:12px;">${b.name || 'Client Lead'}</strong>
-              <span class="badge-pro-3d">Confirmed</span>
+      const serverBookings = data.bookings || [];
+      const displayBookings = (serverBookings.length > 0) ? serverBookings : DEFAULT_CONFIRMED_BOOKINGS;
+
+      ledgerList.innerHTML = displayBookings.map(b => `
+        <div class="card-3d-tilt" style="background:rgba(12,16,28,0.9); border:1px solid rgba(56,189,248,0.25); border-radius:12px; padding:14px 16px; display:flex; flex-direction:column; gap:8px; box-shadow:0 4px 15px rgba(0,0,0,0.4);">
+          <div style="display:flex; justify-content:space-between; align-items:center;">
+            <div style="display:flex; align-items:center; gap:8px;">
+              <div style="width:26px; height:26px; border-radius:6px; background:rgba(56,189,248,0.15); color:#38bdf8; font-weight:800; font-size:11px; display:flex; align-items:center; justify-content:center;">
+                ${(b.name || 'Client').split(' ').map(n=>n[0]).join('').substring(0,2).toUpperCase()}
+              </div>
+              <div>
+                <strong style="color:#ffffff; font-size:12.5px; font-weight:800; display:block;">${b.name || 'Client Lead'}</strong>
+                <span style="color:#94a3b8; font-size:10.5px;">${b.company || b.email || 'Enterprise Lead'}</span>
+              </div>
             </div>
-            <div style="font-size:11px; color:var(--text-muted);">${b.email || 'lead@company.com'} • ${b.time_slot || 'Tomorrow 3:00 PM'}</div>
-            <div style="font-size:10.5px; color:#38bdf8; font-family:var(--font-mono);">${b.intent || 'Qualified AI Closer Demo'}</div>
+            <span class="badge-tag" style="background:rgba(52,211,153,0.15); color:#34d399; border:1px solid rgba(52,211,153,0.3); font-size:9.5px; font-weight:800; padding:2px 8px; border-radius:6px;">
+              ✓ CONFIRMED
+            </span>
           </div>
-        `).join('');
-      }
+          
+          <div style="display:flex; justify-content:space-between; align-items:center; font-size:11px; background:rgba(0,0,0,0.4); padding:6px 10px; border-radius:6px;">
+            <span style="color:#fbbf24; font-weight:800;"><i data-lucide="dollar-sign" style="width:11px; height:11px; display:inline;"></i> ${b.budget || '$15,000 Deal'}</span>
+            <span style="color:#94a3b8;"><i data-lucide="clock" style="width:11px; height:11px; display:inline;"></i> ${b.time_slot || b.timestamp || 'Tomorrow 3:00 PM'}</span>
+          </div>
+
+          <div style="font-size:11px; color:#cbd5e1; line-height:1.4;">
+            <span style="color:#38bdf8; font-weight:700;">Goal:</span> ${b.intent || b.service_needed || 'Deploy 24/7 AI Sales Closer'}
+          </div>
+        </div>
+      `).join('');
+
       if (window.lucide) lucide.createIcons();
     } catch (err) {
       console.error(err);

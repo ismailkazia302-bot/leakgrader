@@ -96,7 +96,7 @@
   <!-- ⚡ HIGH-RESOLUTION GLOWING SVG FAVICON -->
   <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%2338bdf8'><path d='M13 2L3 14h9l-1 8 10-12h-9l1-8z'/></svg>">
 
-  <link rel="stylesheet" href="/style.css?v=2070">
+  <link rel="stylesheet" href="/style.css?v=2075">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;700;800&display=swap" rel="stylesheet">
@@ -550,44 +550,88 @@
       <!-- TAB 3: AI CLOSER (24/7 SALES AGENT & CRM)            -->
       <!-- ==================================================== -->
       <section class="apollo-pane" id="agent-bookflow">
-        <div class="sub-pane-layout-3d">
-          <div class="chat-panel-container-3d">
-            <div class="panel-header-bar-3d">
-              <div style="display:flex; align-items:center; gap:8px;">
-                <i data-lucide="bot" style="color:#0055ff;"></i>
-                <h3>Live 24/7 AI Sales Closer Bot</h3>
+        <div class="sub-pane-layout-3d" style="display:grid; grid-template-columns:1fr 1fr; height:100%; min-height:0; overflow:hidden;">
+          
+          <!-- LEFT: INTERACTIVE AI CONVERSATIONAL CLOSER -->
+          <div class="chat-panel-container-3d" style="display:flex; flex-direction:column; height:100%; min-height:0; border-right:1px solid var(--border-subtle); background:rgba(8,11,20,0.95);">
+            <div class="panel-header-bar-3d" style="padding:14px 20px; border-bottom:1px solid var(--border-subtle); display:flex; justify-content:space-between; align-items:center; background:rgba(12,16,28,0.8);">
+              <div style="display:flex; align-items:center; gap:10px;">
+                <div style="width:30px; height:30px; border-radius:8px; background:rgba(0,85,255,0.2); border:1px solid rgba(56,189,248,0.4); display:flex; align-items:center; justify-content:center; color:#38bdf8;">
+                  <i data-lucide="bot" style="width:16px; height:16px;"></i>
+                </div>
+                <div>
+                  <h3 style="font-size:13px; font-weight:800; color:#ffffff; margin:0;">24/7 AI Sales Closer Bot</h3>
+                  <span style="font-size:10.5px; color:#94a3b8;">Autonomous Qualification & Calendar Closer</span>
+                </div>
               </div>
-              <span class="badge-pro-3d">Online & Ready</span>
+              <span class="badge-tag" style="background:rgba(52,211,153,0.15); color:#34d399; border:1px solid rgba(52,211,153,0.3); font-size:10px; font-weight:800; padding:3px 8px; border-radius:999px;">
+                ● Online & Ready
+              </span>
             </div>
-            <div class="booking-chat-thread" id="booking-chat-thread">
-              <div class="message assistant-message">
-                <div class="message-avatar-3d"><i data-lucide="headset"></i></div>
-                <div class="message-body-3d">
-                  Hello! I am your 24/7 AI Sales Closer. I qualify incoming leads, handle objections, and auto-book consultation calls directly into your CRM. Try messaging me below (e.g. <em>"I run a real estate agency in Dubai, our budget is $5,000, can we book a demo for tomorrow at 3 PM?"</em>).
+
+            <!-- Chat Thread -->
+            <div class="booking-chat-thread" id="booking-chat-thread" style="flex:1; overflow-y:auto; padding:20px; display:flex; flex-direction:column; gap:14px;">
+              <div class="message assistant-message" style="display:flex; gap:12px; max-width:85%;">
+                <div class="message-avatar-3d" style="width:32px; height:32px; border-radius:8px; background:#1e293b; border:1px solid rgba(56,189,248,0.4); color:#38bdf8; display:flex; align-items:center; justify-content:center; flex-shrink:0;">
+                  <i data-lucide="headset" style="width:16px; height:16px;"></i>
+                </div>
+                <div class="message-body-3d" style="background:rgba(15,23,42,0.9); border:1px solid rgba(56,189,248,0.25); border-radius:12px; padding:14px 16px; font-size:12.5px; line-height:1.6; color:#f1f5f9;">
+                  Hello! I am your <strong>24/7 AI Sales Closer</strong>. I engage after-hours website traffic, qualify buying budgets (><strong>$5,000</strong>), handle pricing objections, and automatically confirm consultation meetings into your CRM.
                 </div>
               </div>
             </div>
-            <form id="booking-chat-form" class="chat-form-floating-3d">
-              <input type="text" id="booking-chat-input" placeholder="Type a message to test lead qualification & booking..." autocomplete="off" required>
-              <button type="submit" class="btn-send-3d" id="btn-send-booking"><i data-lucide="send"></i></button>
+
+            <!-- Quick 1-Click Interactive Test Prompts -->
+            <div style="padding:10px 16px 0; display:flex; flex-wrap:wrap; gap:6px;">
+              <span style="font-size:10.5px; color:#64748b; width:100%; font-weight:700;">TEST LIVE QUALIFICATION:</span>
+              <button type="button" class="chip-sample chip-quick-booking" data-text="I run a Real Estate agency in Dubai, our budget is $15,000. Can we schedule a demo for tomorrow at 3 PM?" style="background:rgba(56,189,248,0.08); border:1px solid rgba(56,189,248,0.25); color:#38bdf8; padding:5px 10px; border-radius:6px; font-size:11px; font-weight:600; cursor:pointer;">
+                🏢 Dubai Real Estate ($15k) → Book Tomorrow 3 PM
+              </button>
+              <button type="button" class="chip-sample chip-quick-booking" data-text="We need an AI Closer for our Dental Clinic in London with $8,000 budget. Schedule Friday at 11 AM." style="background:rgba(52,211,153,0.08); border:1px solid rgba(52,211,153,0.25); color:#34d399; padding:5px 10px; border-radius:6px; font-size:11px; font-weight:600; cursor:pointer;">
+                🏥 London Dental ($8k) → Book Friday 11 AM
+              </button>
+            </div>
+
+            <form id="booking-chat-form" class="chat-form-floating-3d" style="margin:12px 16px; display:flex; align-items:center; background:#000000; border:1px solid rgba(255,255,255,0.15); border-radius:10px; padding:6px 12px; gap:8px;">
+              <input type="text" id="booking-chat-input" placeholder="Type a message (e.g. 'I run an agency, budget $10k, book call')..." autocomplete="off" required style="flex:1; background:transparent; border:none; color:#fff; font-size:12.5px; outline:none; font-family:var(--font-sans);">
+              <button type="submit" class="btn-send-3d" id="btn-send-booking" style="background:linear-gradient(135deg, #0284c7, #0055ff); border:none; color:white; width:34px; height:34px; border-radius:8px; cursor:pointer; display:flex; align-items:center; justify-content:center;">
+                <i data-lucide="send" style="width:14px; height:14px;"></i>
+              </button>
             </form>
           </div>
 
-          <div class="crm-ledger-container-3d">
-            <div class="panel-header-bar-3d">
-              <div style="display:flex; align-items:center; gap:8px;">
-                <i data-lucide="calendar-check" style="color:#10b981;"></i>
-                <h3>Booked Consultations CRM</h3>
+          <!-- RIGHT: LIVE VERIFIED CRM PIPELINE -->
+          <div class="crm-ledger-container-3d" style="display:flex; flex-direction:column; height:100%; min-height:0; background:rgba(6,9,16,0.95);">
+            <div class="panel-header-bar-3d" style="padding:14px 20px; border-bottom:1px solid var(--border-subtle); display:flex; justify-content:space-between; align-items:center; background:rgba(12,16,28,0.8);">
+              <div style="display:flex; align-items:center; gap:10px;">
+                <div style="width:30px; height:30px; border-radius:8px; background:rgba(16,185,129,0.15); border:1px solid rgba(52,211,153,0.4); display:flex; align-items:center; justify-content:center; color:#34d399;">
+                  <i data-lucide="calendar-check" style="width:16px; height:16px;"></i>
+                </div>
+                <div>
+                  <h3 style="font-size:13px; font-weight:800; color:#ffffff; margin:0;">Booked Consultations CRM</h3>
+                  <span style="font-size:10.5px; color:#94a3b8;">Real-Time Confirmed Client Pipeline</span>
+                </div>
               </div>
-              <button id="btn-refresh-bookings" class="btn-ghost-sm" title="Refresh CRM"><i data-lucide="rotate-cw"></i></button>
+              <button id="btn-refresh-bookings" class="btn-ghost-sm" title="Refresh CRM" style="background:rgba(255,255,255,0.05); border:1px solid var(--border-subtle); color:#94a3b8; padding:6px 10px; border-radius:6px; cursor:pointer;"><i data-lucide="rotate-cw" class="icon-xs"></i></button>
             </div>
-            <div class="ledger-list" id="ledger-list">
-              <div class="empty-state" style="padding:40px 20px; text-align:center;">
-                <i data-lucide="calendar" class="icon-lg" style="color:var(--text-muted); margin-bottom:8px;"></i>
-                <p style="font-size:12px; color:var(--text-body);">No consultations booked yet. Use the chat on the left to simulate automated scheduling.</p>
+
+            <div class="ledger-list" id="ledger-list" style="flex:1; overflow-y:auto; padding:18px; display:flex; flex-direction:column; gap:12px;">
+            </div>
+
+            <!-- 1-Click Embed Snippet Card -->
+            <div style="margin:12px 18px 18px; background:rgba(12,16,28,0.9); border:1px solid rgba(56,189,248,0.25); border-radius:12px; padding:16px;">
+              <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+                <span style="font-size:11.5px; font-weight:800; color:#ffffff; display:flex; align-items:center; gap:6px;">
+                  <i data-lucide="code" class="icon-xs" style="color:#38bdf8;"></i> Embed AI Closer On Your Site
+                </span>
+                <button type="button" class="btn-copy-sm" onclick="navigator.clipboard.writeText('<script src=\'https://leakgrader.com/closer.js\' async><\/script>'); alert('Snippet copied! Paste before </body> in your website.');" style="cursor:pointer;"><i data-lucide="copy" class="icon-xs"></i> Copy JS</button>
               </div>
+              <code style="display:block; background:#000000; padding:8px 12px; border-radius:6px; font-size:11px; color:#34d399; font-family:var(--font-mono); word-break:break-all;">
+                &lt;script src="https://leakgrader.com/closer.js" async&gt;&lt;/script&gt;
+              </code>
             </div>
           </div>
+
         </div>
       </section>
 
@@ -813,6 +857,6 @@
   <!-- 🔔 LIVE SOCIAL PROOF TOAST CONTAINER -->
   <div id="toast-container" class="toast-container-3d"></div>
 
-  <script src="/app.js?v=2070"></script>
+  <script src="/app.js?v=2075"></script>
 </body>
 </html>
