@@ -318,7 +318,11 @@ def application(environ, start_response):
             response_headers = [('Content-Type', 'text/html; charset=utf-8'), ('Cache-Control', 'public, max-age=3600')]
             start_response(status, response_headers)
             with open(index_file, 'rb') as f:
-                return [f.read()]
+                content = f.read()
+            ga_id = os.environ.get('GA_MEASUREMENT_ID', '')
+            if ga_id:
+                content = content.replace(b'{{GA_MEASUREMENT_ID}}', ga_id.encode('utf-8'))
+            return [content]
 
     file_path = path.lstrip('/')
     full_path = os.path.join(WEB_DIR_PATH, file_path)
@@ -332,7 +336,12 @@ def application(environ, start_response):
         response_headers = [('Content-Type', content_type), ('Cache-Control', 'public, max-age=3600')]
         start_response(status, response_headers)
         with open(full_path, 'rb') as f:
-            return [f.read()]
+            content = f.read()
+        if file_path.endswith('index.html'):
+            ga_id = os.environ.get('GA_MEASUREMENT_ID', '')
+            if ga_id:
+                content = content.replace(b'{{GA_MEASUREMENT_ID}}', ga_id.encode('utf-8'))
+        return [content]
 
     # Fallback to index.html for single-page app routing
     fallback_index = os.path.join(WEB_DIR_PATH, 'index.html')
@@ -341,7 +350,11 @@ def application(environ, start_response):
         response_headers = [('Content-Type', 'text/html; charset=utf-8')]
         start_response(status, response_headers)
         with open(fallback_index, 'rb') as f:
-            return [f.read()]
+            content = f.read()
+        ga_id = os.environ.get('GA_MEASUREMENT_ID', '')
+        if ga_id:
+            content = content.replace(b'{{GA_MEASUREMENT_ID}}', ga_id.encode('utf-8'))
+        return [content]
 
     status = '404 Not Found'
     response_headers = [('Content-Type', 'text/plain')]

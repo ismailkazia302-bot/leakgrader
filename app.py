@@ -528,7 +528,12 @@ class MastermindRequestHandler(BaseHTTPRequestHandler):
             mime, _ = mimetypes.guess_type(full_path)
             self._set_headers(200, content_type=mime or "text/plain")
             with open(full_path, "rb") as f:
-                self.wfile.write(f.read())
+                content = f.read()
+            if file_path.endswith("index.html"):
+                ga_id = os.environ.get("GA_MEASUREMENT_ID", "")
+                if ga_id:
+                    content = content.replace(b"{{GA_MEASUREMENT_ID}}", ga_id.encode("utf-8"))
+            self.wfile.write(content)
         else:
             self._set_headers(404, "text/plain")
             self.wfile.write(b"404 Not Found")

@@ -98,6 +98,18 @@
   <meta name="theme-color" content="#06080e">
   <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%2338bdf8'><path d='M13 2L3 14h9l-1 8 10-12h-9l1-8z'/></svg>">
 
+  <!-- 📈 GOOGLE ANALYTICS 4 (GA4) INTEGRATION -->
+  <script async src="https://www.googletagmanager.com/gtag/js?id={{GA_MEASUREMENT_ID}}"></script>
+  <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    gtag('js', new Date());
+    const gaId = window.GA_MEASUREMENT_ID || '{{GA_MEASUREMENT_ID}}';
+    if (gaId && !gaId.includes('{{')) {
+      gtag('config', gaId, { send_page_view: true });
+    }
+  </script>
+
   <link rel="stylesheet" href="/style.css?v=2075">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
