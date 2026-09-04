@@ -101,6 +101,15 @@ class FounderAnalyticsDashboard:
         })
         social_vault = self._read_json("social_posts_vault.json", {"queued": [], "published": [], "total_dispatches": 0})
         social_config = self._read_json("social_config.json", {"webhook_url": ""})
+        viral_reels = self._read_json("viral_reels_vault.json", [])
+        reel_creds_path = os.path.join(os.path.dirname(self.storage_dir), "config", "reel_credentials.json")
+        reel_creds = {}
+        if os.path.exists(reel_creds_path):
+            try:
+                with open(reel_creds_path, "r", encoding="utf-8") as f:
+                    reel_creds = json.load(f)
+            except Exception:
+                pass
 
         unique_dict = telemetry.get("unique_visitors", {})
         unique_count = len(unique_dict)
@@ -131,6 +140,8 @@ class FounderAnalyticsDashboard:
             "social_published": social_vault.get("published", []),
             "social_dispatches": social_vault.get("total_dispatches", 0),
             "social_webhook": social_config.get("webhook_url", ""),
+            "viral_reels": viral_reels,
+            "reel_creds": reel_creds,
             "last_updated": time.strftime("%Y-%m-%d %H:%M:%S UTC")
         }
 
@@ -208,6 +219,21 @@ class FounderAnalyticsDashboard:
         post_leak = current_post.get("estimated_leak_highlight", "$38,000/mo")
         webhook_cfg = data.get("social_webhook", "")
         webhook_status_text = "🟢 Active & Configured" if webhook_cfg else "⚪ 1-Click Direct Intents Active"
+
+        all_reels = data.get("viral_reels", [])
+        current_reel = all_reels[0] if all_reels else {}
+        storyboard = current_reel.get("script_storyboard", {})
+        s1 = storyboard.get("scene_1_hook_0_3s", {})
+        s2 = storyboard.get("scene_2_problem_3_12s", {})
+        s3 = storyboard.get("scene_3_solution_12_22s", {})
+        s4 = storyboard.get("scene_4_cta_22_28s", {})
+        reel_caption_raw = current_reel.get("caption", "")
+        reel_voiceover_raw = current_reel.get("voiceover_full_transcript", "")
+        reel_id = current_reel.get("id", "")
+        reel_niche = current_reel.get("topic_niche", "B2B & High-Ticket Commercial")
+        reel_angle = current_reel.get("angle", "The 30-Second Rule That Tripled Demo Bookings")
+        reel_creds = data.get("reel_creds", {})
+        reel_webhook = reel_creds.get("auto_publisher_webhook", "")
 
         return f"""<!DOCTYPE html>
 <html lang="en">
@@ -525,6 +551,81 @@ class FounderAnalyticsDashboard:
       </div>
     </div>
 
+    <!-- 🎬 Viral Video, Reels, TikTok & Shorts Studio Section -->
+    <div class="section-card" style="border:1px solid rgba(236,72,153,0.3); background:linear-gradient(180deg, rgba(236,72,153,0.06) 0%, rgba(15,18,25,0.98) 100%);">
+      <div class="section-header">
+        <div>
+          <div class="section-title" style="color:#f472b6;">🎬 Viral Video, Reels, TikTok & YouTube Shorts Studio (Auto-Mode)</div>
+          <p style="font-size:12px; color:#94a3b8; margin-top:4px;">Autonomous Trend Research & 9:16 Vertical Video Production. Automatically promotes LeakGrader.com through high-retention educational hooks.</p>
+        </div>
+        <div style="display:flex; gap:8px;">
+          <button onclick="generateNewReel()" style="background:linear-gradient(135deg, #ec4899, #f43f5e); color:#fff; border:none; padding:6px 14px; border-radius:8px; font-size:11px; font-weight:800; cursor:pointer;">⚡ Research & Generate New Reel</button>
+          <button onclick="dispatchCurrentReel()" style="background:#0284c7; color:#fff; border:none; padding:6px 14px; border-radius:8px; font-size:11px; font-weight:800; cursor:pointer;">🚀 Dispatch to Auto-Publisher</button>
+        </div>
+      </div>
+
+      <!-- Live Ready Reel Card -->
+      <div style="background:rgba(0,0,0,0.5); border:1px solid rgba(255,255,255,0.08); border-radius:12px; padding:20px; margin-bottom:20px;">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px; flex-wrap:wrap; gap:8px;">
+          <div>
+            <span style="font-size:10px; background:rgba(236,72,153,0.2); color:#f472b6; border:1px solid rgba(236,72,153,0.4); padding:3px 8px; border-radius:6px; font-weight:800; text-transform:uppercase;">Niche: {reel_niche}</span>
+            <h3 style="font-size:16px; font-weight:900; color:#fff; margin-top:6px;">{reel_angle}</h3>
+          </div>
+          <div style="font-size:11px; color:#94a3b8;">Format: <strong style="color:#38bdf8;">9:16 Vertical (Reels / TikTok / Shorts)</strong> • Duration: <strong style="color:#34d399;">~28 Seconds</strong></div>
+        </div>
+
+        <!-- 4-Scene Storyboard Grid -->
+        <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap:12px; margin-bottom:18px;">
+          
+          <div style="background:rgba(255,255,255,0.03); border:1px solid rgba(236,72,153,0.2); border-radius:8px; padding:12px;">
+            <div style="font-size:10px; font-weight:800; color:#f472b6; text-transform:uppercase;">Scene 1 • 0-3s (Viral Hook)</div>
+            <div style="font-size:11px; color:#fff; font-weight:700; margin:6px 0;">"{s1.get('voiceover', '')}"</div>
+            <div style="font-size:10px; color:#94a3b8;"><strong>Screen Visual:</strong> {s1.get('screen_visual', '')}</div>
+          </div>
+
+          <div style="background:rgba(255,255,255,0.03); border:1px solid rgba(251,113,133,0.2); border-radius:8px; padding:12px;">
+            <div style="font-size:10px; font-weight:800; color:#fb7185; text-transform:uppercase;">Scene 2 • 3-12s (Industry Education)</div>
+            <div style="font-size:11px; color:#e2e8f0; margin:6px 0;">{s2.get('voiceover', '')}</div>
+            <div style="font-size:10px; color:#94a3b8;"><strong>Screen Visual:</strong> {s2.get('screen_visual', '')}</div>
+          </div>
+
+          <div style="background:rgba(255,255,255,0.03); border:1px solid rgba(56,189,248,0.2); border-radius:8px; padding:12px;">
+            <div style="font-size:10px; font-weight:800; color:#38bdf8; text-transform:uppercase;">Scene 3 • 12-22s (LeakGrader Demo)</div>
+            <div style="font-size:11px; color:#e2e8f0; margin:6px 0;">{s3.get('voiceover', '')}</div>
+            <div style="font-size:10px; color:#94a3b8;"><strong>Screen Visual:</strong> {s3.get('screen_visual', '')}</div>
+          </div>
+
+          <div style="background:rgba(255,255,255,0.03); border:1px solid rgba(52,211,153,0.2); border-radius:8px; padding:12px;">
+            <div style="font-size:10px; font-weight:800; color:#34d399; text-transform:uppercase;">Scene 4 • 22-28s (Viral CTA)</div>
+            <div style="font-size:11px; color:#fff; font-weight:700; margin:6px 0;">"{s4.get('voiceover', '')}"</div>
+            <div style="font-size:10px; color:#94a3b8;"><strong>Screen Visual:</strong> {s4.get('screen_visual', '')}</div>
+          </div>
+
+        </div>
+
+        <!-- 1-Click Copy Buttons for Voiceover & Caption -->
+        <div style="display:flex; gap:10px; flex-wrap:wrap;">
+          <input type="hidden" id="raw-reel-voiceover" value="{reel_voiceover_raw}">
+          <input type="hidden" id="raw-reel-caption" value="{reel_caption_raw}">
+          <input type="hidden" id="current-reel-id" value="{reel_id}">
+          <button onclick="copyReelVoiceover()" style="background:rgba(255,255,255,0.08); border:1px solid rgba(255,255,255,0.15); color:#fff; padding:8px 14px; border-radius:6px; font-size:11px; font-weight:700; cursor:pointer;">📋 Copy Full Voiceover Script</button>
+          <button onclick="copyReelCaption()" style="background:rgba(255,255,255,0.08); border:1px solid rgba(255,255,255,0.15); color:#fff; padding:8px 14px; border-radius:6px; font-size:11px; font-weight:700; cursor:pointer;">📝 Copy Caption & Viral Hashtags</button>
+        </div>
+      </div>
+
+      <!-- Social Credentials & Auto-Publishing Webhook Setup -->
+      <div style="background:rgba(0,0,0,0.3); border:1px solid rgba(255,255,255,0.08); border-radius:10px; padding:16px;">
+        <h4 style="font-size:12px; font-weight:800; color:#fff; text-transform:uppercase; margin-bottom:8px;">⚙️ Auto-Posting Credentials & Webhook Setup (Instagram / Facebook / TikTok / YouTube)</h4>
+        <p style="font-size:11px; color:#94a3b8; margin-bottom:12px;">Paste your Make.com, Zapier, Blotato, or Repurpose.io Webhook URL below to automatically push every newly generated Reel straight to Instagram, Facebook, TikTok, and YouTube Shorts without manual intervention.</p>
+        
+        <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
+          <input type="text" id="reel-webhook-input" placeholder="Make.com / Zapier / Buffer Webhook URL for Reels..." value="{reel_webhook}" style="flex:1; min-width:280px; background:#000; border:1px solid rgba(255,255,255,0.15); border-radius:6px; padding:8px 12px; font-size:11px; color:#fff; outline:none;">
+          <button onclick="saveReelCredentials()" style="background:#10b981; border:none; color:#fff; padding:8px 16px; border-radius:6px; font-size:11px; font-weight:800; cursor:pointer;">💾 Save Webhook</button>
+        </div>
+      </div>
+
+    </div>
+
     <!-- High-DA Startup Directories Launch Kit Section -->
     <div class="section-card" style="border:1px solid rgba(56,189,248,0.25); background:linear-gradient(180deg, rgba(56,189,248,0.05) 0%, rgba(15,18,25,0.95) 100%);">
       <div class="section-header">
@@ -714,6 +815,71 @@ class FounderAnalyticsDashboard:
       }} catch (e) {{
         alert('Error saving webhook: ' + e);
       }}
+    }}
+
+    async function generateNewReel() {{
+      try {{
+        const res = await fetch('/api/reels/generate', {{
+          method: 'POST',
+          headers: {{ 'Content-Type': 'application/json' }},
+          body: JSON.stringify({{}})
+        }});
+        const data = await res.json();
+        if (data.status === 'SUCCESS') {{
+          alert('⚡ Fresh Viral Reel Script & Storyboard Generated: ' + data.reel.angle);
+          location.reload();
+        }}
+      }} catch (e) {{
+        alert('Error generating reel: ' + e);
+      }}
+    }}
+
+    async function dispatchCurrentReel() {{
+      const reelId = document.getElementById('current-reel-id')?.value || '';
+      try {{
+        const res = await fetch('/api/reels/dispatch', {{
+          method: 'POST',
+          headers: {{ 'Content-Type': 'application/json' }},
+          body: JSON.stringify({{ reel_id: reelId }})
+        }});
+        const data = await res.json();
+        if (data.status === 'SUCCESS') {{
+          alert('🚀 Dispatched! Webhook Status: ' + (data.report.webhook_triggered ? 'SENT (HTTP ' + data.report.webhook_status + ')' : 'NO WEBHOOK (Ready for 1-Click Copy)'));
+          location.reload();
+        }}
+      }} catch (e) {{
+        alert('Error dispatching reel: ' + e);
+      }}
+    }}
+
+    async function saveReelCredentials() {{
+      const webhook = document.getElementById('reel-webhook-input')?.value.trim() || '';
+      try {{
+        const res = await fetch('/api/reels/credentials', {{
+          method: 'POST',
+          headers: {{ 'Content-Type': 'application/json' }},
+          body: JSON.stringify({{ auto_publisher_webhook: webhook }})
+        }});
+        const data = await res.json();
+        if (data.status === 'SUCCESS') {{
+          alert('Reel Auto-Publisher Webhook Saved Successfully!');
+          location.reload();
+        }}
+      }} catch (e) {{
+        alert('Error saving credentials: ' + e);
+      }}
+    }}
+
+    function copyReelVoiceover() {{
+      const text = document.getElementById('raw-reel-voiceover')?.value || '';
+      navigator.clipboard.writeText(text);
+      alert('📋 Voiceover Script copied to clipboard!');
+    }}
+
+    function copyReelCaption() {{
+      const text = document.getElementById('raw-reel-caption')?.value || '';
+      navigator.clipboard.writeText(text);
+      alert('📝 Caption & Hashtags copied to clipboard!');
     }}
   </script>
 </body>

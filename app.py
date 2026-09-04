@@ -84,6 +84,8 @@ ANALYTICS_DASHBOARD = FounderAnalyticsDashboard(STORAGE_DIR)
 EMAIL_VAULT = EmailVaultEngine(STORAGE_DIR)
 from engine.autonomous_traffic_blaster import AutonomousTrafficBlaster
 TRAFFIC_BLASTER = AutonomousTrafficBlaster(base_url="https://leakgrader.com", storage_dir=STORAGE_DIR)
+from engine.viral_reel_studio import ViralReelStudioEngine
+VIRAL_REEL_STUDIO = ViralReelStudioEngine(STORAGE_DIR)
 
 def save_index():
     try:
@@ -493,6 +495,11 @@ class MastermindRequestHandler(BaseHTTPRequestHandler):
             self.wfile.write(json.dumps({"status": "SUCCESS", "latest_blast": blaster_data, "total_blasts": len(TRAFFIC_BLASTER.history)}).encode("utf-8"))
             return
 
+        elif path == "/api/reels/feed":
+            self._set_headers(200)
+            self.wfile.write(json.dumps(VIRAL_REEL_STUDIO.get_feed()).encode("utf-8"))
+            return
+
         # 2. OmniBrain Document Endpoints
         elif path == "/api/documents":
             doc_list = []
@@ -887,6 +894,29 @@ class MastermindRequestHandler(BaseHTTPRequestHandler):
             result = GROWTH_AGENT.generate_viral_campaign(comp, niche, loss)
             self._set_headers(200)
             self.wfile.write(json.dumps({"success": True, "campaign": result}).encode("utf-8"))
+            return
+
+        elif path == "/api/reels/generate":
+            reel = VIRAL_REEL_STUDIO.generate_reel()
+            self._set_headers(200)
+            self.wfile.write(json.dumps({"status": "SUCCESS", "reel": reel}).encode("utf-8"))
+            return
+
+        elif path == "/api/reels/dispatch":
+            body = self.rfile.read(content_length)
+            data = json.loads(body.decode("utf-8")) if content_length > 0 else {}
+            reel_id = data.get("reel_id", "")
+            res = VIRAL_REEL_STUDIO.dispatch_reel(reel_id)
+            self._set_headers(200)
+            self.wfile.write(json.dumps(res).encode("utf-8"))
+            return
+
+        elif path == "/api/reels/credentials":
+            body = self.rfile.read(content_length)
+            data = json.loads(body.decode("utf-8")) if content_length > 0 else {}
+            res = VIRAL_REEL_STUDIO.save_credentials(data)
+            self._set_headers(200)
+            self.wfile.write(json.dumps(res).encode("utf-8"))
             return
 
         else:
