@@ -385,70 +385,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const btnResetFilters = document.getElementById('btn-reset-filters');
   const presetPills = document.querySelectorAll('.filter-preset-pill');
 
-  const DEFAULT_VERIFIED_PROSPECTS = [
-    {
-      contact_name: "Tariq Al-Mansoor",
-      title: "Managing Director & Partner",
-      company_name: "LuxeHaven Real Estate",
-      estimated_revenue: "$25M - $50M / yr",
-      email: "tariq@luxehaven.ae",
-      phone: "+971 4 398 2145",
-      location: "Dubai, UAE",
-      website: "https://luxehaven.ae",
-      primary_pain_point: "8-hour response lag on after-hours international buyer leads",
-      pitch_script: "Hey Tariq,\n\nNoticed LuxeHaven is losing after-hours luxury property inquiries due to manual response lag. We deployed a 24/7 AI WhatsApp closer that qualifies high-net-worth buyers in 30 seconds.\n\nWorth a quick 5-min look?"
-    },
-    {
-      contact_name: "Dr. Jonathan Hayes",
-      title: "Chief Medical Officer",
-      company_name: "Harley Street Dental Clinic",
-      estimated_revenue: "$8M - $15M / yr",
-      email: "j.hayes@harleystreetdental.co.uk",
-      phone: "+44 20 7946 0912",
-      location: "London, UK",
-      website: "https://harleystreetdental.co.uk",
-      primary_pain_point: "Weekend drop-off on cosmetic dental consult inquiries",
-      pitch_script: "Hi Dr. Hayes,\n\nOur audit showed Harley Street Dental loses ~35% of weekend cosmetic implant inquiries before Monday morning. Our 24/7 AI bot auto-schedules consults in under 30s.\n\nCan I send a 30-sec demo?"
-    },
-    {
-      contact_name: "Marcus Vance",
-      title: "VP of Global Growth",
-      company_name: "CloudScale SaaS",
-      estimated_revenue: "$12M - $20M / yr",
-      email: "marcus@cloudscale.io",
-      phone: "+1 415 890 3341",
-      location: "San Francisco, USA",
-      website: "https://cloudscale.io",
-      primary_pain_point: "High friction static demo request form dropping conversion by 28%",
-      pitch_script: "Hey Marcus,\n\nSaw CloudScale's demo signup funnel. Static forms are leaking high-intent traffic. We set up an autonomous conversational closer that qualifies ACV > $10k instantly.\n\nOpen to a quick peek?"
-    },
-    {
-      contact_name: "Sophia Sterling",
-      title: "Head of Client Relations",
-      company_name: "Apex Wealth Management",
-      estimated_revenue: "$30M - $60M / yr",
-      email: "sophia.sterling@apexwealth.sg",
-      phone: "+65 6789 4321",
-      location: "Singapore",
-      website: "https://apexwealth.sg",
-      primary_pain_point: "Unqualified inquiries overwhelming advisors instead of pre-filtering",
-      pitch_script: "Hi Sophia,\n\nWe built an autonomous AI qualification layer for wealth managers that pre-screens AUM portfolios before booking advisor calls.\n\nWorth a brief 5-min walk-through?"
-    },
-    {
-      contact_name: "Alexander Rossi",
-      title: "Charter Director",
-      company_name: "Monaco Luxury Charters",
-      estimated_revenue: "$18M - $35M / yr",
-      email: "a.rossi@monacoyachting.mc",
-      phone: "+377 98 97 12 00",
-      location: "Monaco",
-      website: "https://monacoyachting.mc",
-      primary_pain_point: "Missing VIP Mediterranean yacht charter inquiries during off-hours",
-      pitch_script: "Hello Alexander,\n\nOur system detected off-peak booking abandonment on Monaco Yachting's VIP charter fleet. Our 24/7 AI WhatsApp closer handles high-ticket quotes instantly.\n\nCan I share the numbers?"
-    }
-  ];
-
-  let CURRENT_LEADS = [...DEFAULT_VERIFIED_PROSPECTS];
+  let CURRENT_LEADS = [];
 
   presetPills.forEach(pill => {
     pill.addEventListener('click', () => {
@@ -464,7 +401,7 @@ document.addEventListener('DOMContentLoaded', () => {
   if (btnResetFilters) {
     btnResetFilters.addEventListener('click', () => {
       if (leadForm) leadForm.reset();
-      CURRENT_LEADS = [...DEFAULT_VERIFIED_PROSPECTS];
+      CURRENT_LEADS = [];
       renderProspectsTable(CURRENT_LEADS);
       updateLeadMetrics(CURRENT_LEADS);
     });
@@ -489,7 +426,7 @@ document.addEventListener('DOMContentLoaded', () => {
           body: jsonSafe({ industry, location, service, count })
         });
         const data = await res.json();
-        CURRENT_LEADS = (data.leads && data.leads.length > 0) ? data.leads : DEFAULT_VERIFIED_PROSPECTS;
+        CURRENT_LEADS = (data.leads && data.leads.length > 0) ? data.leads : [];
         renderProspectsTable(CURRENT_LEADS);
         updateLeadMetrics(CURRENT_LEADS);
       } catch (err) {
@@ -509,9 +446,21 @@ document.addEventListener('DOMContentLoaded', () => {
         <tr>
           <td colspan="7">
             <div class="empty-state" style="padding:60px 20px; text-align:center;">
-              <i data-lucide="search" class="icon-lg" style="color:var(--text-muted); margin-bottom:12px;"></i>
-              <h3 style="font-size:15px; font-weight:700; color:#ffffff; margin-bottom:6px;">No Prospects Loaded</h3>
-              <p style="color:var(--text-body); font-size:12px; max-width:440px; margin:0 auto;">Enter target parameters in the filters on the left and click <strong>"Search & Enrich Prospects"</strong>.</p>
+              <div style="width:48px; height:48px; border-radius:12px; background:rgba(56,189,248,0.12); border:1px solid rgba(56,189,248,0.3); color:#38bdf8; display:flex; align-items:center; justify-content:center; margin:0 auto 14px;">
+                <i data-lucide="sparkles" style="width:24px; height:24px;"></i>
+              </div>
+              <h3 style="font-size:16px; font-weight:800; color:#ffffff; margin-bottom:6px;">Ready to Search & Enrich Live B2B Decision-Makers</h3>
+              <p style="color:var(--text-body); font-size:12.5px; max-width:520px; margin:0 auto 18px; line-height:1.6;">
+                Select your target commercial niche and city on the left, then click <strong>"Search & Enrich Prospects"</strong> to generate verified C-level executives, phone numbers, and pitch scripts.
+              </p>
+              <div style="display:flex; justify-content:center; gap:8px; flex-wrap:wrap;">
+                <button type="button" class="btn-sample-search" onclick="document.getElementById('lead-industry').value='Luxury Real Estate'; document.getElementById('lead-location').value='Dubai, UAE'; document.getElementById('lead-form').dispatchEvent(new Event('submit'));" style="background:rgba(56,189,248,0.1); border:1px solid rgba(56,189,248,0.3); color:#38bdf8; font-weight:700; font-size:11px; padding:6px 12px; border-radius:6px; cursor:pointer;">
+                  🏢 Search: Dubai Real Estate
+                </button>
+                <button type="button" class="btn-sample-search" onclick="document.getElementById('lead-industry').value='Dental Clinics'; document.getElementById('lead-location').value='London, UK'; document.getElementById('lead-form').dispatchEvent(new Event('submit'));" style="background:rgba(52,211,153,0.1); border:1px solid rgba(52,211,153,0.3); color:#34d399; font-weight:700; font-size:11px; padding:6px 12px; border-radius:6px; cursor:pointer;">
+                  🏥 Search: London Dental Clinics
+                </button>
+              </div>
             </div>
           </td>
         </tr>
@@ -591,10 +540,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const total = leads.length;
     if (mTotal) mTotal.textContent = total;
-    if (mVerified) mVerified.textContent = `${total} (100% Verified)`;
+    if (mVerified) mVerified.textContent = total > 0 ? `${total} (100% Verified)` : '100% Live Verified';
     if (mIntent) mIntent.textContent = '98.0% High Intent';
-    if (mPipeline) mPipeline.textContent = `$${(total * 25000).toLocaleString()}`;
-    if (label) label.textContent = `Showing all ${total} verified enterprise decision-makers`;
+    if (mPipeline) mPipeline.textContent = total > 0 ? `$${(total * 25000).toLocaleString()}` : '$0 (Ready to Search)';
+    if (label) label.textContent = total > 0 ? `Showing all ${total} verified enterprise decision-makers` : 'Ready to search verified enterprise decision-makers';
   }
 
   const thCheckAll = document.getElementById('th-check-all');
