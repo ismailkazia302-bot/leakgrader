@@ -16,3 +16,4 @@ cloudflared.exe
 *.pem
 *.json
 !render.yaml
+!config/payment_links.json

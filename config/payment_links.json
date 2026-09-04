@@ -1,0 +1,17 @@
+{
+  "micro_audit": {
+    "name": "Full Audit & Decision-Maker Unlock",
+    "price_usd": 9,
+    "checkout_url": "https://leakrader.lemonsqueezy.com/checkout/buy/01744fdd-75c3-40f5-86ec-7c724cd55080"
+  },
+  "pro_saas": {
+    "name": "LeakGrader SaaS Pro Plan",
+    "price_usd": 79,
+    "checkout_url": "https://leakrader.lemonsqueezy.com/checkout/buy/047e1a00-52e8-45dd-9d99-0a3463b57096"
+  },
+  "agency_retainer": {
+    "name": "Enterprise Done-For-You Retainer",
+    "price_usd": 1500,
+    "checkout_url": "https://leakrader.lemonsqueezy.com/checkout/buy/ddd06567-8528-4066-856d-ca6e3b68827b"
+  }
+}
