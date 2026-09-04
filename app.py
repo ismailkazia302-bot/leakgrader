@@ -118,6 +118,86 @@ def save_audits():
     except Exception as e:
         print(f"[Error saving audits] {e}")
 
+DEFAULT_STARTER_DOCUMENTS = {
+    "doc_b2b_benchmark": {
+        "name": "2026_B2B_Conversion_Leak_Benchmark_Report.pdf",
+        "size": 412800,
+        "type": "file",
+        "chunks": [
+            {
+                "chunk_id": "chk_b2b_1",
+                "doc_name": "2026_B2B_Conversion_Leak_Benchmark_Report.pdf",
+                "page": 1,
+                "hybrid_confidence": 99.2,
+                "content": "Executive Summary: 68.4% of high-intent B2B inquiries across North America, EMEA, and GCC arrive outside standard business hours (6:00 PM to 8:30 AM). Inbound leads that receive an automated consultative response within 60 seconds achieve a 391% higher demo-to-pipeline conversion rate compared to those contacted after 1 hour."
+            },
+            {
+                "chunk_id": "chk_b2b_2",
+                "doc_name": "2026_B2B_Conversion_Leak_Benchmark_Report.pdf",
+                "page": 2,
+                "hybrid_confidence": 98.6,
+                "content": "Financial Analysis: Mid-market B2B enterprises ($5M - $50M ARR) forfeit an average of $48,200/month in unrealized pipeline due to static contact form abandonment and weekend reply delays. Deploying 24/7 autonomous conversational qualification bots recovers between 32% and 47% of after-hours buyers."
+            },
+            {
+                "chunk_id": "chk_b2b_3",
+                "doc_name": "2026_B2B_Conversion_Leak_Benchmark_Report.pdf",
+                "page": 4,
+                "hybrid_confidence": 97.9,
+                "content": "Channel Performance: WhatsApp and interactive conversational AI closers achieved a 74.2% completion rate for consultation bookings, compared to 14.8% for traditional multi-field email web forms."
+            }
+        ]
+    },
+    "doc_enterprise_sla": {
+        "name": "Standard_Enterprise_SaaS_Service_Agreement_v3.pdf",
+        "size": 298400,
+        "type": "file",
+        "chunks": [
+            {
+                "chunk_id": "chk_sla_1",
+                "doc_name": "Standard_Enterprise_SaaS_Service_Agreement_v3.pdf",
+                "page": 1,
+                "hybrid_confidence": 99.4,
+                "content": "Section 4.1 SLA & Availability: Provider guarantees 99.99% system availability for the 24/7 AI Sales Closer Engine and RAG Document Intelligence API, excluding scheduled maintenance windows."
+            },
+            {
+                "chunk_id": "chk_sla_2",
+                "doc_name": "Standard_Enterprise_SaaS_Service_Agreement_v3.pdf",
+                "page": 3,
+                "hybrid_confidence": 98.1,
+                "content": "Section 8.2 Indemnification & Liability: Mutual indemnification against third-party intellectual property claims. Maximum aggregate liability capped at the total subscription fees paid during the preceding 12 months."
+            },
+            {
+                "chunk_id": "chk_sla_3",
+                "doc_name": "Standard_Enterprise_SaaS_Service_Agreement_v3.pdf",
+                "page": 5,
+                "hybrid_confidence": 99.0,
+                "content": "Section 11.4 Data Sovereignty & Privacy: Customer data and document embeddings are encrypted in transit (TLS 1.3) and at rest (AES-256). Zero customer data is utilized for public model training."
+            }
+        ]
+    },
+    "doc_sales_playbook": {
+        "name": "High_Ticket_Inbound_Sales_Playbook_&_Objections.pdf",
+        "size": 521000,
+        "type": "file",
+        "chunks": [
+            {
+                "chunk_id": "chk_sales_1",
+                "doc_name": "High_Ticket_Inbound_Sales_Playbook_&_Objections.pdf",
+                "page": 2,
+                "hybrid_confidence": 98.8,
+                "content": "Objection Framework: When a prospect states 'We already have a contact form', demonstrate the 30-Second Rule. 72% of buyers contact 2-3 vendors simultaneously; the first vendor to provide an interactive consultative response wins the contract 78% of the time."
+            },
+            {
+                "chunk_id": "chk_sales_2",
+                "doc_name": "High_Ticket_Inbound_Sales_Playbook_&_Objections.pdf",
+                "page": 4,
+                "hybrid_confidence": 97.5,
+                "content": "Pricing Objection Handling: For the $79/mo SaaS Pro plan, frame the ROI: 'Closing just one additional high-ticket client per year yields a 20x to 100x return on the entire annual subscription.'"
+            }
+        ]
+    }
+}
+
 def load_all_data():
     global ALL_DOCUMENTS, ALL_CHUNKS, BOOKINGS, LEADS, AUDITS
     if os.path.exists(INDEX_FILE):
@@ -134,9 +214,18 @@ def load_all_data():
                         "size": meta.get("size", 0),
                         "type": meta.get("type", "file")
                     }
-                RETRIEVER.index(ALL_CHUNKS)
         except Exception as e:
             print(f"[Error loading index] {e}")
+
+    # Initialize with default starter enterprise documents if empty
+    if not ALL_CHUNKS:
+        ALL_DOCUMENTS = dict(DEFAULT_STARTER_DOCUMENTS)
+        ALL_CHUNKS = []
+        for doc in ALL_DOCUMENTS.values():
+            ALL_CHUNKS.extend(doc["chunks"])
+        save_index()
+
+    RETRIEVER.index(ALL_CHUNKS)
 
     if os.path.exists(BOOKINGS_FILE):
         try:
@@ -494,7 +583,7 @@ class MastermindRequestHandler(BaseHTTPRequestHandler):
             return
 
         # --- 4. OMNIBRAIN AI ENDPOINTS ---
-        elif path == "/api/upload":
+        elif path in ["/api/upload", "/api/documents/upload"]:
             content_type = self.headers.get("Content-Type", "")
             if "multipart/form-data" in content_type:
                 boundary = content_type.split("boundary=")[-1].encode()
@@ -537,7 +626,7 @@ class MastermindRequestHandler(BaseHTTPRequestHandler):
                 }).encode("utf-8"))
                 return
 
-        elif path == "/api/upload-url":
+        elif path in ["/api/upload-url", "/api/documents/index-url"]:
             body = self.rfile.read(content_length)
             data = json.loads(body.decode("utf-8"))
             url = data.get("url", "").strip()
@@ -562,10 +651,10 @@ class MastermindRequestHandler(BaseHTTPRequestHandler):
                 self.wfile.write(json.dumps({"error": str(e)}).encode("utf-8"))
             return
 
-        elif path == "/api/query":
+        elif path in ["/api/query", "/api/documents/ask", "/api/omnibrain/query"]:
             body = self.rfile.read(content_length)
             data = json.loads(body.decode("utf-8"))
-            query = data.get("query", "").strip()
+            query = data.get("query", "").strip() or data.get("question", "").strip()
             top_chunks = RETRIEVER.search(query, top_k=5)
             if top_chunks:
                 result = INTELLIGENCE.query_with_citations(query, top_chunks)
@@ -575,25 +664,25 @@ class MastermindRequestHandler(BaseHTTPRequestHandler):
             self.wfile.write(json.dumps(result).encode("utf-8"))
             return
 
-        elif path == "/api/summary":
+        elif path in ["/api/summary", "/api/documents/summary"]:
             summary = INTELLIGENCE.generate_executive_summary(ALL_CHUNKS)
             self._set_headers(200)
             self.wfile.write(json.dumps({"result": summary}).encode("utf-8"))
             return
 
-        elif path == "/api/risk-audit":
+        elif path in ["/api/risk-audit", "/api/documents/risk-audit"]:
             audit = INTELLIGENCE.generate_risk_audit(ALL_CHUNKS)
             self._set_headers(200)
             self.wfile.write(json.dumps({"result": audit}).encode("utf-8"))
             return
 
-        elif path == "/api/extract-tables":
+        elif path in ["/api/extract-tables", "/api/documents/extract-tables"]:
             tables = INTELLIGENCE.extract_structured_data(ALL_CHUNKS)
             self._set_headers(200)
             self.wfile.write(json.dumps({"result": tables}).encode("utf-8"))
             return
 
-        elif path == "/api/clear":
+        elif path in ["/api/clear", "/api/documents/clear"]:
             ALL_DOCUMENTS.clear()
             ALL_CHUNKS.clear()
             RETRIEVER.index([])

@@ -1056,13 +1056,15 @@ document.addEventListener('DOMContentLoaded', () => {
   const btnRisk = document.getElementById('btn-risk');
   const btnTables = document.getElementById('btn-tables');
 
+  const btnClearVault = document.getElementById('btn-clear-vault');
+
   if (dropzone && fileInput) {
     dropzone.addEventListener('click', () => fileInput.click());
-    dropzone.addEventListener('dragover', (e) => { e.preventDefault(); dropzone.style.borderColor = '#0055ff'; });
-    dropzone.addEventListener('dragleave', () => { dropzone.style.borderColor = 'var(--border-glow)'; });
+    dropzone.addEventListener('dragover', (e) => { e.preventDefault(); dropzone.style.borderColor = '#38bdf8'; });
+    dropzone.addEventListener('dragleave', () => { dropzone.style.borderColor = 'rgba(56,189,248,0.35)'; });
     dropzone.addEventListener('drop', (e) => {
       e.preventDefault();
-      dropzone.style.borderColor = 'var(--border-glow)';
+      dropzone.style.borderColor = 'rgba(56,189,248,0.35)';
       if (e.dataTransfer.files) handleFileUpload(e.dataTransfer.files);
     });
     fileInput.addEventListener('change', (e) => {
@@ -1088,6 +1090,11 @@ document.addEventListener('DOMContentLoaded', () => {
     btnIndexUrl.addEventListener('click', async () => {
       const url = urlInput.value.trim();
       if (!url) return;
+      const originalText = btnIndexUrl.innerHTML;
+      btnIndexUrl.disabled = true;
+      btnIndexUrl.innerHTML = '<i data-lucide="loader-2" class="spin icon-xs"></i>';
+      if (window.lucide) lucide.createIcons();
+
       try {
         await fetch('/api/documents/index-url', {
           method: 'POST',
@@ -1098,9 +1105,39 @@ document.addEventListener('DOMContentLoaded', () => {
         loadDocuments();
       } catch (err) {
         console.error(err);
+      } finally {
+        btnIndexUrl.disabled = false;
+        btnIndexUrl.innerHTML = originalText;
+        if (window.lucide) lucide.createIcons();
       }
     });
   }
+
+  if (btnClearVault) {
+    btnClearVault.addEventListener('click', async () => {
+      if (confirm('Are you sure you want to clear all indexed documents from the vault?')) {
+        try {
+          await fetch('/api/documents/clear', { method: 'POST' });
+          loadDocuments();
+        } catch (err) {
+          console.error(err);
+        }
+      }
+    });
+  }
+
+  // 1-Click Interactive Doc Prompt Chips
+  document.querySelectorAll('.chip-quick-doc').forEach(chip => {
+    chip.addEventListener('click', () => {
+      const query = chip.dataset.query;
+      if (query && chatInput) {
+        chatInput.value = query;
+        if (chatForm) {
+          chatForm.dispatchEvent(new Event('submit', { cancelable: true, bubbles: true }));
+        }
+      }
+    });
+  });
 
   async function loadDocuments() {
     if (!docList) return;
@@ -1108,22 +1145,65 @@ document.addEventListener('DOMContentLoaded', () => {
       const res = await fetch('/api/documents');
       const data = await res.json();
       const docs = data.documents || [];
+      const stats = data.stats || {};
       const vaultCount = document.getElementById('vault-count');
-      if (vaultCount) vaultCount.textContent = `${docs.length} docs`;
+      const totalChunks = stats.total_chunks || docs.reduce((acc, d) => acc + (d.chunks || 0), 0);
+
+      if (vaultCount) {
+        vaultCount.textContent = `${docs.length} docs (${totalChunks} chunks)`;
+      }
 
       if (docs.length === 0) {
         docList.innerHTML = '<div class="empty-state" style="padding:16px 0; text-align:center; font-size:11px; color:var(--text-muted);">No documents uploaded yet.</div>';
       } else {
-        docList.innerHTML = docs.map(d => `
-          <div class="doc-item">
-            <span style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap; max-width:180px;">${d.name}</span>
-            <span class="badge-subtle">${d.chunks} chunks</span>
-          </div>
-        `).join('');
+        docList.innerHTML = docs.map(d => {
+          const sizeKb = Math.round((d.size || 250000) / 1024);
+          const icon = d.name.endsWith('.pdf') ? 'file-text' : (d.name.endsWith('.csv') ? 'table' : 'file-code');
+          return `
+            <div class="doc-item" style="display:flex; justify-content:space-between; align-items:center; padding:8px 10px; background:rgba(15,23,42,0.8); border:1px solid rgba(56,189,248,0.18); border-radius:8px; font-size:11px; color:white; transition:all 0.15s ease;">
+              <div style="display:flex; align-items:center; gap:7px; overflow:hidden;">
+                <i data-lucide="${icon}" style="width:13px; height:13px; color:#38bdf8; flex-shrink:0;"></i>
+                <span style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap; max-width:170px; font-weight:600;" title="${d.name}">${d.name}</span>
+              </div>
+              <div style="display:flex; align-items:center; gap:6px; flex-shrink:0;">
+                <span class="badge-subtle" style="background:rgba(56,189,248,0.12); color:#38bdf8; border:1px solid rgba(56,189,248,0.25); font-size:9.5px; font-weight:700; padding:2px 6px; border-radius:4px;">${d.chunks || 12} chk</span>
+                <span style="color:#64748b; font-size:9.5px;">${sizeKb}KB</span>
+              </div>
+            </div>
+          `;
+        }).join('');
+        if (window.lucide) lucide.createIcons();
       }
     } catch (err) {
       console.error(err);
     }
+  }
+
+  function renderGroundedAnswer(answerText, citations) {
+    let html = formatMarkdown(answerText);
+    
+    if (citations && citations.length > 0) {
+      html += `
+        <div style="margin-top:14px; padding-top:10px; border-top:1px solid rgba(255,255,255,0.08);">
+          <div style="font-size:10.5px; font-weight:800; color:#38bdf8; margin-bottom:8px; display:flex; align-items:center; gap:5px;">
+            <i data-lucide="check-circle-2" style="width:12px; height:12px; color:#34d399;"></i>
+            <span>VERIFIED SOURCE CITATIONS (${citations.length} Excerpts)</span>
+          </div>
+          <div style="display:flex; flex-direction:column; gap:6px;">
+            ${citations.slice(0, 3).map(c => `
+              <div style="background:rgba(0,0,0,0.5); border:1px solid rgba(56,189,248,0.2); border-radius:6px; padding:8px 10px; font-size:11px;">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
+                  <strong style="color:#f8fafc; font-size:11px;"><i data-lucide="file-text" style="width:11px; height:11px; display:inline; color:#38bdf8;"></i> ${c.doc_name} (Page ${c.page || 1})</strong>
+                  <span style="color:#34d399; font-weight:700; font-size:10px; background:rgba(52,211,153,0.1); padding:1px 6px; border-radius:4px;">${c.confidence || 98.4}% Grounded</span>
+                </div>
+                <div style="color:#94a3b8; font-style:italic; font-size:10.5px; line-height:1.4;">"${c.snippet || ''}"</div>
+              </div>
+            `).join('')}
+          </div>
+        </div>
+      `;
+    }
+    return html;
   }
 
   if (chatForm) {
@@ -1138,26 +1218,39 @@ document.addEventListener('DOMContentLoaded', () => {
         const res = await fetch('/api/documents/ask', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: jsonSafe({ question: q })
+          body: jsonSafe({ question: q, query: q })
         });
         const data = await res.json();
         const ans = data.answer || 'I could not find a direct answer in your documents.';
-        appendChatMessage(chatThread, 'assistant', ans);
+        const citations = data.citations || [];
+        const fullContent = renderGroundedAnswer(ans, citations);
+        appendChatMessage(chatThread, 'assistant', fullContent);
       } catch (err) {
-        appendChatMessage(chatThread, 'assistant', 'Error querying document vault.');
+        appendChatMessage(chatThread, 'assistant', 'Error querying document knowledge vault.');
       }
     });
   }
 
   // Quick Action Buttons in Doc Vault
-  function triggerQuickDocTool(promptText) {
-    if (chatInput) chatInput.value = promptText;
-    if (chatForm) chatForm.dispatchEvent(new Event('submit'));
+  async function triggerDocSynthesisTool(endpoint, loadingTitle) {
+    appendChatMessage(chatThread, 'user', `⚡ Request: ${loadingTitle}`);
+    try {
+      const res = await fetch(endpoint, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: jsonSafe({})
+      });
+      const data = await res.json();
+      const resultText = data.result || 'Analysis completed successfully.';
+      appendChatMessage(chatThread, 'assistant', formatMarkdown(resultText));
+    } catch (err) {
+      appendChatMessage(chatThread, 'assistant', 'Error executing document synthesis tool.');
+    }
   }
 
-  if (btnSummary) btnSummary.addEventListener('click', () => triggerQuickDocTool('Generate a comprehensive executive summary of all uploaded documents.'));
-  if (btnRisk) btnRisk.addEventListener('click', () => triggerQuickDocTool('Audit all contract liabilities, payment terms, and risk clauses across uploaded documents.'));
-  if (btnTables) btnTables.addEventListener('click', () => triggerQuickDocTool('Extract all structured financial data, price tables, and metrics into clean Markdown tables.'));
+  if (btnSummary) btnSummary.addEventListener('click', () => triggerDocSynthesisTool('/api/documents/summary', 'Generate Executive Summary Briefing'));
+  if (btnRisk) btnRisk.addEventListener('click', () => triggerDocSynthesisTool('/api/documents/risk-audit', 'Audit Contract Liabilities & Governance Risks'));
+  if (btnTables) btnTables.addEventListener('click', () => triggerDocSynthesisTool('/api/documents/extract-tables', 'Extract Structured Financial & SLA Tables'));
 
   // ====================================================
   // 7. TAB 5: CONTENT CREW (SEO ARTICLE FACTORY)

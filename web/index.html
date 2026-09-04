@@ -645,47 +645,137 @@
       <!-- TAB 4: DOC VAULT (DOCUMENT SECOND BRAIN & QA)        -->
       <!-- ==================================================== -->
       <section class="apollo-pane" id="agent-omnibrain">
-        <div class="sub-pane-layout-3d">
-          <aside class="sub-sidebar-3d">
-            <div class="sub-sidebar-header">
-              <h3><i data-lucide="folder-up"></i> Document Vault</h3>
-              <span class="badge-subtle" id="vault-count">0 docs</span>
+        <div class="sub-pane-layout-3d" style="display:grid; grid-template-columns:320px 1fr; height:100%; min-height:0; overflow:hidden;">
+          
+          <!-- LEFT: DOCUMENT REPOSITORY & AI SYNTHESIS TOOLS -->
+          <aside class="sub-sidebar-3d" style="background:rgba(8,11,20,0.95); border-right:1px solid var(--border-subtle); padding:16px; display:flex; flex-direction:column; gap:12px; overflow-y:auto;">
+            <div class="sub-sidebar-header" style="display:flex; justify-content:space-between; align-items:center; padding-bottom:8px; border-bottom:1px solid var(--border-subtle);">
+              <div style="display:flex; align-items:center; gap:8px;">
+                <div style="width:26px; height:26px; border-radius:6px; background:rgba(56,189,248,0.15); color:#38bdf8; display:flex; align-items:center; justify-content:center;">
+                  <i data-lucide="folder-kanban" style="width:14px; height:14px;"></i>
+                </div>
+                <h3 style="font-size:12.5px; font-weight:800; color:#ffffff; margin:0;">Document Vault</h3>
+              </div>
+              <span class="badge-tag" id="vault-count" style="background:rgba(56,189,248,0.15); color:#38bdf8; border:1px solid rgba(56,189,248,0.3); font-size:10px; font-weight:800; padding:2px 8px; border-radius:999px;">3 docs (122 chunks)</span>
             </div>
-            <div class="dropzone-3d" id="dropzone">
-              <input type="file" id="file-input" multiple accept=".pdf,.txt,.md,.markdown,.csv,.json" style="display:none;">
-              <i data-lucide="cloud-upload" class="icon-md" style="color:#38bdf8;"></i>
-              <strong>Drop PDF, TXT, CSV, JSON</strong>
-              <small>or click to browse local files</small>
+
+            <!-- Upload Dropzone -->
+            <div class="dropzone-3d" id="dropzone" style="border:1.5px dashed rgba(56,189,248,0.35); border-radius:10px; padding:16px 12px; text-align:center; cursor:pointer; background:rgba(15,23,42,0.6); transition:all 0.2s ease;">
+              <input type="file" id="file-input" multiple accept=".pdf,.txt,.md,.markdown,.csv,.json,.docx" style="display:none;">
+              <div style="width:36px; height:36px; border-radius:8px; background:rgba(56,189,248,0.15); color:#38bdf8; display:flex; align-items:center; justify-content:center; margin:0 auto 8px;">
+                <i data-lucide="cloud-upload" style="width:18px; height:18px;"></i>
+              </div>
+              <strong style="font-size:12px; color:#ffffff; display:block; margin-bottom:2px;">Drop PDF, TXT, CSV, JSON</strong>
+              <small style="font-size:10.5px; color:#94a3b8;">or click to browse local files</small>
             </div>
-            <div class="url-scraper-bar-3d">
-              <input type="url" id="url-input" placeholder="https://your-docs.com">
-              <button id="btn-index-url" class="btn-sm-3d" type="button" title="Index Web URL"><i data-lucide="plus"></i></button>
+
+            <!-- Web URL Scraper Bar -->
+            <div class="url-scraper-bar-3d" style="display:flex; align-items:center; gap:6px; background:rgba(0,0,0,0.5); border:1px solid var(--border-subtle); border-radius:8px; padding:4px 6px;">
+              <i data-lucide="globe" style="width:13px; height:13px; color:#64748b; margin-left:4px;"></i>
+              <input type="url" id="url-input" placeholder="https://company.com/whitepaper" style="flex:1; background:transparent; border:none; color:#fff; font-size:11px; outline:none;">
+              <button id="btn-index-url" class="btn-sm-3d" type="button" title="Index Web URL" style="background:rgba(56,189,248,0.2); border:1px solid rgba(56,189,248,0.4); color:#38bdf8; padding:5px 8px; border-radius:6px; font-size:10px; font-weight:700; cursor:pointer; display:flex; align-items:center; gap:3px;">
+                <i data-lucide="plus" style="width:11px; height:11px;"></i> Index
+              </button>
             </div>
-            <div class="doc-list" id="doc-list">
-              <div class="empty-state" style="padding:16px 0; text-align:center; font-size:11px; color:var(--text-muted);">No documents uploaded yet.</div>
+
+            <!-- Indexed Documents List -->
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-top:4px;">
+              <span style="font-size:10.5px; font-weight:700; color:#64748b;">INDEXED ASSETS:</span>
+              <button id="btn-clear-vault" type="button" style="background:transparent; border:none; color:#ef4444; font-size:10px; font-weight:700; cursor:pointer; display:flex; align-items:center; gap:2px;">
+                <i data-lucide="trash-2" style="width:10px; height:10px;"></i> Clear
+              </button>
             </div>
             
-            <div class="quick-agent-tools">
-              <button class="tool-btn-3d" id="btn-summary" type="button"><i data-lucide="file-check"></i> Generate Executive Summary</button>
-              <button class="tool-btn-3d" id="btn-risk" type="button"><i data-lucide="shield-alert"></i> Audit Contract Liabilities</button>
-              <button class="tool-btn-3d" id="btn-tables" type="button"><i data-lucide="table"></i> Extract Structured Tables</button>
+            <div class="doc-list" id="doc-list" style="display:flex; flex-direction:column; gap:6px; max-height:160px; overflow-y:auto;">
+              <!-- Populated via loadDocuments() -->
+            </div>
+            
+            <!-- AI Synthesis Deep-Analysis Tools -->
+            <div style="margin-top:6px; padding-top:10px; border-top:1px solid var(--border-subtle);">
+              <span style="font-size:10.5px; font-weight:700; color:#64748b; display:block; margin-bottom:6px;">1-CLICK AI SYNTHESIS:</span>
+              <div class="quick-agent-tools" style="display:flex; flex-direction:column; gap:6px;">
+                <button class="tool-btn-3d" id="btn-summary" type="button" style="background:rgba(15,23,42,0.8); border:1px solid rgba(56,189,248,0.2); color:#ffffff; padding:8px 10px; border-radius:8px; font-size:11px; font-weight:600; cursor:pointer; display:flex; align-items:center; gap:8px; transition:all 0.15s ease;">
+                  <i data-lucide="file-text" style="width:13px; height:13px; color:#38bdf8;"></i>
+                  <span>Executive Briefing Summary</span>
+                </button>
+                <button class="tool-btn-3d" id="btn-risk" type="button" style="background:rgba(15,23,42,0.8); border:1px solid rgba(239,68,68,0.2); color:#ffffff; padding:8px 10px; border-radius:8px; font-size:11px; font-weight:600; cursor:pointer; display:flex; align-items:center; gap:8px; transition:all 0.15s ease;">
+                  <i data-lucide="shield-alert" style="width:13px; height:13px; color:#f87171;"></i>
+                  <span>Audit Liabilities & Risks</span>
+                </button>
+                <button class="tool-btn-3d" id="btn-tables" type="button" style="background:rgba(15,23,42,0.8); border:1px solid rgba(52,211,153,0.2); color:#ffffff; padding:8px 10px; border-radius:8px; font-size:11px; font-weight:600; cursor:pointer; display:flex; align-items:center; gap:8px; transition:all 0.15s ease;">
+                  <i data-lucide="table" style="width:13px; height:13px; color:#34d399;"></i>
+                  <span>Extract Financial Tables</span>
+                </button>
+              </div>
             </div>
           </aside>
 
-          <main class="sub-main-chat-3d">
-            <div class="chat-thread" id="chat-thread">
-              <div class="message assistant-message">
-                <div class="message-avatar-3d"><i data-lucide="bot"></i></div>
-                <div class="message-body-3d">
-                  <h3>Document Second Brain Ready</h3>
-                  <p>Upload your business contracts, pricing sheets, and policies on the left or use the 1-click tools below. Ask any specific question to receive grounded, citation-backed answers with zero hallucination.</p>
+          <!-- RIGHT: GROUNDED CONVERSATIONAL CANVAS -->
+          <main class="sub-main-chat-3d" style="display:flex; flex-direction:column; height:100%; min-height:0; background:rgba(6,9,16,0.95); position:relative; overflow:hidden;">
+            
+            <!-- Header Bar -->
+            <div class="panel-header-bar-3d" style="padding:14px 20px; border-bottom:1px solid var(--border-subtle); display:flex; justify-content:space-between; align-items:center; background:rgba(12,16,28,0.8);">
+              <div style="display:flex; align-items:center; gap:10px;">
+                <div style="width:30px; height:30px; border-radius:8px; background:rgba(0,85,255,0.2); border:1px solid rgba(56,189,248,0.4); display:flex; align-items:center; justify-content:center; color:#38bdf8;">
+                  <i data-lucide="brain-circuit" style="width:16px; height:16px;"></i>
+                </div>
+                <div>
+                  <h3 style="font-size:13px; font-weight:800; color:#ffffff; margin:0;">Grounded RAG Second Brain</h3>
+                  <span style="font-size:10.5px; color:#94a3b8;">Zero Hallucination • Verified In-Document Citations</span>
+                </div>
+              </div>
+              <div style="display:flex; align-items:center; gap:8px;">
+                <span class="badge-tag" style="background:rgba(52,211,153,0.15); color:#34d399; border:1px solid rgba(52,211,153,0.3); font-size:10px; font-weight:800; padding:3px 8px; border-radius:999px;">
+                  ● Hybrid BM25 + Vector Search
+                </span>
+              </div>
+            </div>
+
+            <!-- Chat Thread -->
+            <div class="chat-thread" id="chat-thread" style="flex:1; overflow-y:auto; padding:20px; display:flex; flex-direction:column; gap:16px;">
+              <div class="message assistant-message" style="display:flex; gap:12px; max-width:90%;">
+                <div class="message-avatar-3d" style="width:32px; height:32px; border-radius:8px; background:#1e293b; border:1px solid rgba(56,189,248,0.4); color:#38bdf8; display:flex; align-items:center; justify-content:center; flex-shrink:0;">
+                  <i data-lucide="bot" style="width:16px; height:16px;"></i>
+                </div>
+                <div class="message-body-3d" style="background:rgba(15,23,42,0.9); border:1px solid rgba(56,189,248,0.25); border-radius:12px; padding:16px 18px; font-size:12.5px; line-height:1.6; color:#f1f5f9;">
+                  <h3 style="font-size:14px; font-weight:800; color:#38bdf8; margin:0 0 6px;">🧠 Knowledge Second Brain Ready</h3>
+                  <p style="margin:0 0 10px; color:#cbd5e1;">
+                    I am your enterprise intelligence agent. Ask any specific question to receive factual, citation-backed answers with zero hallucination. <strong>3 verified enterprise assets are already loaded</strong> in your vault on the left!
+                  </p>
+                  <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(180px, 1fr)); gap:8px; font-size:11px; background:rgba(0,0,0,0.4); padding:10px; border-radius:8px; border:1px solid rgba(255,255,255,0.05);">
+                    <div><strong style="color:#38bdf8;">✓ 100% Grounded:</strong> Factual excerpts only</div>
+                    <div><strong style="color:#34d399;">✓ Citation Tagging:</strong> [Doc, Page, Score]</div>
+                    <div><strong style="color:#fbbf24;">✓ Fast Indexing:</strong> PDF, TXT, CSV, URLs</div>
+                  </div>
                 </div>
               </div>
             </div>
-            <form id="chat-form" class="chat-form-floating-3d">
-              <textarea id="chat-input" placeholder="Ask anything about your uploaded documents or contracts..." rows="1" required></textarea>
-              <button type="submit" class="btn-send-3d" id="btn-send-chat"><i data-lucide="arrow-up"></i></button>
+
+            <!-- Quick 1-Click Interactive Query Chips -->
+            <div style="padding:8px 16px 0; display:flex; flex-wrap:wrap; gap:6px;">
+              <span style="font-size:10.5px; color:#64748b; width:100%; font-weight:700;">TEST GROUNDED Q&A:</span>
+              <button type="button" class="chip-sample chip-quick-doc" data-query="What are the top causes of after-hours revenue loss in B2B?" style="background:rgba(56,189,248,0.08); border:1px solid rgba(56,189,248,0.25); color:#38bdf8; padding:4px 8px; border-radius:6px; font-size:10.5px; font-weight:600; cursor:pointer;">
+                📈 After-Hours Revenue Loss Causes
+              </button>
+              <button type="button" class="chip-sample chip-quick-doc" data-query="Summarize SLA uptime guarantee and liability cap clauses" style="background:rgba(239,68,68,0.08); border:1px solid rgba(239,68,68,0.25); color:#f87171; padding:4px 8px; border-radius:6px; font-size:10.5px; font-weight:600; cursor:pointer;">
+                🛡️ SLA & Liability Caps
+              </button>
+              <button type="button" class="chip-sample chip-quick-doc" data-query="What is the conversion rate of 24/7 AI WhatsApp closers?" style="background:rgba(52,211,153,0.08); border:1px solid rgba(52,211,153,0.25); color:#34d399; padding:4px 8px; border-radius:6px; font-size:10.5px; font-weight:600; cursor:pointer;">
+                📲 WhatsApp Closer Conversion Rates
+              </button>
+              <button type="button" class="chip-sample chip-quick-doc" data-query="How to handle the objection 'We already have a contact form'?" style="background:rgba(168,85,247,0.08); border:1px solid rgba(168,85,247,0.25); color:#c084fc; padding:4px 8px; border-radius:6px; font-size:10.5px; font-weight:600; cursor:pointer;">
+                🎯 'Contact Form' Objection Script
+              </button>
+            </div>
+
+            <!-- Floating Prompt Form -->
+            <form id="chat-form" class="chat-form-floating-3d" style="margin:12px 16px; display:flex; align-items:center; background:#000000; border:1px solid rgba(255,255,255,0.15); border-radius:10px; padding:6px 12px; gap:8px;">
+              <input type="text" id="chat-input" placeholder="Ask anything about your indexed documents, contracts, or policies..." autocomplete="off" required style="flex:1; background:transparent; border:none; color:#fff; font-size:12.5px; outline:none; font-family:var(--font-sans);">
+              <button type="submit" class="btn-send-3d" id="btn-send-chat" style="background:linear-gradient(135deg, #0284c7, #0055ff); border:none; color:white; width:34px; height:34px; border-radius:8px; cursor:pointer; display:flex; align-items:center; justify-content:center;">
+                <i data-lucide="send" style="width:14px; height:14px;"></i>
+              </button>
             </form>
+
           </main>
         </div>
       </section>
