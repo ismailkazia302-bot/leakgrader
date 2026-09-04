@@ -82,6 +82,8 @@ COMPETITOR_SPY = CompetitorSpyAgent(api_key=GEMINI_API_KEY, model="gemini-3.6-fl
 DOSSIER_GEN = ExecutiveDossierGenerator()
 ANALYTICS_DASHBOARD = FounderAnalyticsDashboard(STORAGE_DIR)
 EMAIL_VAULT = EmailVaultEngine(STORAGE_DIR)
+from engine.autonomous_traffic_blaster import AutonomousTrafficBlaster
+TRAFFIC_BLASTER = AutonomousTrafficBlaster(base_url="https://leakgrader.com", storage_dir=STORAGE_DIR)
 
 def save_index():
     try:
@@ -316,6 +318,22 @@ class MastermindRequestHandler(BaseHTTPRequestHandler):
             self.wfile.write(f"google-site-verification: {path.lstrip('/')}".encode("utf-8"))
             return
 
+        elif path in ["/feed.xml", "/rss.xml", "/feed"]:
+            rss_xml = TRAFFIC_BLASTER.generate_rss_feed_xml()
+            self.send_response(200)
+            self.send_header("Content-Type", "application/rss+xml; charset=utf-8")
+            self.send_header("Cache-Control", "public, max-age=3600")
+            self.end_headers()
+            self.wfile.write(rss_xml.encode("utf-8"))
+            return
+
+        elif path == "/leakgrader-indexnow-key.txt":
+            self.send_response(200)
+            self.send_header("Content-Type", "text/plain; charset=utf-8")
+            self.end_headers()
+            self.wfile.write(b"leakgrader-indexnow-key")
+            return
+
         elif path.startswith("/badge/") and path.endswith(".svg"):
             slug = path.replace("/badge/", "").replace(".svg", "").replace("-", " ").title()
             svg_content = f"""<svg xmlns="http://www.w3.org/2000/svg" width="220" height="40" viewBox="0 0 220 40">
@@ -467,6 +485,12 @@ class MastermindRequestHandler(BaseHTTPRequestHandler):
             feed = SOCIAL_POSTER.get_feed()
             self._set_headers(200)
             self.wfile.write(json.dumps(feed).encode("utf-8"))
+            return
+
+        elif path == "/api/traffic-blaster/status":
+            blaster_data = TRAFFIC_BLASTER.history[-1] if TRAFFIC_BLASTER.history else {}
+            self._set_headers(200)
+            self.wfile.write(json.dumps({"status": "SUCCESS", "latest_blast": blaster_data, "total_blasts": len(TRAFFIC_BLASTER.history)}).encode("utf-8"))
             return
 
         # 2. OmniBrain Document Endpoints

@@ -13,6 +13,7 @@ from engine.onpage_seo import OnPageSEOEngine
 from engine.offpage_seo import OffPageSEOEngine
 from engine.auto_outreach_bot import AutonomousOutreachEngine
 from engine.social_auto_poster import SocialAutoPoster
+from engine.autonomous_traffic_blaster import AutonomousTrafficBlaster
 
 class GrowthAndIndexingAgent:
     def __init__(self, base_url: str = "https://leakgrader.com"):
@@ -21,10 +22,11 @@ class GrowthAndIndexingAgent:
         self.offpage = OffPageSEOEngine(base_url=self.base_url)
         self.outreach = AutonomousOutreachEngine()
         self.social_poster = SocialAutoPoster(base_url=self.base_url)
+        self.traffic_blaster = AutonomousTrafficBlaster(base_url=self.base_url)
 
     def run_full_seo_cycle(self, target_keyword: str = "Website Revenue Leak Scanner") -> dict:
         """
-        Executes 100% autonomous growth sprint: SEO + Backlinks + Outbound Dispatches + Social Auto-Posting.
+        Executes 100% autonomous growth sprint: SEO + Backlinks + Outbound Dispatches + Social Auto-Posting + Traffic Blaster.
         """
         onpage_report = self.onpage.audit_and_optimize_page(target_keyword=target_keyword)
         offpage_report = self.offpage.execute_offpage_sprint(target_url=f"{self.base_url}/")
@@ -34,13 +36,19 @@ class GrowthAndIndexingAgent:
         except Exception as e:
             social_report = {"status": "ERROR", "error": str(e)}
 
+        try:
+            blaster_report = self.traffic_blaster.run_full_blaster_cycle()
+        except Exception as e:
+            blaster_report = {"status": "ERROR", "error": str(e)}
+
         return {
             "status": "100_PERCENT_HANDS_FREE_SPRINT_SUCCESS",
             "timestamp": time.strftime("%Y-%m-%d %H:%M:%S UTC"),
             "on_page_seo": onpage_report,
             "off_page_seo": offpage_report,
             "autonomous_outbound": outreach_report,
-            "social_auto_poster": social_report
+            "social_auto_poster": social_report,
+            "traffic_blaster": blaster_report
         }
 
     # Backward compatibility alias
