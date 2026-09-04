@@ -1250,3 +1250,161 @@ body {
     gap: 10px;
   }
 }
+
+/* ==================================================== */
+/* 🌍 MULTI-CURRENCY SELECTOR                           */
+/* ==================================================== */
+.currency-selector-box {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--border-subtle);
+  border-radius: 8px;
+  padding: 4px 8px;
+  transition: all 0.2s ease;
+}
+.currency-selector-box:hover {
+  border-color: rgba(56, 189, 248, 0.4);
+  background: rgba(56, 189, 248, 0.06);
+}
+.currency-select-3d {
+  background: transparent;
+  border: none;
+  color: #38bdf8;
+  font-size: 11.5px;
+  font-weight: 700;
+  font-family: var(--font-sans);
+  cursor: pointer;
+  outline: none;
+}
+.currency-select-3d option {
+  background: #0b0c10;
+  color: #f8fafc;
+}
+
+/* ==================================================== */
+/* 📧 EMAIL CAPTURE & DOSSIER BOX                       */
+/* ==================================================== */
+.email-dossier-capture-box {
+  background: linear-gradient(135deg, rgba(56, 189, 248, 0.08) 0%, rgba(94, 106, 210, 0.08) 100%);
+  border: 1px solid rgba(56, 189, 248, 0.25);
+  border-radius: 14px;
+  padding: 22px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-top: 16px;
+  position: relative;
+  overflow: hidden;
+}
+.email-capture-form {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+.email-capture-input {
+  flex: 1;
+  min-width: 220px;
+  background: rgba(0, 0, 0, 0.5);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 8px;
+  padding: 10px 14px;
+  color: #ffffff;
+  font-size: 12px;
+  outline: none;
+  transition: all 0.2s ease;
+}
+.email-capture-input:focus {
+  border-color: #38bdf8;
+  box-shadow: 0 0 15px rgba(56, 189, 248, 0.2);
+}
+.btn-email-submit {
+  background: linear-gradient(135deg, #0284c7 0%, #0055ff 100%);
+  color: #ffffff;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 8px;
+  padding: 10px 18px;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+}
+.btn-email-submit:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 15px rgba(0, 85, 255, 0.4);
+}
+
+/* ==================================================== */
+/* 🔔 LIVE SOCIAL PROOF TOAST TICKER                    */
+/* ==================================================== */
+.toast-container-3d {
+  position: fixed;
+  bottom: 24px;
+  left: 24px;
+  z-index: 9999;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  pointer-events: none;
+}
+.toast-notification-3d {
+  pointer-events: auto;
+  background: rgba(10, 14, 26, 0.92);
+  border: 1px solid rgba(56, 189, 248, 0.35);
+  backdrop-filter: blur(16px);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.8), 0 0 20px rgba(56, 189, 248, 0.15);
+  border-radius: 12px;
+  padding: 12px 16px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  max-width: 380px;
+  animation: toastSlideUp 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  transition: opacity 0.3s ease, transform 0.3s ease;
+}
+.toast-notification-3d.fade-out {
+  opacity: 0;
+  transform: translateY(10px) scale(0.95);
+}
+.toast-icon-pulse {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: rgba(56, 189, 248, 0.15);
+  border: 1px solid rgba(56, 189, 248, 0.4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #38bdf8;
+  flex-shrink: 0;
+}
+.toast-content-3d {
+  font-size: 11.5px;
+  color: #f1f5f9;
+  line-height: 1.4;
+}
+.toast-content-3d strong {
+  color: #38bdf8;
+}
+.toast-time {
+  font-size: 9.5px;
+  color: #64748b;
+  margin-top: 2px;
+}
+
+@keyframes toastSlideUp {
+  0% {
+    opacity: 0;
+    transform: translateY(20px) scale(0.92);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}

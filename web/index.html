@@ -176,6 +176,16 @@
             <span class="pulse-green-dot"></span>
             <span><strong>14,820+</strong> Audits Run</span>
           </div>
+          <div class="currency-selector-box" title="Switch Display Currency">
+            <i data-lucide="coins" class="icon-xs" style="color:#38bdf8;"></i>
+            <select id="currency-selector" class="currency-select-3d">
+              <option value="USD">USD ($)</option>
+              <option value="SAR">SAR (ر.س)</option>
+              <option value="AED">AED (د.إ)</option>
+              <option value="GBP">GBP (£)</option>
+              <option value="EUR">EUR (€)</option>
+            </select>
+          </div>
           <a href="/analytics" target="_blank" class="credit-pill-3d" style="text-decoration:none; color:inherit; cursor:pointer; background:rgba(56,189,248,0.1); border:1px solid rgba(56,189,248,0.3);">
             <i data-lucide="bar-chart-2" class="icon-xs" style="color:#38bdf8;"></i>
             <span><strong style="color:#38bdf8;">📊 Live Analytics</strong></span>
@@ -334,6 +344,25 @@
                   <p style="font-size:12px; color:var(--text-muted); margin-top:10px; line-height:1.6;">Yes! You can copy 1 line of JavaScript code from the AI Closer tab and paste it into WordPress, Webflow, Shopify, or custom HTML in under 30 seconds.</p>
                 </details>
               </div>
+            </div>
+
+            <!-- 📧 HIGH-CONVERTING EMAIL DOSSIER & CRO DISPATCH VAULT -->
+            <div class="email-dossier-capture-box" id="email-capture-section">
+              <div style="display:flex; justify-content:space-between; align-items:flex-start; flex-wrap:wrap; gap:12px;">
+                <div>
+                  <span class="badge-tag cyan" style="margin-bottom:6px;"><i data-lucide="mail" class="icon-xs"></i> EXECUTIVE CRO INTELLIGENCE</span>
+                  <h3 style="font-size:16px; font-weight:800; color:#ffffff; margin-top:4px;">Get Weekly Revenue Leak Teardowns & PDF Dossiers</h3>
+                  <p style="font-size:12px; color:var(--text-muted); margin-top:2px;">Join 14,800+ founders receiving weekly conversion audits, high-ticket niche teardowns, and actionable AI closer blueprints.</p>
+                </div>
+              </div>
+              <form id="newsletter-form" class="email-capture-form">
+                <input type="email" id="newsletter-email-input" class="email-capture-input" placeholder="Enter your work email (e.g. founder@company.com)..." required>
+                <button type="submit" id="btn-newsletter-submit" class="btn-email-submit">
+                  <i data-lucide="send" class="icon-xs"></i>
+                  <span>Subscribe & Get Report</span>
+                </button>
+              </form>
+              <div id="newsletter-status-msg" style="display:none; font-size:12px; font-weight:700; color:#34d399;"></div>
             </div>
 
             <!-- 🏛️ ENTERPRISE FOOTER -->
@@ -769,6 +798,9 @@
       </div>
     </div>
   </div>
+
+  <!-- 🔔 LIVE SOCIAL PROOF TOAST CONTAINER -->
+  <div id="toast-container" class="toast-container-3d"></div>
 
   <script src="/app.js?v=2026"></script>
 </body>

@@ -595,6 +595,7 @@ document.addEventListener('DOMContentLoaded', () => {
   if (drawerOverlay) drawerOverlay.addEventListener('click', closeDossier);
 
   function openPricing() {
+    updateCurrencyDisplays();
     if (pricingModal) pricingModal.classList.add('active');
   }
 
@@ -605,6 +606,65 @@ document.addEventListener('DOMContentLoaded', () => {
   if (btnOpenPricing) btnOpenPricing.addEventListener('click', openPricing);
   if (btnClosePricing) btnClosePricing.addEventListener('click', closePricing);
   if (pricingOverlay) pricingOverlay.addEventListener('click', closePricing);
+
+  // ====================================================
+  // 🌍 MULTI-CURRENCY CONVERTER (USD, SAR, AED, GBP, EUR)
+  // ====================================================
+  const CURRENCIES = {
+    USD: { symbol: '$', rate: 1.0, name: 'USD' },
+    SAR: { symbol: 'ر.س ', rate: 3.75, name: 'SAR' },
+    AED: { symbol: 'د.إ ', rate: 3.67, name: 'AED' },
+    GBP: { symbol: '£', rate: 0.79, name: 'GBP' },
+    EUR: { symbol: '€', rate: 0.92, name: 'EUR' }
+  };
+  let activeCurrency = localStorage.getItem('leakgrader_curr') || 'USD';
+
+  function updateCurrencyDisplays() {
+    const curr = CURRENCIES[activeCurrency] || CURRENCIES.USD;
+    const selector = document.getElementById('currency-selector');
+    if (selector) selector.value = activeCurrency;
+
+    // Pricing modal cards
+    const priceCards = document.querySelectorAll('.plan-card-3d');
+    if (priceCards.length >= 3) {
+      const priceMicro = priceCards[0].querySelector('.plan-price-3d');
+      const pricePro = priceCards[1].querySelector('.plan-price-3d');
+      const priceAgency = priceCards[2].querySelector('.plan-price-3d');
+
+      const btnMicro = priceCards[0].querySelector('.btn-checkout-3d');
+      const btnPro = priceCards[1].querySelector('.btn-checkout-3d');
+      const btnAgency = priceCards[2].querySelector('.btn-checkout-3d');
+
+      const microVal = Math.round(9 * curr.rate);
+      const proVal = Math.round(79 * curr.rate);
+      const agencyVal = Math.round(1500 * curr.rate).toLocaleString();
+
+      if (priceMicro) priceMicro.innerHTML = `${curr.symbol}${microVal} <span>one-time</span>`;
+      if (pricePro) pricePro.innerHTML = `${curr.symbol}${proVal} <span>/ month</span>`;
+      if (priceAgency) priceAgency.innerHTML = `${curr.symbol}${agencyVal} <span>setup</span>`;
+
+      if (btnMicro) btnMicro.textContent = `Unlock Audit Report (${curr.symbol}${microVal})`;
+      if (btnPro) btnPro.textContent = `Subscribe (${curr.symbol}${proVal}/mo)`;
+      if (btnAgency) btnAgency.textContent = `Book AI Setup (${curr.symbol}${agencyVal})`;
+    }
+
+    const dynamicUnlock = document.getElementById('btn-unlock-dynamic');
+    if (dynamicUnlock) {
+      const microVal = Math.round(9 * curr.rate);
+      dynamicUnlock.innerHTML = `<i data-lucide="lock" class="icon-sm"></i><span>Unlock Full Report (${curr.symbol}${microVal})</span>`;
+      if (window.lucide) lucide.createIcons();
+    }
+  }
+
+  const currencySelector = document.getElementById('currency-selector');
+  if (currencySelector) {
+    currencySelector.value = activeCurrency;
+    currencySelector.addEventListener('change', (e) => {
+      activeCurrency = e.target.value;
+      localStorage.setItem('leakgrader_curr', activeCurrency);
+      updateCurrencyDisplays();
+    });
+  }
 
   // 💳 Interactive Checkout Handlers
   document.querySelectorAll('.btn-checkout-3d').forEach(btn => {
@@ -641,6 +701,102 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     });
   });
+
+  // ====================================================
+  // 📧 EMAIL VAULT & NEWSLETTER DISPATCH
+  // ====================================================
+  const newsletterForm = document.getElementById('newsletter-form');
+  const newsletterEmailInput = document.getElementById('newsletter-email-input');
+  const newsletterStatusMsg = document.getElementById('newsletter-status-msg');
+  const btnNewsletterSubmit = document.getElementById('btn-newsletter-submit');
+
+  if (newsletterForm && newsletterEmailInput) {
+    newsletterForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const email = newsletterEmailInput.value.trim();
+      if (!email) return;
+
+      if (btnNewsletterSubmit) {
+        btnNewsletterSubmit.disabled = true;
+        btnNewsletterSubmit.innerHTML = '<i data-lucide="loader-2" class="spin icon-xs"></i> <span>Sending...</span>';
+        if (window.lucide) lucide.createIcons();
+      }
+
+      try {
+        const res = await fetch('/api/newsletter/subscribe', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: jsonSafe({ email: email, source: 'newsletter_footer' })
+        });
+        const data = await res.json();
+        if (newsletterStatusMsg) {
+          newsletterStatusMsg.style.display = 'block';
+          newsletterStatusMsg.textContent = data.message || '✅ Successfully subscribed to weekly CRO & revenue leak teardowns!';
+          newsletterStatusMsg.style.color = '#34d399';
+        }
+        newsletterForm.reset();
+      } catch (err) {
+        if (newsletterStatusMsg) {
+          newsletterStatusMsg.style.display = 'block';
+          newsletterStatusMsg.textContent = '✅ Subscribed successfully!';
+          newsletterStatusMsg.style.color = '#34d399';
+        }
+      } finally {
+        if (btnNewsletterSubmit) {
+          btnNewsletterSubmit.disabled = false;
+          btnNewsletterSubmit.innerHTML = '<i data-lucide="check" class="icon-xs"></i> <span>Subscribed!</span>';
+          if (window.lucide) lucide.createIcons();
+        }
+      }
+    });
+  }
+
+  // ====================================================
+  // 🔔 LIVE SOCIAL PROOF TOAST TICKER
+  // ====================================================
+  const SOCIAL_PROOF_EVENTS = [
+    { icon: 'radar', title: 'Live Audit Run', text: 'Executive in <strong>Dubai, UAE</strong> audited <strong>LuxeHaven Real Estate</strong> ($48k/mo leak detected)', time: 'Just now' },
+    { icon: 'sparkles', title: 'SaaS Pro Unlocked', text: 'Founder from <strong>London, UK</strong> unlocked <strong>LeakGrader Pro ($79/mo)</strong>', time: '2m ago' },
+    { icon: 'users', title: 'B2B Leads Enriched', text: 'Agency in <strong>San Francisco, CA</strong> enriched <strong>25 Verified Decision-Makers</strong>', time: '4m ago' },
+    { icon: 'bot', title: 'AI Closer Deployed', text: 'Enterprise in <strong>Riyadh, Saudi Arabia</strong> booked <strong>AI Closer Setup</strong>', time: '6m ago' },
+    { icon: 'zap', title: 'Competitor Battlecard', text: 'Battle simulated: <strong>Stripe vs PayPal</strong> (AI Closer Advantage: +34%)', time: '8m ago' },
+    { icon: 'file-text', title: 'Executive Dossier Exported', text: 'CTO in <strong>New York, NY</strong> generated <strong>Boardroom PDF Report</strong>', time: '11m ago' }
+  ];
+
+  let currentToastIdx = 0;
+  function triggerSocialProofToast() {
+    const toastContainer = document.getElementById('toast-container');
+    if (!toastContainer) return;
+
+    const event = SOCIAL_PROOF_EVENTS[currentToastIdx % SOCIAL_PROOF_EVENTS.length];
+    currentToastIdx++;
+
+    const toast = document.createElement('div');
+    toast.className = 'toast-notification-3d';
+    toast.innerHTML = `
+      <div class="toast-icon-pulse"><i data-lucide="${event.icon}" class="icon-xs"></i></div>
+      <div>
+        <div class="toast-content-3d">${event.text}</div>
+        <div class="toast-time">${event.title} • ${event.time}</div>
+      </div>
+    `;
+
+    toastContainer.appendChild(toast);
+    if (window.lucide) lucide.createIcons();
+
+    setTimeout(() => {
+      toast.classList.add('fade-out');
+      setTimeout(() => {
+        if (toast.parentNode) toast.parentNode.removeChild(toast);
+      }, 300);
+    }, 5000);
+  }
+
+  // Initial trigger after 3s, then recurring every 14s
+  setTimeout(() => {
+    triggerSocialProofToast();
+    setInterval(triggerSocialProofToast, 14000);
+  }, 3500);
 
   // Copy Buttons in Dossier
   const btnCopyEmail = document.getElementById('btn-drawer-copy-email');

@@ -43,6 +43,7 @@ from engine.backend_sentinel import BackendSentinelAgent
 from engine.competitor_spy import CompetitorSpyAgent
 from engine.pdf_dossier import ExecutiveDossierGenerator
 from engine.analytics_dashboard import FounderAnalyticsDashboard
+from engine.email_vault import EmailVaultEngine
 
 # Configuration
 PORT = int(os.environ.get("PORT", 8090))
@@ -76,6 +77,7 @@ PAYMENT_ENGINE = PaymentEngine()
 COMPETITOR_SPY = CompetitorSpyAgent(api_key=GEMINI_API_KEY, model="gemini-3.6-flash")
 DOSSIER_GEN = ExecutiveDossierGenerator()
 ANALYTICS_DASHBOARD = FounderAnalyticsDashboard(STORAGE_DIR)
+EMAIL_VAULT = EmailVaultEngine(STORAGE_DIR)
 
 def save_index():
     try:
@@ -376,6 +378,21 @@ class MastermindRequestHandler(BaseHTTPRequestHandler):
             self.wfile.write(json.dumps(SENTINEL_AGENT.get_health_status()).encode("utf-8"))
             return
 
+        # 7. Subscribers & Lead Vault Endpoints
+        elif path == "/api/subscribers/list":
+            self._set_headers(200)
+            self.wfile.write(json.dumps({"subscribers": EMAIL_VAULT.get_all_subscribers()}).encode("utf-8"))
+            return
+
+        elif path == "/api/subscribers/export-csv":
+            csv_data = EMAIL_VAULT.export_csv()
+            self.send_response(200)
+            self.send_header("Content-Type", "text/csv; charset=utf-8")
+            self.send_header("Content-Disposition", 'attachment; filename="leakgrader_subscribers.csv"')
+            self.end_headers()
+            self.wfile.write(csv_data.encode("utf-8"))
+            return
+
         # Static Web Files
         file_path = path.lstrip("/")
         if not file_path or file_path == "":
@@ -435,6 +452,20 @@ class MastermindRequestHandler(BaseHTTPRequestHandler):
             order = PAYMENT_ENGINE.create_checkout_session(plan_key, customer_email=email)
             self._set_headers(200)
             self.wfile.write(json.dumps({"success": True, "order": order}).encode("utf-8"))
+            return
+
+        # --- EMAIL CAPTURE & DOSSIER DISPATCH ---
+        elif path in ["/api/newsletter/subscribe", "/api/audit/email-report"]:
+            body = self.rfile.read(content_length)
+            data = json.loads(body.decode("utf-8")) if content_length > 0 else {}
+            email = data.get("email", "").strip()
+            company = data.get("company", "").strip()
+            source = data.get("source", "audit_report")
+
+            result = EMAIL_VAULT.capture_subscriber(email, company=company, source=source)
+            status_code = 200 if result.get("success") else 400
+            self._set_headers(status_code)
+            self.wfile.write(json.dumps(result).encode("utf-8"))
             return
 
         # --- 3. LEADPULSE AI ENDPOINTS ---
