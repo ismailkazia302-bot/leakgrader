@@ -639,14 +639,15 @@ document.addEventListener('DOMContentLoaded', () => {
   if (pricingOverlay) pricingOverlay.addEventListener('click', closePricing);
 
   // ====================================================
-  // 🌍 MULTI-CURRENCY CONVERTER (USD, SAR, AED, GBP, EUR)
+  // 🌍 MULTI-CURRENCY CONVERTER (USD, INR, SAR, AED, GBP, EUR)
   // ====================================================
   const CURRENCIES = {
-    USD: { symbol: '$', rate: 1.0, name: 'USD' },
-    SAR: { symbol: 'ر.س ', rate: 3.75, name: 'SAR' },
-    AED: { symbol: 'د.إ ', rate: 3.67, name: 'AED' },
-    GBP: { symbol: '£', rate: 0.79, name: 'GBP' },
-    EUR: { symbol: '€', rate: 0.92, name: 'EUR' }
+    USD: { symbol: '$', rate: 1.0, name: 'USD ($)' },
+    INR: { symbol: '₹', rate: 83.5, name: 'INR (₹)' },
+    SAR: { symbol: 'ر.س ', rate: 3.75, name: 'SAR (ر.س)' },
+    AED: { symbol: 'د.إ ', rate: 3.67, name: 'AED (د.إ)' },
+    GBP: { symbol: '£', rate: 0.79, name: 'GBP (£)' },
+    EUR: { symbol: '€', rate: 0.92, name: 'EUR (€)' }
   };
   let activeCurrency = localStorage.getItem('leakgrader_curr') || 'USD';
 

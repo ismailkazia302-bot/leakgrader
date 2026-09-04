@@ -16,6 +16,14 @@ import urllib.error
 
 # Accurate regional phone codes and area formats
 GEO_PHONE_PRESETS = {
+    "india": {"code": "+91", "formats": ["+91 98201 {num5}", "+91 98110 {num5}", "+91 99400 {num5}", "+91 22 6789 {num4}", "+91 80 4123 {num4}", "+91 11 4356 {num4}"]},
+    "mumbai": {"code": "+91", "formats": ["+91 98201 {num5}", "+91 22 6789 {num4}", "+91 22 2654 {num4}"]},
+    "delhi": {"code": "+91", "formats": ["+91 98110 {num5}", "+91 11 4356 {num4}", "+91 11 2678 {num4}"]},
+    "bangalore": {"code": "+91", "formats": ["+91 99400 {num5}", "+91 80 4123 {num4}", "+91 80 2558 {num4}"]},
+    "bengaluru": {"code": "+91", "formats": ["+91 99400 {num5}", "+91 80 4123 {num4}", "+91 80 2558 {num4}"]},
+    "hyderabad": {"code": "+91", "formats": ["+91 98490 {num5}", "+91 40 2331 {num4}"]},
+    "chennai": {"code": "+91", "formats": ["+91 98400 {num5}", "+91 44 2827 {num4}"]},
+    "pune": {"code": "+91", "formats": ["+91 98220 {num5}", "+91 20 2567 {num4}"]},
     "dubai": {"code": "+971", "formats": ["+971 4 388 {num4}", "+971 4 456 {num4}", "+971 50 789 {num4}", "+971 4 521 {num4}"]},
     "uae": {"code": "+971", "formats": ["+971 4 394 {num4}", "+971 2 678 {num4}", "+971 50 654 {num4}"]},
     "abu dhabi": {"code": "+971", "formats": ["+971 2 644 {num4}", "+971 2 811 {num4}", "+971 50 321 {num4}"]},
@@ -30,41 +38,31 @@ GEO_PHONE_PRESETS = {
     "usa": {"code": "+1", "formats": ["+1 (800) 555-{num4}", "+1 (212) 555-{num4}", "+1 (415) 555-{num4}"]},
     "singapore": {"code": "+65", "formats": ["+65 6789 {num4}", "+65 6432 {num4}", "+65 6511 {num4}"]},
     "sydney": {"code": "+61", "formats": ["+61 2 8900 {num4}", "+61 2 9234 {num4}"]},
+    "australia": {"code": "+61", "formats": ["+61 2 8900 {num4}", "+61 3 9800 {num4}"]},
     "toronto": {"code": "+1", "formats": ["+1 (416) 555-{num4}", "+1 (647) 555-{num4}"]},
+    "canada": {"code": "+1", "formats": ["+1 (416) 555-{num4}", "+1 (604) 555-{num4}"]},
     "paris": {"code": "+33", "formats": ["+33 1 42 68 {num2} {num2}", "+33 1 53 00 {num2} {num2}"]},
-    "berlin": {"code": "+49", "formats": ["+49 30 2094 {num4}", "+49 30 8891 {num4}"]}
-}
-
-# Industry Specific Authentic Brand Templates for Geo-Targeted Fallbacks
-INDUSTRY_BRAND_CATALOG = {
-    "dental": [
-        {"prefix": "Pearl Aesthetic Dental Care", "tld": ".com", "pain": "Missing high-value cosmetic & implant patient bookings on weekends."},
-        {"prefix": "Skyline Private Dental Clinic", "tld": ".com", "pain": "Patients abandoning multi-field appointment forms after 6:00 PM."},
-        {"prefix": "Elite Orthodontics & Smiles", "tld": ".ae", "pain": "Slow 6-hour inquiry response time leading patients to book rival clinics."},
-        {"prefix": "German Medical & Dental Center", "tld": ".com", "pain": "Unanswered VIP dental inquiries from mobile search ads during off-hours."},
-        {"prefix": "Apex Laser Dental Studio", "tld": ".com", "pain": "No 24/7 WhatsApp concierge for emergency dental consultations."}
-    ],
-    "real estate": [
-        {"prefix": "LuxeHaven Prime Properties", "tld": ".ae", "pain": "High-net-worth buyers dropping off luxury off-plan villa listings after 8:00 PM."},
-        {"prefix": "Marina Grand Luxury Estates", "tld": ".com", "pain": "International investor inquiries waiting 12+ hours due to timezone differences."},
-        {"prefix": "Apex Sovereign Real Estate", "tld": ".com", "pain": "Losing 42% of portal lead submissions from mobile buyers who bounce."},
-        {"prefix": "Palm Jumeirah Signature Realty", "tld": ".ae", "pain": "Static contact forms failing to pre-qualify buyer budgets over $2M."},
-        {"prefix": "Vanguard Commercial Assets", "tld": ".com", "pain": "Broker team overwhelmed with unqualified rental inquiries instead of buyers."}
-    ],
-    "wealth": [
-        {"prefix": "Sovereign Family Office & Capital", "tld": ".com", "pain": "Lack of instant pre-qualification for accredited investor inquiries."},
-        {"prefix": "Apex Global Wealth Advisory", "tld": ".com", "pain": "Advisors losing prime international client leads over weekends."},
-        {"prefix": "Horizon Private Asset Partners", "tld": ".ae", "pain": "High-friction appointment booking process for HNWI wealth reviews."}
-    ],
-    "saas": [
-        {"prefix": "CloudScale Enterprise AI", "tld": ".io", "pain": "High friction demo request form causing 34% drop-off on enterprise landing pages."},
-        {"prefix": "OmniSync Data Systems", "tld": ".com", "pain": "Static contact sales pipeline with 24-hour SLA losing hot enterprise trials."},
-        {"prefix": "Vanguard Cyber Operations", "tld": ".io", "pain": "Inbound buyer inquiries abandoning static pricing calculator."}
-    ]
+    "france": {"code": "+33", "formats": ["+33 1 42 68 {num2} {num2}"]},
+    "berlin": {"code": "+49", "formats": ["+49 30 2094 {num4}", "+49 30 8891 {num4}"]},
+    "germany": {"code": "+49", "formats": ["+49 30 2094 {num4}", "+49 89 2100 {num4}"]}
 }
 
 # Dynamic Name Pools with wide regional diversity
 REGIONAL_NAMES = {
+    "south_asia": [
+        {"first": "Dr. Rohan", "last": "Mehta", "title": "Chief Dental Surgeon & Director"},
+        {"first": "Dr. Priya", "last": "Sharma", "title": "Clinical Director & Founder"},
+        {"first": "Dr. Rajesh", "last": "Iyer", "title": "Principal Specialist & MD"},
+        {"first": "Dr. Ananya", "last": "Verma", "title": "Head of Orthodontics & Smiles"},
+        {"first": "Vikram", "last": "Malhotra", "title": "Managing Director"},
+        {"first": "Siddharth", "last": "Kapoor", "title": "Chief Executive Officer"},
+        {"first": "Dr. Neha", "last": "Patel", "title": "Clinical Lead & Partner"},
+        {"first": "Arjun", "last": "Singhania", "title": "Founder & Principal"},
+        {"first": "Pooja", "last": "Deshmukh", "title": "VP of Commercial Operations"},
+        {"first": "Kunal", "last": "Bansal", "title": "Managing Partner"},
+        {"first": "Dr. Aditya", "last": "Nambiar", "title": "Specialist Director"},
+        {"first": "Rituja", "last": "Sen", "title": "Head of Patient Experience"}
+    ],
     "middle_east": [
         {"first": "Tariq", "last": "Al-Mansoor", "title": "Managing Director"},
         {"first": "Dr. Sarah", "last": "Al-Hashimi", "title": "Clinical Director"},
@@ -95,7 +93,11 @@ REGIONAL_NAMES = {
     ]
 }
 
-COMPANY_ADJECTIVES = [
+COMPANY_ADJECTIVES_INDIA = [
+    "Apollo", "Clove", "Max", "Smile Kraft", "Fortis", "Care", "Medanta", "Apex", "Sabka", "Zenith"
+]
+
+COMPANY_ADJECTIVES_GLOBAL = [
     "Apex", "Prime", "Signature", "Heritage", "Sovereign", "Elite", "Horizon", "Sterling", 
     "Vanguard", "Crown", "Pinnacle", "Ascent", "Omni", "Beacon", "Crest", "Nexus"
 ]
@@ -131,11 +133,11 @@ class LeadPulseAgent:
 Your job is to generate {count} highly realistic, unique, and verified enterprise B2B decision-makers in the '{industry}' industry located in '{location}'.
 
 STRICT ACCURACY RULES:
-1. Company Name: Authentic, prestigious, realistic enterprise business names in {location} for {industry}. Do not use generic placeholders.
-2. Decision Maker: Culturally and geographically authentic full names appropriate for {location}.
-3. Accurate Phone Number: Exact dial code and local mobile/landline format for {location}.
-4. Direct Corporate Email: Professional formula like 'firstname.lastname@domain.com'.
-5. Estimated Revenue: Realistic annual turnover ($8M - $60M / year).
+1. Company Name: Authentic, prestigious, realistic enterprise business names in {location} for {industry}. For India, use authentic Indian medical/commercial brands (e.g. 'Apollo White Dental', 'Clove Dental Mumbai', 'Max Super Specialty Dental Delhi', 'Smile Kraft Care Bangalore', 'DLF Prime Living Gurgaon', 'Godrej Signature Estates Mumbai').
+2. Decision Maker: Culturally and geographically authentic full names appropriate for {location} (e.g. Indian names like Dr. Rohan Mehta, Dr. Priya Sharma for India; Arabic names for UAE/Saudi; British names for UK, etc.).
+3. Accurate Phone Number: Exact dial code and local mobile/landline format for {location} (e.g. +91 98XXX XXXXX for India; +971 4 XXX XXXX for Dubai; +44 20 XXXX XXXX for UK; +1 (212) XXX-XXXX for US).
+4. Direct Corporate Email: Professional formula like 'firstname.lastname@domain.in' or '.com'.
+5. Estimated Revenue: Realistic turnover (e.g. ₹15 Cr - ₹45 Cr / yr for India, $8M - $60M for US/UAE).
 6. Primary Pain Point: Specific after-hours response lag or conversion leakage on their website in {industry}.
 7. Pitch Scripts: High-converting cold outreach script tailored to their business.
 
@@ -192,23 +194,41 @@ RETURN VALID JSON ARRAY of objects with this schema:
         loc_low = location.lower()
         ind_low = industry.lower()
 
-        # 1. Resolve Geo Phone Format
-        phone_template = "+971 4 388 {num4}" if ("dubai" in loc_low or "uae" in loc_low) else "+1 (212) 555-{num4}"
+        # 1. Detect Geographic Region
+        is_india = any(k in loc_low for k in ["india", "mumbai", "delhi", "bangalore", "bengaluru", "hyderabad", "chennai", "pune", "kolkata", "ahmedabad", "jaipur", "gurgaon", "noida"])
+        is_me = any(k in loc_low for k in ["dubai", "uae", "abu dhabi", "riyadh", "saudi", "doha", "qatar", "kuwait", "bahrain", "oman", "jeddah"])
+        is_uk = any(k in loc_low for k in ["london", "uk", "manchester", "birmingham", "leeds", "glasgow", "edinburgh", "bristol"])
+        is_au = any(k in loc_low for k in ["sydney", "melbourne", "australia", "brisbane", "perth"])
+        is_ca = any(k in loc_low for k in ["toronto", "vancouver", "canada", "montreal", "calgary"])
+
+        # 2. Resolve Geo Phone Format
+        phone_template = "+1 (212) 555-{num4}"
+        if is_india:
+            phone_template = random.choice(GEO_PHONE_PRESETS["india"]["formats"])
+        elif is_me:
+            phone_template = "+971 4 388 {num4}"
+        elif is_uk:
+            phone_template = "+44 20 7946 {num4}"
+
         for city_key, conf in GEO_PHONE_PRESETS.items():
             if city_key in loc_low:
                 phone_template = random.choice(conf["formats"])
                 break
 
-        # 2. Resolve Regional Names
-        is_me = any(k in loc_low for k in ["dubai", "uae", "abu dhabi", "riyadh", "saudi", "doha", "qatar", "kuwait", "bahrain", "oman", "jeddah"])
-        name_pool = list(REGIONAL_NAMES["middle_east"] if is_me else REGIONAL_NAMES["western"])
+        # 3. Resolve Regional Name Pool
+        if is_india:
+            name_pool = list(REGIONAL_NAMES["south_asia"])
+        elif is_me:
+            name_pool = list(REGIONAL_NAMES["middle_east"])
+        else:
+            name_pool = list(REGIONAL_NAMES["western"])
         random.shuffle(name_pool)
 
         city_clean = location.title().split(",")[0].strip()
         ind_clean = industry.title()
 
         # Dynamic brand templates
-        adjectives = list(COMPANY_ADJECTIVES)
+        adjectives = list(COMPANY_ADJECTIVES_INDIA if is_india else COMPANY_ADJECTIVES_GLOBAL)
         random.shuffle(adjectives)
 
         leads = []
@@ -218,22 +238,38 @@ RETURN VALID JSON ARRAY of objects with this schema:
             
             # Create customized company name based on user's exact industry & city
             if "dent" in ind_low:
-                comp_name = f"{adj} Dental & Aesthetic Care {city_clean}"
+                if is_india:
+                    comp_name = f"{adj} Dental & Aesthetic Clinic {city_clean}" if city_clean != "India" else f"{adj} Dental Care India"
+                else:
+                    comp_name = f"{adj} Dental & Aesthetic Care {city_clean}"
             elif any(k in ind_low for k in ["real", "estate", "prop", "villa"]):
                 comp_name = f"{adj} Living & Properties {city_clean}"
             elif any(k in ind_low for k in ["wealth", "invest", "fund", "capital", "equity"]):
-                comp_name = f"{adj} Capital Partners {city_clean}"
+                comp_name = f"{adj} Capital Advisory {city_clean}"
             elif "saas" in ind_low or "tech" in ind_low or "cloud" in ind_low:
                 comp_name = f"{adj} Cloud Systems {city_clean}"
             else:
                 comp_name = f"{adj} {ind_clean} Group {city_clean}"
             
             domain_slug = comp_name.lower().replace(" ", "").replace("&", "").replace("-", "").replace(".", "")[:14]
-            tld = ".ae" if is_me and "dubai" in loc_low else (".co.uk" if "london" in loc_low or "uk" in loc_low else ".com")
+            if is_india:
+                tld = ".in" if i % 2 == 0 else ".co.in"
+            elif is_me and "dubai" in loc_low:
+                tld = ".ae"
+            elif is_uk:
+                tld = ".co.uk"
+            elif is_au:
+                tld = ".com.au"
+            elif is_ca:
+                tld = ".ca"
+            else:
+                tld = ".com"
+                
             domain = f"{domain_slug}{tld}"
 
             # Generate geo-accurate phone
             phone_num = phone_template.format(
+                num5=random.randint(10000, 99999),
                 num4=random.randint(1000, 9999),
                 num3=random.randint(100, 999),
                 num2=random.randint(10, 99)
@@ -243,13 +279,17 @@ RETURN VALID JSON ARRAY of objects with this schema:
             last_clean = person["last"].replace("Al-", "").lower()
             email = f"{first_clean}.{last_clean}@{domain}"
 
-            revenue = f"${random.randint(10, 48)}M / year"
+            if is_india:
+                revenue = f"₹{random.randint(15, 65)} Cr / yr"
+            else:
+                revenue = f"${random.randint(10, 48)}M / yr"
+                
             pain = f"Losing high-intent after-hours inbound inquiries on {comp_name} due to slow response latency."
 
             pitch = (
                 f"Hi {person['first']},\n\n"
                 f"I analyzed {comp_name}'s conversion pipeline in {location} and noticed inquiries submitted after business hours currently face response lag.\n\n"
-                f"We deployed a 24/7 autonomous AI WhatsApp closer for similar {industry} businesses that cut reply times to 30 seconds and recovered ~$45,000/mo in dropped inquiries.\n\n"
+                f"We deployed a 24/7 autonomous AI WhatsApp closer for similar {industry} businesses that cut reply times to 30 seconds and recovered ~₹35 Lakhs/mo in dropped patient/client inquiries.\n\n"
                 f"Would you be open to a 5-minute walkthrough of your live diagnostic?\n\n"
                 f"Best regards,\nLeakGrader Growth Intelligence"
             )
