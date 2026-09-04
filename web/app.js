@@ -667,12 +667,18 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   // 💳 Interactive Checkout Handlers
+  const DIRECT_CHECKOUT_URLS = {
+    micro_audit: 'https://leakrader.lemonsqueezy.com/checkout/buy/01744fdd-75c3-40f5-86ec-7c724cd55080',
+    pro_saas: 'https://leakrader.lemonsqueezy.com/checkout/buy/047e1a00-52e8-45dd-9d99-0a3463b57096',
+    agency_retainer: 'https://leakrader.lemonsqueezy.com/checkout/buy/ddd06567-8528-4066-856d-ca6e3b68827b'
+  };
+
   document.querySelectorAll('.btn-checkout-3d').forEach(btn => {
     btn.addEventListener('click', async () => {
       const planKey = btn.dataset.plan || 'micro_audit';
       const originalText = btn.innerHTML;
       btn.disabled = true;
-      btn.innerHTML = '<i data-lucide="loader-2" class="spin icon-xs"></i> <span>Initializing Secure Checkout...</span>';
+      btn.innerHTML = '<i data-lucide="loader-2" class="spin icon-xs"></i> <span>Opening Secure Checkout...</span>';
       if (window.lucide) lucide.createIcons();
 
       try {
@@ -683,9 +689,10 @@ document.addEventListener('DOMContentLoaded', () => {
         });
         const data = await res.json();
         const order = data.order || {};
+        const targetUrl = order.checkout_url || DIRECT_CHECKOUT_URLS[planKey];
 
-        if (order.checkout_url && order.checkout_url.startsWith('https://')) {
-          window.open(order.checkout_url, '_blank');
+        if (targetUrl && targetUrl.startsWith('https://')) {
+          window.open(targetUrl, '_blank');
           closePricing();
           return;
         }
@@ -693,7 +700,10 @@ document.addEventListener('DOMContentLoaded', () => {
         alert(`✅ Secure Checkout Session Created!\n\nOrder ID: ${order.order_id}\nPlan: ${order.plan_name}\nAmount: $${order.amount_usd} USD\nUnlock Token: ${order.unlock_token}\n\nStatus: Order Confirmed & Instant Pro Features Unlocked!`);
         closePricing();
       } catch (err) {
-        alert('Checkout completed in Sandbox mode.');
+        if (DIRECT_CHECKOUT_URLS[planKey]) {
+          window.open(DIRECT_CHECKOUT_URLS[planKey], '_blank');
+        }
+        closePricing();
       } finally {
         btn.disabled = false;
         btn.innerHTML = originalText;
