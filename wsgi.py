@@ -15,6 +15,7 @@ from app import (
     ALL_DOCUMENTS, ALL_CHUNKS, BOOKINGS, LEADS, AUDITS,
     RETRIEVER, INTELLIGENCE, LEAD_AGENT, BOOKING_AGENT,
     CONTENT_CREW, AUDIT_ENGINE, SEO_ENGINE, PAYMENT_ENGINE, GROWTH_AGENT, PLANS,
+    ANALYTICS_DASHBOARD, WEBSITE_MANAGER,
     WEB_DIR, save_index, save_bookings, save_leads, save_audits, load_all_data
 )
 
@@ -28,6 +29,17 @@ def application(environ, start_response):
     path = environ.get('PATH_INFO', '')
     method = environ.get('REQUEST_METHOD', 'GET').upper()
     query_string = environ.get('QUERY_STRING', '')
+
+    # Record Live Visitor Telemetry
+    client_ip = environ.get('HTTP_X_FORWARDED_FOR', '').split(',')[0].strip() or environ.get('REMOTE_ADDR', '127.0.0.1')
+    user_agent = environ.get('HTTP_USER_AGENT', '')
+    referrer = environ.get('HTTP_REFERER', '')
+    country = environ.get('HTTP_CF_IPCOUNTRY', '')
+    if not path.startswith('/api/') and not path.endswith('.ico') and not path.endswith('.svg') and not path.endswith('.css') and not path.endswith('.js'):
+        try:
+            ANALYTICS_DASHBOARD.record_visitor(client_ip, user_agent, path, referrer, country)
+        except Exception:
+            pass
 
     # 1. Handle POST API requests
     if method == 'POST':
@@ -162,8 +174,36 @@ def application(environ, start_response):
             start_response(status, response_headers)
             return [json.dumps({"success": True, "campaign": res}).encode('utf-8')]
 
+        # Route: /api/manager/solve-all
+        elif path in ['/api/manager/solve-all', '/api/website-manager/auto-heal']:
+            rep = WEBSITE_MANAGER.run_full_management_cycle()
+            status = '200 OK'
+            response_headers = [('Content-Type', 'application/json; charset=utf-8'), ('Access-Control-Allow-Origin', '*')]
+            start_response(status, response_headers)
+            return [json.dumps({"success": True, "report": rep}).encode('utf-8')]
+
     # 2. Handle GET endpoints
-    if path == '/robots.txt':
+    if path in ['/analytics', '/dashboard', '/founder']:
+        dashboard_html = ANALYTICS_DASHBOARD.render_html()
+        status = '200 OK'
+        response_headers = [('Content-Type', 'text/html; charset=utf-8'), ('Cache-Control', 'no-cache')]
+        start_response(status, response_headers)
+        return [dashboard_html.encode('utf-8')]
+
+    elif path == '/api/analytics/live':
+        status = '200 OK'
+        response_headers = [('Content-Type', 'application/json; charset=utf-8'), ('Access-Control-Allow-Origin', '*')]
+        start_response(status, response_headers)
+        return [json.dumps(ANALYTICS_DASHBOARD.get_live_data()).encode('utf-8')]
+
+    elif path in ['/api/manager/status', '/api/website-manager/status']:
+        rep = WEBSITE_MANAGER.run_full_management_cycle()
+        status = '200 OK'
+        response_headers = [('Content-Type', 'application/json; charset=utf-8'), ('Access-Control-Allow-Origin', '*')]
+        start_response(status, response_headers)
+        return [json.dumps(rep).encode('utf-8')]
+
+    elif path == '/robots.txt':
         robots_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "web", "robots.txt")
         if os.path.exists(robots_path):
             with open(robots_path, 'rb') as f:

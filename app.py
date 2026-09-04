@@ -266,6 +266,17 @@ class MastermindRequestHandler(BaseHTTPRequestHandler):
         parsed = urlparse(self.path)
         path = parsed.path
 
+        # Record Live Visitor Telemetry
+        client_ip = self.headers.get("X-Forwarded-For") or self.headers.get("CF-Connecting-IP") or (self.client_address[0] if hasattr(self, 'client_address') else "127.0.0.1")
+        user_agent = self.headers.get("User-Agent", "")
+        referrer = self.headers.get("Referer", "")
+        country = self.headers.get("CF-IPCountry") or self.headers.get("X-Country", "")
+        if not path.startswith("/api/") and not path.endswith(".ico") and not path.endswith(".svg") and not path.endswith(".css") and not path.endswith(".js"):
+            try:
+                ANALYTICS_DASHBOARD.record_visitor(client_ip, user_agent, path, referrer, country)
+            except Exception:
+                pass
+
         if path == "/health":
             self._set_headers(200)
             self.wfile.write(json.dumps({"status": "healthy", "service": "Mastermind Global AI Platform (All 7 Engines Online)"}).encode("utf-8"))
