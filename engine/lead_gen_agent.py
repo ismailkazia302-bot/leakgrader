@@ -227,8 +227,27 @@ RETURN VALID JSON ARRAY of objects with this schema:
         city_clean = location.title().split(",")[0].strip()
         ind_clean = industry.title()
 
-        # Dynamic brand templates
-        adjectives = list(COMPANY_ADJECTIVES_INDIA if is_india else COMPANY_ADJECTIVES_GLOBAL)
+        # Dynamic brand templates by industry
+        is_gym = any(k in ind_low for k in ["gym", "fitness", "crossfit", "workout", "trainer", "yoga", "pilates"])
+        is_dental = any(k in ind_low for k in ["dent", "ortho", "teeth", "smile"])
+        is_medical = any(k in ind_low for k in ["clinic", "hospital", "health", "pharma", "doctor", "care", "medic"])
+        is_real_estate = any(k in ind_low for k in ["real", "estate", "prop", "villa", "realt", "builder", "developer"])
+        is_tech = any(k in ind_low for k in ["saas", "tech", "cloud", "ai", "software", "app", "cyber"])
+        is_legal = any(k in ind_low for k in ["law", "legal", "advocate", "attorney", "jurist"])
+
+        if is_gym:
+            adjectives = ["Cult", "Gold's", "Iron", "Titan", "FitZone", "Olympus", "Pulse", "Elevate", "Anytime", "Spartan"] if is_india else ["Equinox", "F45", "Gold's", "Titan", "FitZone", "Pulse", "Olympus", "Elevate", "Anytime", "Iron"]
+        elif is_dental or is_medical:
+            adjectives = list(COMPANY_ADJECTIVES_INDIA if is_india else COMPANY_ADJECTIVES_GLOBAL)
+        elif is_real_estate:
+            adjectives = ["DLF", "Godrej", "Lodha", "Prestige", "Sobha", "Signature", "Apex", "Prime", "LuxeHaven", "Heritage"] if is_india else ["LuxeHaven", "Vanguard", "Apex", "Prime", "Emaar", "Damac", "Sotheby", "Prestige"]
+        elif is_tech:
+            adjectives = ["Nexlify", "ScalePoint", "Cognitive", "CloudSphere", "ApexWave", "InnoTech", "DataPulse", "ByteCore"]
+        elif is_legal:
+            adjectives = ["Singhania", "Khaitan", "Amarchand", "Apex", "Lex", "Vanguard", "Pinnacle", "Sterling"]
+        else:
+            adjectives = ["Apex", "Zenith", "Prime", "Pinnacle", "Summit", "Elevate", "Vanguard", "Benchmark", "Nexus", "Elite"]
+
         random.shuffle(adjectives)
 
         leads = []
@@ -236,22 +255,36 @@ RETURN VALID JSON ARRAY of objects with this schema:
             person = name_pool[i % len(name_pool)]
             adj = adjectives[i % len(adjectives)]
             
-            # Create customized company name based on user's exact industry & city
-            if "dent" in ind_low:
-                if is_india:
-                    comp_name = f"{adj} Dental & Aesthetic Clinic {city_clean}" if city_clean != "India" else f"{adj} Dental Care India"
-                else:
-                    comp_name = f"{adj} Dental & Aesthetic Care {city_clean}"
-            elif any(k in ind_low for k in ["real", "estate", "prop", "villa"]):
-                comp_name = f"{adj} Living & Properties {city_clean}"
-            elif any(k in ind_low for k in ["wealth", "invest", "fund", "capital", "equity"]):
-                comp_name = f"{adj} Capital Advisory {city_clean}"
-            elif "saas" in ind_low or "tech" in ind_low or "cloud" in ind_low:
-                comp_name = f"{adj} Cloud Systems {city_clean}"
+            # Title adaptation if doctor vs fitness/business founder
+            title = person["title"]
+            contact_first = person["first"]
+            if is_gym:
+                contact_first = contact_first.replace("Dr. ", "")
+                gym_titles = ["Founder & Managing Director", "Managing Partner", "Chief Operating Officer", "Head of Membership & Expansion", "Director of Operations"]
+                title = gym_titles[i % len(gym_titles)]
+                comp_name = f"{adj} Fitness Club {city_clean}" if i % 2 == 0 else f"{adj} Gym & Performance Center {city_clean}"
+            elif is_dental:
+                comp_name = f"{adj} Dental & Aesthetic Clinic {city_clean}" if city_clean != "India" else f"{adj} Dental Care India"
+            elif is_medical:
+                comp_name = f"{adj} Healthcare & Specialty Clinic {city_clean}"
+            elif is_real_estate:
+                contact_first = contact_first.replace("Dr. ", "")
+                re_titles = ["Managing Director", "Chief Executive Officer", "VP of Sales & Acquisitions", "Managing Partner", "Head of Commercial Sales"]
+                title = re_titles[i % len(re_titles)]
+                comp_name = f"{adj} Living & Properties {city_clean}" if i % 2 == 0 else f"{adj} Real Estate Developers {city_clean}"
+            elif is_tech:
+                contact_first = contact_first.replace("Dr. ", "")
+                tech_titles = ["Chief Executive Officer", "Founder & CTO", "VP of Growth & Revenue", "Managing Director", "Head of Product"]
+                title = tech_titles[i % len(tech_titles)]
+                comp_name = f"{adj} Cloud Systems {city_clean}" if i % 2 == 0 else f"{adj} Technologies {city_clean}"
+            elif is_legal:
+                contact_first = contact_first.replace("Dr. ", "Adv. ")
+                comp_name = f"{adj} & Partners Legal Chambers {city_clean}"
             else:
+                contact_first = contact_first.replace("Dr. ", "")
                 comp_name = f"{adj} {ind_clean} Group {city_clean}"
             
-            domain_slug = comp_name.lower().replace(" ", "").replace("&", "").replace("-", "").replace(".", "")[:14]
+            domain_slug = comp_name.lower().replace(" ", "").replace("&", "").replace("-", "").replace(".", "").replace("'", "")[:15]
             if is_india:
                 tld = ".in" if i % 2 == 0 else ".co.in"
             elif is_me and "dubai" in loc_low:
@@ -275,29 +308,38 @@ RETURN VALID JSON ARRAY of objects with this schema:
                 num2=random.randint(10, 99)
             )
 
-            first_clean = person["first"].replace("Dr. ", "").lower()
+            first_clean = contact_first.replace("Dr. ", "").replace("Adv. ", "").lower()
             last_clean = person["last"].replace("Al-", "").lower()
             email = f"{first_clean}.{last_clean}@{domain}"
 
             if is_india:
-                revenue = f"₹{random.randint(15, 65)} Cr / yr"
+                if is_gym:
+                    revenue = f"₹{random.randint(8, 28)} Cr / yr"
+                    pain_term = "dropped membership signups & trial bookings"
+                elif is_dental:
+                    revenue = f"₹{random.randint(15, 65)} Cr / yr"
+                    pain_term = "dropped patient inquiries & cosmetic consultations"
+                else:
+                    revenue = f"₹{random.randint(12, 50)} Cr / yr"
+                    pain_term = "dropped customer/client inquiries"
             else:
                 revenue = f"${random.randint(10, 48)}M / yr"
+                pain_term = "dropped customer/client inquiries"
                 
             pain = f"Losing high-intent after-hours inbound inquiries on {comp_name} due to slow response latency."
 
             pitch = (
-                f"Hi {person['first']},\n\n"
+                f"Hi {contact_first},\n\n"
                 f"I analyzed {comp_name}'s conversion pipeline in {location} and noticed inquiries submitted after business hours currently face response lag.\n\n"
-                f"We deployed a 24/7 autonomous AI WhatsApp closer for similar {industry} businesses that cut reply times to 30 seconds and recovered ~₹35 Lakhs/mo in dropped patient/client inquiries.\n\n"
+                f"We deployed a 24/7 autonomous AI WhatsApp closer for similar {industry} businesses that cut reply times to 30 seconds and recovered ~₹18-35 Lakhs/mo in {pain_term}.\n\n"
                 f"Would you be open to a 5-minute walkthrough of your live diagnostic?\n\n"
                 f"Best regards,\nLeakGrader Growth Intelligence"
             )
 
             leads.append({
                 "id": f"ld_{int(time.time()*1000)}_{i+1}",
-                "contact_name": f"{person['first']} {person['last']}",
-                "title": person["title"],
+                "contact_name": f"{contact_first} {person['last']}",
+                "title": title,
                 "company_name": comp_name,
                 "estimated_revenue": revenue,
                 "email": email,
