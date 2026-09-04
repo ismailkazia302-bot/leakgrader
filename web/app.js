@@ -1875,4 +1875,46 @@ document.addEventListener('DOMContentLoaded', () => {
   loadDocuments();
   loadBookings();
   loadDirectoryPages();
+
+  // 📱 PWA Service Worker & Install Handler
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+      navigator.serviceWorker.register('/sw.js').then((reg) => {
+        console.log('LeakGrader ServiceWorker registered with scope:', reg.scope);
+      }).catch((err) => {
+        console.log('ServiceWorker registration error:', err);
+      });
+    });
+  }
+
+  let deferredInstallPrompt = null;
+  const btnInstallApp = document.getElementById('btn-install-app');
+
+  window.addEventListener('beforeinstallprompt', (e) => {
+    e.preventDefault();
+    deferredInstallPrompt = e;
+    if (btnInstallApp) {
+      btnInstallApp.style.display = 'inline-flex';
+    }
+  });
+
+  if (btnInstallApp) {
+    btnInstallApp.addEventListener('click', async () => {
+      if (deferredInstallPrompt) {
+        deferredInstallPrompt.prompt();
+        const { outcome } = await deferredInstallPrompt.userChoice;
+        if (outcome === 'accepted') {
+          btnInstallApp.style.display = 'none';
+        }
+        deferredInstallPrompt = null;
+      } else {
+        alert('To install LeakGrader as an app:\n\n• On Desktop (Chrome / Edge): Look at the right side of your address bar and click the ⤓ Install icon.\n• On Mobile (Safari / iOS): Tap Share > Add to Home Screen.\n• On Android (Chrome): Tap Menu (⋮) > Install app.');
+      }
+    });
+  }
+
+  window.addEventListener('appinstalled', () => {
+    if (btnInstallApp) btnInstallApp.style.display = 'none';
+    deferredInstallPrompt = null;
+  });
 });
