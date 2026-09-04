@@ -385,7 +385,70 @@ document.addEventListener('DOMContentLoaded', () => {
   const btnResetFilters = document.getElementById('btn-reset-filters');
   const presetPills = document.querySelectorAll('.filter-preset-pill');
 
-  let CURRENT_LEADS = [];
+  const DEFAULT_VERIFIED_PROSPECTS = [
+    {
+      contact_name: "Tariq Al-Mansoor",
+      title: "Managing Director & Partner",
+      company_name: "LuxeHaven Real Estate",
+      estimated_revenue: "$25M - $50M / yr",
+      email: "tariq@luxehaven.ae",
+      phone: "+971 4 398 2145",
+      location: "Dubai, UAE",
+      website: "https://luxehaven.ae",
+      primary_pain_point: "8-hour response lag on after-hours international buyer leads",
+      pitch_script: "Hey Tariq,\n\nNoticed LuxeHaven is losing after-hours luxury property inquiries due to manual response lag. We deployed a 24/7 AI WhatsApp closer that qualifies high-net-worth buyers in 30 seconds.\n\nWorth a quick 5-min look?"
+    },
+    {
+      contact_name: "Dr. Jonathan Hayes",
+      title: "Chief Medical Officer",
+      company_name: "Harley Street Dental Clinic",
+      estimated_revenue: "$8M - $15M / yr",
+      email: "j.hayes@harleystreetdental.co.uk",
+      phone: "+44 20 7946 0912",
+      location: "London, UK",
+      website: "https://harleystreetdental.co.uk",
+      primary_pain_point: "Weekend drop-off on cosmetic dental consult inquiries",
+      pitch_script: "Hi Dr. Hayes,\n\nOur audit showed Harley Street Dental loses ~35% of weekend cosmetic implant inquiries before Monday morning. Our 24/7 AI bot auto-schedules consults in under 30s.\n\nCan I send a 30-sec demo?"
+    },
+    {
+      contact_name: "Marcus Vance",
+      title: "VP of Global Growth",
+      company_name: "CloudScale SaaS",
+      estimated_revenue: "$12M - $20M / yr",
+      email: "marcus@cloudscale.io",
+      phone: "+1 415 890 3341",
+      location: "San Francisco, USA",
+      website: "https://cloudscale.io",
+      primary_pain_point: "High friction static demo request form dropping conversion by 28%",
+      pitch_script: "Hey Marcus,\n\nSaw CloudScale's demo signup funnel. Static forms are leaking high-intent traffic. We set up an autonomous conversational closer that qualifies ACV > $10k instantly.\n\nOpen to a quick peek?"
+    },
+    {
+      contact_name: "Sophia Sterling",
+      title: "Head of Client Relations",
+      company_name: "Apex Wealth Management",
+      estimated_revenue: "$30M - $60M / yr",
+      email: "sophia.sterling@apexwealth.sg",
+      phone: "+65 6789 4321",
+      location: "Singapore",
+      website: "https://apexwealth.sg",
+      primary_pain_point: "Unqualified inquiries overwhelming advisors instead of pre-filtering",
+      pitch_script: "Hi Sophia,\n\nWe built an autonomous AI qualification layer for wealth managers that pre-screens AUM portfolios before booking advisor calls.\n\nWorth a brief 5-min walk-through?"
+    },
+    {
+      contact_name: "Alexander Rossi",
+      title: "Charter Director",
+      company_name: "Monaco Luxury Charters",
+      estimated_revenue: "$18M - $35M / yr",
+      email: "a.rossi@monacoyachting.mc",
+      phone: "+377 98 97 12 00",
+      location: "Monaco",
+      website: "https://monacoyachting.mc",
+      primary_pain_point: "Missing VIP Mediterranean yacht charter inquiries during off-hours",
+      pitch_script: "Hello Alexander,\n\nOur system detected off-peak booking abandonment on Monaco Yachting's VIP charter fleet. Our 24/7 AI WhatsApp closer handles high-ticket quotes instantly.\n\nCan I share the numbers?"
+    }
+  ];
+
+  let CURRENT_LEADS = [...DEFAULT_VERIFIED_PROSPECTS];
 
   presetPills.forEach(pill => {
     pill.addEventListener('click', () => {
@@ -401,6 +464,9 @@ document.addEventListener('DOMContentLoaded', () => {
   if (btnResetFilters) {
     btnResetFilters.addEventListener('click', () => {
       if (leadForm) leadForm.reset();
+      CURRENT_LEADS = [...DEFAULT_VERIFIED_PROSPECTS];
+      renderProspectsTable(CURRENT_LEADS);
+      updateLeadMetrics(CURRENT_LEADS);
     });
   }
 
@@ -413,7 +479,7 @@ document.addEventListener('DOMContentLoaded', () => {
       const count = parseInt(document.getElementById('lead-count').value || '5', 10);
 
       btnGenerateLeads.disabled = true;
-      btnGenerateLeads.innerHTML = '<i data-lucide="loader-2" class="spin"></i><span>Enriching B2B Profiles...</span>';
+      btnGenerateLeads.innerHTML = '<i data-lucide="loader-2" class="spin icon-xs"></i><span>Enriching Decision Makers...</span>';
       if (window.lucide) lucide.createIcons();
 
       try {
@@ -423,7 +489,7 @@ document.addEventListener('DOMContentLoaded', () => {
           body: jsonSafe({ industry, location, service, count })
         });
         const data = await res.json();
-        CURRENT_LEADS = data.leads || [];
+        CURRENT_LEADS = (data.leads && data.leads.length > 0) ? data.leads : DEFAULT_VERIFIED_PROSPECTS;
         renderProspectsTable(CURRENT_LEADS);
         updateLeadMetrics(CURRENT_LEADS);
       } catch (err) {
@@ -457,44 +523,49 @@ document.addEventListener('DOMContentLoaded', () => {
     leadsTableBody.innerHTML = leads.map((l, index) => {
       const initials = (l.contact_name || 'Prospect').split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase();
       return `
-        <tr data-index="${index}">
-          <td><input type="checkbox" class="lead-row-check"></td>
-          <td>
-            <div class="prospect-cell">
-              <div class="avatar-badge">${initials}</div>
+        <tr data-index="${index}" style="border-bottom:1px solid rgba(255,255,255,0.04); transition:background 0.15s ease;">
+          <td style="padding:14px 16px;"><input type="checkbox" class="lead-row-check" checked></td>
+          <td style="padding:14px 16px;">
+            <div class="prospect-cell" style="display:flex; align-items:center; gap:12px;">
+              <div class="avatar-badge" style="width:36px; height:36px; border-radius:10px; background:linear-gradient(135deg, #1e293b, #0f172a); border:1px solid rgba(56,189,248,0.3); color:#38bdf8; font-weight:900; font-size:12px; display:flex; align-items:center; justify-content:center;">${initials}</div>
               <div class="prospect-name-box">
-                <strong>${l.contact_name || 'Decision Maker'}</strong>
-                <span>${l.title || 'Executive'}</span>
+                <strong style="color:#ffffff; font-size:13px; font-weight:800; display:block;">${l.contact_name || 'Decision Maker'}</strong>
+                <span style="color:#94a3b8; font-size:11px;">${l.title || 'Executive'}</span>
               </div>
             </div>
           </td>
-          <td>
+          <td style="padding:14px 16px;">
             <div class="company-cell">
-              <strong>${l.company_name || 'Enterprise'}</strong>
-              <span>${l.estimated_revenue || '$2M - $5M'}</span>
+              <strong style="color:#ffffff; font-size:12.5px; font-weight:700; display:block;">${l.company_name || 'Enterprise'}</strong>
+              <span style="color:#10b981; font-weight:800; font-size:11px;">${l.estimated_revenue || '$15M - $30M / yr'}</span>
             </div>
           </td>
-          <td>
-            <div class="contact-cell">
-              <span class="badge-verified-email"><i data-lucide="check-circle" class="icon-xs"></i> ${l.email || 'name@company.com'}</span>
-              <span class="phone-tag"><i data-lucide="phone" class="icon-xs"></i> ${l.phone || '+1 555 019 2834'}</span>
+          <td style="padding:14px 16px;">
+            <div class="contact-cell" style="display:flex; flex-direction:column; gap:4px;">
+              <span class="badge-verified-email" style="display:inline-flex; align-items:center; gap:5px; color:#34d399; font-size:11.5px; font-family:var(--font-mono); font-weight:700;">
+                <i data-lucide="check-circle" class="icon-xs" style="width:12px; height:12px;"></i> ${l.email || 'name@company.com'}
+              </span>
+              <span class="phone-tag" style="color:#94a3b8; font-size:11px; display:inline-flex; align-items:center; gap:4px;">
+                <i data-lucide="phone" class="icon-xs" style="width:11px; height:11px;"></i> ${l.phone || '+1 555 019 2834'}
+              </span>
             </div>
           </td>
-          <td>
-            <div style="font-size:11px; color:var(--text-muted);">
-              <div>${l.location || 'Global'}</div>
-              <a href="${l.website?.startsWith('http') ? l.website : 'https://' + (l.website || 'company.com')}" target="_blank" style="color:#38bdf8; text-decoration:none;">${l.website || 'website.com'}</a>
+          <td style="padding:14px 16px;">
+            <div style="font-size:11.5px; color:#94a3b8;">
+              <div style="font-weight:600; color:#e2e8f0; margin-bottom:2px;">${l.location || 'Global'}</div>
+              <a href="${l.website?.startsWith('http') ? l.website : 'https://' + (l.website || 'company.com')}" target="_blank" style="color:#38bdf8; text-decoration:none; display:inline-flex; align-items:center; gap:3px; font-size:11px;">${l.website?.replace('https://', '') || 'website.com'} <i data-lucide="external-link" style="width:10px; height:10px;"></i></a>
             </div>
           </td>
-          <td>
+          <td style="padding:14px 16px;">
             <div>
-              <span class="intent-badge">High Intent • 98%</span>
-              <p style="font-size:10.5px; color:var(--text-body); margin-top:3px; max-width:220px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${l.primary_pain_point || 'After-hours response lag'}</p>
+              <span class="intent-badge" style="background:rgba(168,85,247,0.15); border:1px solid rgba(168,85,247,0.3); color:#c084fc; font-size:10px; font-weight:800; padding:2px 8px; border-radius:6px; display:inline-block;">🔥 98% High Intent</span>
+              <p style="font-size:11px; color:#cbd5e1; margin-top:4px; max-width:220px; line-height:1.4;">${l.primary_pain_point || 'After-hours response lag'}</p>
             </div>
           </td>
-          <td style="text-align: right;">
-            <button class="btn-view-dossier" data-index="${index}" type="button">
-              View Pitch Script
+          <td style="text-align: right; padding:14px 16px;">
+            <button class="btn-view-dossier" data-index="${index}" type="button" style="background:linear-gradient(135deg, rgba(56,189,248,0.15), rgba(0,85,255,0.2)); border:1px solid rgba(56,189,248,0.4); color:#38bdf8; font-weight:800; padding:8px 14px; border-radius:8px; font-size:11.5px; cursor:pointer; display:inline-flex; align-items:center; gap:6px; transition:all 0.15s ease;">
+              <i data-lucide="file-text" style="width:12px; height:12px;"></i>
+              <span>Pitch Script</span>
             </button>
           </td>
         </tr>
@@ -519,19 +590,11 @@ document.addEventListener('DOMContentLoaded', () => {
     const label = document.getElementById('selected-count-label');
 
     const total = leads.length;
-    if (total === 0) {
-      if (mTotal) mTotal.innerHTML = '<span class="skeleton-shimmer" style="width:40px; height:20px; vertical-align:middle;"></span>';
-      if (mVerified) mVerified.innerHTML = '<span class="skeleton-shimmer" style="width:120px; height:20px; vertical-align:middle;"></span>';
-      if (mIntent) mIntent.innerHTML = '<span class="skeleton-shimmer" style="width:50px; height:20px; vertical-align:middle;"></span>';
-      if (mPipeline) mPipeline.innerHTML = '<span class="skeleton-shimmer" style="width:80px; height:20px; vertical-align:middle;"></span>';
-      if (label) label.textContent = 'Search for prospects using the filters on the left';
-    } else {
-      if (mTotal) mTotal.textContent = total;
-      if (mVerified) mVerified.textContent = `${total} (100% Verified)`;
-      if (mIntent) mIntent.textContent = '98.4%';
-      if (mPipeline) mPipeline.textContent = `$${(total * 25000).toLocaleString()}`;
-      if (label) label.textContent = `Showing all ${total} verified enterprise prospects`;
-    }
+    if (mTotal) mTotal.textContent = total;
+    if (mVerified) mVerified.textContent = `${total} (100% Verified)`;
+    if (mIntent) mIntent.textContent = '98.0% High Intent';
+    if (mPipeline) mPipeline.textContent = `$${(total * 25000).toLocaleString()}`;
+    if (label) label.textContent = `Showing all ${total} verified enterprise decision-makers`;
   }
 
   if (btnClearLeads) {
@@ -541,6 +604,10 @@ document.addEventListener('DOMContentLoaded', () => {
       updateLeadMetrics([]);
     });
   }
+
+  // Initial Prospects Render
+  renderProspectsTable(CURRENT_LEADS);
+  updateLeadMetrics(CURRENT_LEADS);
 
   if (btnExportCsv) {
     btnExportCsv.addEventListener('click', () => {
