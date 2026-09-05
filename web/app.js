@@ -32,6 +32,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
     if (targetId === 'agent-seohub') {
       loadDirectoryPages();
+      loadSeoActivity();
+      startSeoCountdown();
     }
 
     if (window.lucide) lucide.createIcons();
@@ -2144,6 +2146,7 @@ document.addEventListener('DOMContentLoaded', () => {
         btnTriggerSprint.disabled = false;
         btnTriggerSprint.innerHTML = '<i data-lucide="zap" style="width:14px; height:14px;"></i> <span id="btn-sprint-text">Run Autonomous SEO Sprint Now</span>';
         if (window.lucide) lucide.createIcons();
+        loadSeoActivity();
       }
     });
   }
@@ -2258,6 +2261,120 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     });
   }
+
+  // ====================================================
+  // 9B. REAL-TIME AUTONOMOUS SEO ACTIVITY STREAM & COUNTDOWN
+  // ====================================================
+  const btnRefreshSeoFeed = document.getElementById('btn-refresh-seo-feed');
+
+  // Live SEO Activity Stream & Countdown
+  let seoCountdownSeconds = 300;
+  let seoCountdownInterval = null;
+
+  async function loadSeoActivity() {
+    const tbody = document.getElementById('seo-activity-tbody');
+    const totalCountEl = document.getElementById('seo-total-sprints-count');
+    const statBacklinks = document.getElementById('stat-seo-backlinks');
+
+    try {
+      const res = await fetch('/api/seo/recent-activity');
+      if (!res.ok) return;
+      const data = await res.json();
+      if (!data.success) return;
+
+      if (totalCountEl) {
+        totalCountEl.textContent = data.total_sprints || 0;
+      }
+      if (statBacklinks && data.total_sprints) {
+        statBacklinks.textContent = `${data.total_sprints} Acquired`;
+      }
+
+      // Calculate countdown seconds remaining based on last run
+      if (data.server_time_utc && data.last_run) {
+        try {
+          const sTime = new Date(data.server_time_utc.replace(' UTC', 'Z')).getTime();
+          const lTime = new Date(data.last_run.replace(' UTC', 'Z')).getTime();
+          if (!isNaN(sTime) && !isNaN(lTime)) {
+            const elapsed = Math.max(0, Math.floor((sTime - lTime) / 1000));
+            seoCountdownSeconds = Math.max(0, 300 - (elapsed % 300));
+          }
+        } catch (e) {}
+      }
+
+      if (tbody && data.recent_sprints && data.recent_sprints.length > 0) {
+        tbody.innerHTML = data.recent_sprints.map((item, idx) => {
+          const isLatest = idx === 0;
+          const targetUrl = item.target_url || 'https://leakgrader.com/';
+          const cleanLocal = targetUrl.replace('https://leakgrader.com', '') || '/';
+          return `
+            <tr style="border-bottom:1px solid rgba(255,255,255,0.05); ${isLatest ? 'background:rgba(56,189,248,0.06);' : ''}">
+              <td style="padding:10px 12px; font-family:var(--font-mono); color:${isLatest ? '#38bdf8' : '#94a3b8'}; font-weight:700;">
+                #${item.sprint_number || item.id}
+                ${isLatest ? '<span style="background:#0055ff; color:#fff; font-size:9px; font-weight:800; padding:2px 6px; border-radius:4px; margin-left:4px;">LATEST</span>' : ''}
+              </td>
+              <td style="padding:10px 12px; font-family:var(--font-mono); color:#cbd5e1; font-size:11.5px; white-space:nowrap;">
+                ${item.timestamp}
+              </td>
+              <td style="padding:10px 12px;">
+                <span style="font-weight:700; color:#ffffff; display:block;">${item.platform}</span>
+                <span style="display:block; font-size:10.5px; color:#64748b;">${item.category || item.tier || 'Authority Directory'}</span>
+              </td>
+              <td style="padding:10px 12px;">
+                <span style="background:rgba(251,191,36,0.15); color:#fbbf24; border:1px solid rgba(251,191,36,0.3); font-weight:800; font-size:11px; padding:2px 8px; border-radius:6px; white-space:nowrap;">
+                  DA ${item.domain_authority}
+                </span>
+              </td>
+              <td style="padding:10px 12px; max-width:320px;">
+                <div style="color:#e2e8f0; font-size:11.5px; font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;" title="${item.anchor_text}">
+                  ${item.anchor_text}
+                </div>
+                <a href="${cleanLocal}" target="_blank" style="color:#38bdf8; font-size:10.5px; text-decoration:none; display:inline-block; margin-top:2px;">
+                  ${cleanLocal} ↗
+                </a>
+              </td>
+              <td style="padding:10px 12px; text-align:right; white-space:nowrap;">
+                <span style="background:rgba(52,211,153,0.15); color:#34d399; border:1px solid rgba(52,211,153,0.3); font-size:10.5px; font-weight:700; padding:2px 8px; border-radius:12px; display:inline-flex; align-items:center; gap:4px;">
+                  <span class="pulse-green-dot" style="width:6px; height:6px;"></span> VERIFIED & LOGGED
+                </span>
+              </td>
+            </tr>
+          `;
+        }).join('');
+        if (window.lucide) lucide.createIcons();
+      }
+    } catch (e) {
+      console.warn('SEO activity feed poll failed:', e);
+    }
+  }
+
+  function startSeoCountdown() {
+    const timerEl = document.getElementById('seo-countdown-timer');
+    if (seoCountdownInterval) clearInterval(seoCountdownInterval);
+    seoCountdownInterval = setInterval(() => {
+      if (seoCountdownSeconds > 0) {
+        seoCountdownSeconds--;
+      } else {
+        seoCountdownSeconds = 300;
+        loadSeoActivity();
+      }
+      if (timerEl) {
+        const mins = Math.floor(seoCountdownSeconds / 60).toString().padStart(2, '0');
+        const secs = (seoCountdownSeconds % 60).toString().padStart(2, '0');
+        timerEl.textContent = `${mins}:${secs}`;
+      }
+    }, 1000);
+  }
+
+  if (btnRefreshSeoFeed) {
+    btnRefreshSeoFeed.addEventListener('click', () => {
+      loadSeoActivity();
+    });
+  }
+
+  // Preload and recurring auto-sync
+  loadSeoActivity();
+  startSeoCountdown();
+  setInterval(loadSeoActivity, 20000);
 
   // ====================================================
   // 10. HELPER UTILITIES

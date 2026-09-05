@@ -547,6 +547,34 @@ def application(environ, start_response):
         start_response(status, response_headers)
         return [json.dumps(ANALYTICS_DASHBOARD.get_live_data()).encode('utf-8')]
 
+    elif path == '/api/seo/directory':
+        routes = SEO_ENGINE.get_all_directory_pages(limit=100)
+        status = '200 OK'
+        response_headers = [('Content-Type', 'application/json; charset=utf-8'), ('Access-Control-Allow-Origin', '*')]
+        start_response(status, response_headers)
+        return [json.dumps({"total_pages": len(routes), "pages": routes}).encode('utf-8')]
+
+    elif path == '/api/seo/recent-activity':
+        from engine.backlink_ledger import BacklinkLedgerEngine
+        storage_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "storage")
+        ledger = BacklinkLedgerEngine(storage_dir)
+        summary = ledger.get_daily_summary()
+        history = ledger._load_history()
+        last_entry = history[-1] if history else None
+        status = '200 OK'
+        response_headers = [('Content-Type', 'application/json; charset=utf-8'), ('Access-Control-Allow-Origin', '*')]
+        start_response(status, response_headers)
+        return [json.dumps({
+            "success": True,
+            "status": "RUNNING",
+            "daemon_interval_seconds": 300,
+            "total_sprints": len(history),
+            "last_run": last_entry.get("timestamp") if last_entry else None,
+            "server_time_utc": time.strftime("%Y-%m-%d %H:%M:%S UTC"),
+            "recent_sprints": history[-10:][::-1] if history else [],
+            "summary": summary
+        }).encode('utf-8')]
+
     elif path in ['/api/manager/status', '/api/website-manager/status']:
         rep = WEBSITE_MANAGER.run_full_management_cycle()
         status = '200 OK'

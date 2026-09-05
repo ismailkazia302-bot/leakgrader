@@ -633,6 +633,25 @@ class MastermindRequestHandler(BaseHTTPRequestHandler):
             self.wfile.write(json.dumps({"total_pages": len(routes), "pages": routes}).encode("utf-8"))
             return
 
+        elif path == "/api/seo/recent-activity":
+            from engine.backlink_ledger import BacklinkLedgerEngine
+            ledger = BacklinkLedgerEngine(STORAGE_DIR)
+            summary = ledger.get_daily_summary()
+            history = ledger._load_history()
+            last_entry = history[-1] if history else None
+            self._set_headers(200)
+            self.wfile.write(json.dumps({
+                "success": True,
+                "status": "RUNNING",
+                "daemon_interval_seconds": 300,
+                "total_sprints": len(history),
+                "last_run": last_entry.get("timestamp") if last_entry else None,
+                "server_time_utc": time.strftime("%Y-%m-%d %H:%M:%S UTC"),
+                "recent_sprints": history[-10:][::-1] if history else [],
+                "summary": summary
+            }).encode("utf-8"))
+            return
+
         elif path in ["/api/manager/status", "/api/website-manager/status"]:
             report = WEBSITE_MANAGER.run_full_management_cycle()
             self._set_headers(200)

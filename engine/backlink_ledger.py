@@ -127,12 +127,13 @@ class BacklinkLedgerEngine:
         return entry
 
     def get_daily_summary(self) -> dict:
+        self.history = self._load_history()
         today_date = time.strftime("%Y-%m-%d")
-        today_entries = [e for e in self.history if e["timestamp"].startswith(today_date)]
+        today_entries = [e for e in self.history if e.get("timestamp", "").startswith(today_date)]
         return {
             "date": today_date,
             "total_backlinks_sent_today": len(today_entries),
             "daily_safe_target": "20 - 50 Quality Links / Day",
-            "avg_domain_authority": round(sum(e["domain_authority"] for e in today_entries) / max(len(today_entries), 1), 1),
+            "avg_domain_authority": round(sum(e.get("domain_authority", 50) for e in today_entries) / max(len(today_entries), 1), 1),
             "recent_entries": self.history[-10:] if self.history else []
         }

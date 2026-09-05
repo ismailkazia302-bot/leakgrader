@@ -1220,6 +1220,56 @@
           <div id="seo-sprint-output" style="display:none; background:rgba(15,23,42,0.9); border:1px solid rgba(56,189,248,0.3); border-radius:14px; padding:20px; box-shadow:0 8px 24px rgba(0,0,0,0.4);"></div>
           <div id="growth-output-area"></div>
 
+          <!-- SECTION 0: REAL-TIME AUTONOMOUS SEO ACTIVITY STREAM (EVERY 5 MINUTES) -->
+          <div style="background:linear-gradient(180deg, rgba(12,16,28,0.95), rgba(8,11,20,0.95)); border:1px solid rgba(56,189,248,0.3); border-radius:16px; padding:20px 24px; box-shadow:0 12px 36px rgba(0,0,0,0.5);">
+            <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px; margin-bottom:16px; padding-bottom:14px; border-bottom:1px solid rgba(255,255,255,0.08);">
+              <div style="display:flex; align-items:center; gap:10px;">
+                <span class="pulse-green-dot" style="width:9px; height:9px;"></span>
+                <h3 style="font-size:15px; font-weight:800; color:#ffffff; margin:0; display:flex; align-items:center; gap:8px;">
+                  Real-Time Autonomous SEO Execution Stream
+                  <span style="font-size:11px; font-weight:700; background:rgba(52,211,153,0.15); color:#34d399; border:1px solid rgba(52,211,153,0.3); padding:2px 8px; border-radius:12px;">Active Daemon • Runs Every 5 Min</span>
+                </h3>
+              </div>
+              <div style="display:flex; align-items:center; gap:16px; flex-wrap:wrap;">
+                <div style="font-size:12px; color:#94a3b8; display:flex; align-items:center; gap:6px;">
+                  <span>Next Sprint In:</span>
+                  <span id="seo-countdown-timer" style="color:#38bdf8; font-weight:800; font-family:var(--font-mono, monospace); font-size:14px; background:rgba(56,189,248,0.1); border:1px solid rgba(56,189,248,0.25); padding:2px 8px; border-radius:6px;">04:59</span>
+                </div>
+                <div style="font-size:12px; color:#94a3b8; display:flex; align-items:center; gap:6px;">
+                  <span>Automated Sprints Logged:</span>
+                  <span id="seo-total-sprints-count" style="color:#34d399; font-weight:800; font-family:var(--font-mono, monospace); font-size:14px; background:rgba(52,211,153,0.1); border:1px solid rgba(52,211,153,0.25); padding:2px 8px; border-radius:6px;">186</span>
+                </div>
+                <button type="button" id="btn-refresh-seo-feed" class="btn-action-3d" style="background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.15); color:#e2e8f0; font-size:11px; font-weight:700; padding:6px 12px; border-radius:6px; cursor:pointer; display:inline-flex; align-items:center; gap:5px;">
+                  <i data-lucide="refresh-cw" style="width:12px; height:12px;"></i> <span>Sync Feed</span>
+                </button>
+              </div>
+            </div>
+
+            <!-- Live Sprint Table / Activity Feed -->
+            <div style="overflow-x:auto;">
+              <table style="width:100%; border-collapse:collapse; font-size:12px; text-align:left;">
+                <thead>
+                  <tr style="border-bottom:1px solid rgba(255,255,255,0.1); color:#64748b; font-size:10.5px; text-transform:uppercase; letter-spacing:0.5px;">
+                    <th style="padding:8px 12px;">Sprint #</th>
+                    <th style="padding:8px 12px;">Time (UTC)</th>
+                    <th style="padding:8px 12px;">Platform & Category</th>
+                    <th style="padding:8px 12px;">Authority</th>
+                    <th style="padding:8px 12px;">Synthesized Anchor & Target Landing URL</th>
+                    <th style="padding:8px 12px; text-align:right;">Status</th>
+                  </tr>
+                </thead>
+                <tbody id="seo-activity-tbody">
+                  <tr style="border-bottom:1px solid rgba(255,255,255,0.05);">
+                    <td colspan="6" style="padding:20px; text-align:center; color:#94a3b8;">
+                      <i data-lucide="loader-2" class="icon-sm spin" style="display:inline-block; vertical-align:middle; margin-right:8px; color:#38bdf8;"></i>
+                      Connecting to 24/7 Autonomous SEO Daemon...
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
           <!-- SECTION 1: PROGRAMMATIC GEO DIRECTORY EXPLORER -->
           <div style="background:rgba(12,16,28,0.7); border:1px solid rgba(255,255,255,0.08); border-radius:16px; padding:20px 24px;">
             <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px; margin-bottom:16px;">
