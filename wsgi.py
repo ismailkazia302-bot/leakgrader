@@ -17,7 +17,7 @@ from app import (
     RETRIEVER, INTELLIGENCE, LEAD_AGENT, BOOKING_AGENT,
     CONTENT_CREW, AUDIT_ENGINE, SEO_ENGINE, PAYMENT_ENGINE, GROWTH_AGENT, PLANS,
     ANALYTICS_DASHBOARD, WEBSITE_MANAGER, SOCIAL_POSTER, SENTINEL_AGENT,
-    TRAFFIC_BLASTER, VIRAL_REEL_STUDIO, COMPETITOR_SPY,
+    TRAFFIC_BLASTER, VIRAL_REEL_STUDIO, COMPETITOR_SPY, SECURITY_HEADERS,
     WEB_DIR, save_index, save_bookings, save_leads, save_audits, load_all_data
 )
 from engine.document_parser import parse_file, extract_text_from_url, chunk_text
@@ -31,10 +31,24 @@ WEB_DIR_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "web")
 # Load existing index & storage data on startup
 load_all_data()
 
+def make_headers(base_headers):
+    """Merges base response headers with standard production security headers"""
+    headers = list(base_headers)
+    existing_keys = {k.lower() for k, _ in headers}
+    for sec_k, sec_v in SECURITY_HEADERS:
+        if sec_k.lower() not in existing_keys:
+            headers.append((sec_k, sec_v))
+    return headers
+
 def application(environ, start_response):
     """
     Standard WSGI callable for Gunicorn on Render.com
     """
+    orig_start_response = start_response
+    def start_response(status, response_headers, exc_info=None):
+        if exc_info is not None:
+            return orig_start_response(status, make_headers(response_headers), exc_info)
+        return orig_start_response(status, make_headers(response_headers))
     path = environ.get('PATH_INFO', '')
     method = environ.get('REQUEST_METHOD', 'GET').upper()
     query_string = environ.get('QUERY_STRING', '')
@@ -499,6 +513,15 @@ def application(environ, start_response):
         start_response(status, response_headers)
         return [content]
 
+    elif path == '/favicon.ico':
+        fav_path = os.path.join(WEB_DIR_PATH, 'favicon.ico')
+        if os.path.exists(fav_path):
+            status = '200 OK'
+            response_headers = [('Content-Type', 'image/x-icon'), ('Cache-Control', 'public, max-age=86400')]
+            start_response(status, response_headers)
+            with open(fav_path, 'rb') as f:
+                return [f.read()]
+
     elif path == '/sitemap.xml':
         sitemap_xml = SEO_ENGINE.generate_sitemap_xml()
         status = '200 OK'
@@ -653,7 +676,7 @@ def application(environ, start_response):
         index_file = os.path.join(WEB_DIR_PATH, 'index.html')
         if os.path.exists(index_file):
             status = '200 OK'
-            response_headers = [('Content-Type', 'text/html; charset=utf-8'), ('Cache-Control', 'public, max-age=3600')]
+            response_headers = [('Content-Type', 'text/html; charset=utf-8'), ('Cache-Control', 'public, max-age=3600, stale-while-revalidate=86400')]
             start_response(status, response_headers)
             with open(index_file, 'rb') as f:
                 content = f.read()
@@ -670,8 +693,13 @@ def application(environ, start_response):
         if 'text/' in content_type or 'javascript' in content_type:
             content_type += '; charset=utf-8'
 
+        if query_string or file_path.endswith(('.css', '.js', '.svg', '.png', '.ico', '.woff2', '.woff')):
+            cache_ctrl = 'public, max-age=31536000, immutable' if query_string else 'public, max-age=86400'
+        else:
+            cache_ctrl = 'public, max-age=3600, stale-while-revalidate=86400'
+
         status = '200 OK'
-        response_headers = [('Content-Type', content_type), ('Cache-Control', 'public, max-age=3600')]
+        response_headers = [('Content-Type', content_type), ('Cache-Control', cache_ctrl)]
         start_response(status, response_headers)
         with open(full_path, 'rb') as f:
             content = f.read()

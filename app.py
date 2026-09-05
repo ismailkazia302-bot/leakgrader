@@ -76,7 +76,22 @@ LEAD_AGENT = LeadPulseAgent(api_key=GEMINI_API_KEY, model="gemini-3.6-flash")
 BOOKING_AGENT = BookFlowAgent(api_key=GEMINI_API_KEY, model="gemini-3.6-flash")
 CONTENT_CREW = ContentCrewEngine(api_key=GEMINI_API_KEY, model="gemini-3.6-flash")
 AUDIT_ENGINE = ViralAuditEngine(api_key=GEMINI_API_KEY, model="gemini-3.6-flash")
-SEO_ENGINE = ProgrammaticSEOEngine(base_url="http://localhost:8090")
+SEO_ENGINE = ProgrammaticSEOEngine(base_url=os.environ.get("BASE_URL", "https://leakgrader.com"))
+SECURITY_HEADERS = [
+    ("Strict-Transport-Security", "max-age=31536000; includeSubDomains; preload"),
+    ("X-Content-Type-Options", "nosniff"),
+    ("X-Frame-Options", "SAMEORIGIN"),
+    ("Referrer-Policy", "strict-origin-when-cross-origin"),
+    ("Permissions-Policy", "geolocation=(), microphone=(), camera=()"),
+    ("Content-Security-Policy", (
+        "default-src 'self' 'unsafe-inline' 'unsafe-eval' https: data:; "
+        "img-src 'self' data: https:; "
+        "connect-src 'self' https:; "
+        "font-src 'self' https://fonts.gstatic.com data:; "
+        "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; "
+        "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://www.googletagmanager.com https://unpkg.com https://cdn.jsdelivr.net;"
+    ))
+]
 PAYMENT_ENGINE = PaymentEngine()
 COMPETITOR_SPY = CompetitorSpyAgent(api_key=GEMINI_API_KEY, model="gemini-3.6-flash")
 DOSSIER_GEN = ExecutiveDossierGenerator()
@@ -388,12 +403,17 @@ def load_all_data():
             AUDITS = []
 
 class MastermindRequestHandler(BaseHTTPRequestHandler):
-    def _set_headers(self, status=200, content_type="application/json"):
+    def _set_headers(self, status=200, content_type="application/json", extra_headers=None):
         self.send_response(status)
         self.send_header("Content-Type", content_type)
         self.send_header("Access-Control-Allow-Origin", "*")
         self.send_header("Access-Control-Allow-Methods", "GET, POST, DELETE, OPTIONS")
         self.send_header("Access-Control-Allow-Headers", "Content-Type")
+        for h, v in SECURITY_HEADERS:
+            self.send_header(h, v)
+        if extra_headers:
+            for h, v in extra_headers:
+                self.send_header(h, v)
         self.end_headers()
 
     def do_OPTIONS(self):
@@ -419,6 +439,15 @@ class MastermindRequestHandler(BaseHTTPRequestHandler):
             self.wfile.write(json.dumps({"status": "healthy", "service": "Mastermind Global AI Platform (All 7 Engines Online)"}).encode("utf-8"))
             return
 
+        elif path == "/favicon.ico":
+            fav_path = os.path.join(WEB_DIR, "favicon.ico")
+            if os.path.exists(fav_path):
+                with open(fav_path, "rb") as f:
+                    fav_data = f.read()
+                self._set_headers(200, content_type="image/x-icon", extra_headers=[("Cache-Control", "public, max-age=86400")])
+                self.wfile.write(fav_data)
+                return
+
         elif path == "/robots.txt":
             robots_file = os.path.join(WEB_DIR, "robots.txt")
             if os.path.exists(robots_file):
@@ -426,20 +455,14 @@ class MastermindRequestHandler(BaseHTTPRequestHandler):
                     content = f.read()
             else:
                 content = b"User-agent: *\nAllow: /\nSitemap: https://leakgrader.com/sitemap.xml\n"
-            self.send_response(200)
-            self.send_header("Content-Type", "text/plain; charset=utf-8")
-            self.send_header("Cache-Control", "public, max-age=86400")
-            self.end_headers()
+            self._set_headers(200, content_type="text/plain; charset=utf-8", extra_headers=[("Cache-Control", "public, max-age=86400")])
             self.wfile.write(content)
             return
 
         # 1. Programmatic SEO XML Sitemap & Google Search Console Verification
         elif path == "/sitemap.xml":
             sitemap_xml = SEO_ENGINE.generate_sitemap_xml()
-            self.send_response(200)
-            self.send_header("Content-Type", "application/xml; charset=utf-8")
-            self.send_header("Cache-Control", "public, max-age=86400")
-            self.end_headers()
+            self._set_headers(200, content_type="application/xml; charset=utf-8", extra_headers=[("Cache-Control", "public, max-age=86400")])
             self.wfile.write(sitemap_xml.encode("utf-8"))
             return
 
@@ -709,7 +732,8 @@ class MastermindRequestHandler(BaseHTTPRequestHandler):
         full_path = os.path.join(WEB_DIR, file_path)
         if os.path.exists(full_path) and os.path.isfile(full_path):
             mime, _ = mimetypes.guess_type(full_path)
-            self._set_headers(200, content_type=mime or "text/plain")
+            cache_ctrl = "public, max-age=31536000, immutable" if file_path.endswith((".css", ".js", ".svg", ".png", ".ico", ".woff2", ".woff")) else "public, max-age=3600, stale-while-revalidate=86400"
+            self._set_headers(200, content_type=mime or "text/plain", extra_headers=[("Cache-Control", cache_ctrl)])
             with open(full_path, "rb") as f:
                 content = f.read()
             if file_path.endswith("index.html"):

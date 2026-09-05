@@ -140,6 +140,8 @@ class ProgrammaticSEOEngine:
         
         # Core Platform URLs
         xml.append(f"  <url><loc>{self.base_url}/</loc><changefreq>daily</changefreq><priority>1.0</priority></url>")
+        xml.append(f"  <url><loc>{self.base_url}/privacy</loc><changefreq>monthly</changefreq><priority>0.5</priority></url>")
+        xml.append(f"  <url><loc>{self.base_url}/terms</loc><changefreq>monthly</changefreq><priority>0.5</priority></url>")
         
         # All Programmatic Hubs
         for c in self.cities:

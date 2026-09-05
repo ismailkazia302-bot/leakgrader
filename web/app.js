@@ -81,6 +81,21 @@ document.addEventListener('DOMContentLoaded', () => {
   const sampleChips = document.querySelectorAll('.chip-sample');
   let isCompetitorMode = false;
 
+  // Methodology Toggle
+  const methToggle = document.getElementById('methodology-toggle');
+  const methContent = document.getElementById('methodology-content');
+  const methText = document.getElementById('methodology-toggle-text');
+  const methChevron = document.getElementById('methodology-chevron');
+  if (methToggle && methContent) {
+    methToggle.addEventListener('click', () => {
+      const isHidden = methContent.style.display === 'none' || !methContent.style.display;
+      methContent.style.display = isHidden ? 'block' : 'none';
+      if (methText) methText.textContent = isHidden ? 'Hide Formula' : 'Show Formula';
+      if (methChevron) methChevron.style.transform = isHidden ? 'rotate(180deg)' : 'rotate(0deg)';
+      if (window.lucide) lucide.createIcons();
+    });
+  }
+
   if (btnModeSingle && btnModeVs && auditCompetitorInput) {
     btnModeSingle.addEventListener('click', () => {
       isCompetitorMode = false;
