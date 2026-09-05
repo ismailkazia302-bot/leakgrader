@@ -1015,6 +1015,102 @@ document.addEventListener('DOMContentLoaded', () => {
   if (btnClosePricing) btnClosePricing.addEventListener('click', closePricing);
   if (pricingOverlay) pricingOverlay.addEventListener('click', closePricing);
 
+  // 📬 CONTACT US MODAL & FORM HANDLERS
+  const contactModal = document.getElementById('contact-modal');
+  const contactOverlay = document.getElementById('contact-overlay');
+  const btnCloseContact = document.getElementById('btn-close-contact');
+  const contactForm = document.getElementById('contact-modal-form');
+  const modalStatus = document.getElementById('modal-contact-status');
+  const btnModalSubmit = document.getElementById('btn-modal-contact-submit');
+
+  function openContactModal(e) {
+    if (e) e.preventDefault();
+    if (modalStatus) {
+      modalStatus.style.display = 'none';
+      modalStatus.className = '';
+    }
+    if (contactModal) contactModal.classList.add('active');
+  }
+
+  function closeContactModal() {
+    if (contactModal) contactModal.classList.remove('active');
+  }
+
+  document.querySelectorAll('.btn-open-contact').forEach(btn => {
+    btn.addEventListener('click', openContactModal);
+  });
+  if (btnCloseContact) btnCloseContact.addEventListener('click', closeContactModal);
+  if (contactOverlay) contactOverlay.addEventListener('click', closeContactModal);
+
+  if (contactForm) {
+    contactForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const payload = {
+        name: (document.getElementById('modal-contact-name')?.value || '').trim(),
+        email: (document.getElementById('modal-contact-email')?.value || '').trim(),
+        company: (document.getElementById('modal-contact-company')?.value || '').trim(),
+        subject: (document.getElementById('modal-contact-subject')?.value || '').trim(),
+        message: (document.getElementById('modal-contact-message')?.value || '').trim()
+      };
+
+      if (!payload.name || !payload.email || !payload.message) {
+        if (modalStatus) {
+          modalStatus.style.display = 'block';
+          modalStatus.style.background = 'rgba(239, 68, 68, 0.15)';
+          modalStatus.style.border = '1px solid rgba(239, 68, 68, 0.35)';
+          modalStatus.style.color = '#f87171';
+          modalStatus.textContent = 'Please fill out all required fields (Name, Email, Message).';
+        }
+        return;
+      }
+
+      if (btnModalSubmit) {
+        btnModalSubmit.disabled = true;
+        btnModalSubmit.textContent = 'Sending Inquiry...';
+      }
+
+      try {
+        const res = await fetch('/api/contact/submit', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+        const data = await res.json();
+        if (res.ok && data.success) {
+          if (modalStatus) {
+            modalStatus.style.display = 'block';
+            modalStatus.style.background = 'rgba(16, 185, 129, 0.15)';
+            modalStatus.style.border = '1px solid rgba(16, 185, 129, 0.35)';
+            modalStatus.style.color = '#34d399';
+            modalStatus.textContent = '🎉 ' + (data.message || 'Thank you! Your message has been received.');
+          }
+          contactForm.reset();
+        } else {
+          if (modalStatus) {
+            modalStatus.style.display = 'block';
+            modalStatus.style.background = 'rgba(239, 68, 68, 0.15)';
+            modalStatus.style.border = '1px solid rgba(239, 68, 68, 0.35)';
+            modalStatus.style.color = '#f87171';
+            modalStatus.textContent = '⚠️ ' + (data.error || 'Submission failed. Please try again.');
+          }
+        }
+      } catch (err) {
+        if (modalStatus) {
+          modalStatus.style.display = 'block';
+          modalStatus.style.background = 'rgba(239, 68, 68, 0.15)';
+          modalStatus.style.border = '1px solid rgba(239, 68, 68, 0.35)';
+          modalStatus.style.color = '#f87171';
+          modalStatus.textContent = 'Network error. Please try again or email support@leakgrader.com';
+        }
+      } finally {
+        if (btnModalSubmit) {
+          btnModalSubmit.disabled = false;
+          btnModalSubmit.textContent = 'Submit Inquiry 🚀';
+        }
+      }
+    });
+  }
+
   // ====================================================
   // 🌍 MULTI-CURRENCY CONVERTER (USD, INR, SAR, AED, GBP, EUR)
   // ====================================================

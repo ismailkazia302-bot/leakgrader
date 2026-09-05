@@ -101,6 +101,8 @@ from engine.autonomous_traffic_blaster import AutonomousTrafficBlaster
 TRAFFIC_BLASTER = AutonomousTrafficBlaster(base_url="https://leakgrader.com", storage_dir=STORAGE_DIR)
 from engine.viral_reel_studio import ViralReelStudioEngine
 VIRAL_REEL_STUDIO = ViralReelStudioEngine(STORAGE_DIR)
+from engine.contact_engine import ContactEngine
+CONTACT_ENGINE = ContactEngine(STORAGE_DIR)
 
 def save_index():
     try:
@@ -794,6 +796,32 @@ class MastermindRequestHandler(BaseHTTPRequestHandler):
             self.wfile.write(csv_data.encode("utf-8"))
             return
 
+        # 8. Inbound Contact Inquiries Endpoints
+        elif path == "/api/contact/list":
+            self._set_headers(200)
+            messages = CONTACT_ENGINE.get_all_messages()
+            self.wfile.write(json.dumps({"success": True, "messages": messages, "total": len(messages)}).encode("utf-8"))
+            return
+
+        elif path == "/api/contact/export-csv":
+            csv_data = CONTACT_ENGINE.export_csv()
+            self.send_response(200)
+            self.send_header("Content-Type", "text/csv; charset=utf-8")
+            self.send_header("Content-Disposition", 'attachment; filename="leakgrader_contact_inquiries.csv"')
+            self.end_headers()
+            self.wfile.write(csv_data.encode("utf-8"))
+            return
+
+        elif path in ["/contact", "/contact-us"]:
+            contact_path = os.path.join(WEB_DIR, "contact.html")
+            if os.path.exists(contact_path):
+                with open(contact_path, "rb") as f:
+                    content = f.read()
+                self._set_headers(200, content_type="text/html; charset=utf-8")
+                self.wfile.write(content)
+                return
+
+
         # Static Web Files
         file_path = path.lstrip("/")
         if not file_path or file_path == "":
@@ -1217,8 +1245,18 @@ class MastermindRequestHandler(BaseHTTPRequestHandler):
             body = self.rfile.read(content_length)
             data = json.loads(body.decode("utf-8")) if content_length > 0 else {}
             res = VIRAL_REEL_STUDIO.save_credentials(data)
-            self._set_headers(200)
-            self.wfile.write(json.dumps(res).encode("utf-8"))
+        elif path in ["/api/contact/submit", "/api/contact/send"]:
+            body = self.rfile.read(content_length)
+            data = json.loads(body.decode("utf-8")) if content_length > 0 else {}
+            name = data.get("name", "")
+            email = data.get("email", "")
+            company = data.get("company", "")
+            subject = data.get("subject", "General Inquiry")
+            message = data.get("message", "")
+
+            result = CONTACT_ENGINE.save_message(name, email, company, subject, message)
+            self._set_headers(200 if result.get("success") else 400)
+            self.wfile.write(json.dumps(result).encode("utf-8"))
             return
 
         else:

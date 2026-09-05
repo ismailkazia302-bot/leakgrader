@@ -1,0 +1,371 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>Contact Us — Enterprise Support & AI Closer Consultation | LeakGrader</title>
+  <meta name="description" content="Get in touch with the LeakGrader team for enterprise website revenue leak diagnostics, 24/7 AI closer setups, and custom API integrations.">
+  <link rel="canonical" href="https://leakgrader.com/contact">
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+  <script src="https://unpkg.com/lucide@latest"></script>
+
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+      background: #06080e;
+      color: #f8fafc;
+      line-height: 1.6;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+    .container {
+      max-width: 900px;
+      margin: 0 auto;
+      padding: 0 20px;
+      width: 100%;
+    }
+    header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 24px 0;
+      border-bottom: 1px solid rgba(255,255,255,0.08);
+    }
+    .logo {
+      font-weight: 800;
+      font-size: 20px;
+      color: #ffffff;
+      text-decoration: none;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .hero {
+      text-align: center;
+      padding: 50px 0 30px;
+    }
+    .badge-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: rgba(56, 189, 248, 0.1);
+      border: 1px solid rgba(56, 189, 248, 0.3);
+      padding: 6px 14px;
+      border-radius: 9999px;
+      font-size: 12px;
+      font-weight: 700;
+      color: #38bdf8;
+      margin-bottom: 16px;
+    }
+    h1 {
+      font-size: clamp(28px, 4vw, 42px);
+      font-weight: 800;
+      line-height: 1.25;
+      margin-bottom: 14px;
+      background: linear-gradient(135deg, #ffffff 40%, #94a3b8 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+    .hero p {
+      font-size: 16px;
+      color: #94a3b8;
+      max-width: 620px;
+      margin: 0 auto;
+    }
+    .contact-card {
+      background: linear-gradient(180deg, rgba(255,255,255,0.04) 0%, rgba(255,255,255,0.01) 100%);
+      border: 1px solid rgba(255,255,255,0.12);
+      border-radius: 16px;
+      padding: 36px;
+      margin: 20px auto 60px;
+      box-shadow: 0 25px 50px -12px rgba(0,0,0,0.6);
+    }
+    .form-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 18px;
+      margin-bottom: 18px;
+    }
+    @media (max-width: 640px) {
+      .form-row { grid-template-columns: 1fr; }
+      .contact-card { padding: 24px; }
+    }
+    .form-field {
+      display: flex;
+      flex-direction: column;
+      margin-bottom: 18px;
+    }
+    .form-field label {
+      font-size: 13px;
+      font-weight: 700;
+      color: #cbd5e1;
+      margin-bottom: 6px;
+    }
+    .form-field input, .form-field select, .form-field textarea {
+      background: rgba(0,0,0,0.4);
+      border: 1px solid rgba(255,255,255,0.15);
+      border-radius: 10px;
+      padding: 12px 16px;
+      color: #ffffff;
+      font-size: 14px;
+      font-family: inherit;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+    .form-field input:focus, .form-field select:focus, .form-field textarea:focus {
+      border-color: #38bdf8;
+      box-shadow: 0 0 0 2px rgba(56, 189, 248, 0.2);
+    }
+    .form-field textarea {
+      resize: vertical;
+      min-height: 120px;
+    }
+    .btn-submit {
+      width: 100%;
+      background: linear-gradient(135deg, #0055ff 0%, #2563eb 100%);
+      color: #ffffff;
+      font-weight: 700;
+      border: none;
+      border-radius: 10px;
+      padding: 14px 20px;
+      font-size: 15px;
+      cursor: pointer;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 8px;
+      transition: opacity 0.2s;
+    }
+    .btn-submit:hover {
+      opacity: 0.92;
+    }
+    .btn-submit:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+    }
+    .status-msg {
+      display: none;
+      padding: 14px 18px;
+      border-radius: 10px;
+      font-size: 14px;
+      font-weight: 600;
+      margin-bottom: 20px;
+    }
+    .status-msg.success {
+      display: block;
+      background: rgba(16, 185, 129, 0.15);
+      border: 1px solid rgba(16, 185, 129, 0.35);
+      color: #34d399;
+    }
+    .status-msg.error {
+      display: block;
+      background: rgba(239, 68, 68, 0.15);
+      border: 1px solid rgba(239, 68, 68, 0.35);
+      color: #f87171;
+    }
+    .info-strip {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 20px;
+      margin-bottom: 50px;
+    }
+    .info-box {
+      background: rgba(255,255,255,0.02);
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 12px;
+      padding: 20px;
+    }
+    .info-box h4 {
+      font-size: 13px;
+      color: #38bdf8;
+      text-transform: uppercase;
+      margin-bottom: 6px;
+      font-weight: 800;
+      letter-spacing: 0.5px;
+    }
+    .info-box p {
+      color: #94a3b8;
+      font-size: 14px;
+    }
+    footer {
+      margin-top: auto;
+      border-top: 1px solid rgba(255,255,255,0.08);
+      padding: 30px 0;
+      text-align: center;
+      font-size: 13px;
+      color: #64748b;
+    }
+    footer a {
+      color: #94a3b8;
+      text-decoration: none;
+      margin: 0 10px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <a href="/" class="logo">
+        <svg width="24" height="24" viewBox="0 0 32 32">
+          <defs>
+            <linearGradient id="g" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" stop-color="#0055ff"/>
+              <stop offset="100%" stop-color="#38bdf8"/>
+            </linearGradient>
+          </defs>
+          <rect width="32" height="32" rx="8" fill="#06080e"/>
+          <path d="M16 4L28 16L16 28L4 16Z" fill="none" stroke="url(#g)" stroke-width="2.5"/>
+          <circle cx="16" cy="16" r="4" fill="#38bdf8"/>
+        </svg>
+        LeakGrader
+      </a>
+      <div style="display:flex; gap:16px; align-items:center;">
+        <a href="/" style="color:#94a3b8; text-decoration:none; font-size:14px; font-weight:600;">Home</a>
+        <a href="/#agent-audit" style="color:#38bdf8; text-decoration:none; font-size:14px; font-weight:700;">Live Scanner →</a>
+      </div>
+    </header>
+
+    <div class="hero">
+      <div class="badge-pill"><i data-lucide="mail" style="width:14px; height:14px;"></i> Enterprise & Support Inquiries</div>
+      <h1>Contact the LeakGrader Team</h1>
+      <p>Have questions regarding revenue leak diagnostics, enterprise AI WhatsApp closers, or strategic agency partnerships? Fill out the form below and we'll reply within 15 minutes.</p>
+    </div>
+
+    <div class="contact-card">
+      <div id="contact-status" class="status-msg"></div>
+
+      <form id="contact-page-form">
+        <div class="form-row">
+          <div class="form-field">
+            <label for="contact-name">Full Name *</label>
+            <input type="text" id="contact-name" name="name" placeholder="John Doe" required>
+          </div>
+          <div class="form-field">
+            <label for="contact-email">Work Email *</label>
+            <input type="email" id="contact-email" name="email" placeholder="john@company.com" required>
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="form-field">
+            <label for="contact-company">Company / Website Domain</label>
+            <input type="text" id="contact-company" name="company" placeholder="e.g. apexconsulting.com">
+          </div>
+          <div class="form-field">
+            <label for="contact-subject">Inquiry Subject *</label>
+            <select id="contact-subject" name="subject" required>
+              <option value="Enterprise AI Closer Setup">Enterprise Done-For-You AI Closer Setup ($1,500)</option>
+              <option value="Custom Website Revenue Audit">Custom Website Revenue Leak Audit & Benchmark</option>
+              <option value="B2B LeadPulse Intelligence API">B2B LeadPulse Intelligence API Integration</option>
+              <option value="Agency / White-Label Partnership">Agency / White-Label Partnership</option>
+              <option value="Billing & Support Inquiry">Billing, Support & Account Management</option>
+              <option value="General Inquiry">General Inquiry / Other</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="form-field">
+          <label for="contact-message">Your Message / Project Requirements *</label>
+          <textarea id="contact-message" name="message" placeholder="Please describe your website traffic, after-hours sales goals, or specific questions..." required></textarea>
+        </div>
+
+        <button type="submit" id="btn-contact-submit" class="btn-submit">
+          <i data-lucide="send" style="width:16px; height:16px;"></i>
+          <span>Send Inquiry</span>
+        </button>
+      </form>
+    </div>
+
+    <div class="info-strip">
+      <div class="info-box">
+        <h4>⚡ Rapid Response Guarantee</h4>
+        <p>Enterprise inbound requests are routed directly to our senior growth engineering team for a response under 15 minutes.</p>
+      </div>
+      <div class="info-box">
+        <h4>🔒 100% Confidential</h4>
+        <p>All website traffic data, lead benchmarks, and commercial audit details are encrypted and never shared with 3rd parties.</p>
+      </div>
+      <div class="info-box">
+        <h4>🌍 Direct Email Support</h4>
+        <p>You can also reach our primary executive support desk at <a href="mailto:support@leakgrader.com" style="color:#38bdf8; text-decoration:none;">support@leakgrader.com</a>.</p>
+      </div>
+    </div>
+
+    <footer>
+      <p>&copy; 2026 LeakGrader Inc. • Autonomous Website Revenue Leak Diagnostic & 24/7 AI Closer</p>
+      <p style="margin-top:8px;">
+        <a href="/">Home</a> • 
+        <a href="/contact">Contact Us</a> • 
+        <a href="/sitemap.xml">XML Sitemap</a> • 
+        <a href="/privacy">Privacy Policy</a> • 
+        <a href="/terms">Terms of Service</a>
+      </p>
+    </footer>
+  </div>
+
+  <script>
+    if (window.lucide) lucide.createIcons();
+
+    const form = document.getElementById('contact-page-form');
+    const statusBox = document.getElementById('contact-status');
+    const submitBtn = document.getElementById('btn-contact-submit');
+
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      statusBox.className = 'status-msg';
+      statusBox.style.display = 'none';
+
+      const payload = {
+        name: document.getElementById('contact-name').value.trim(),
+        email: document.getElementById('contact-email').value.trim(),
+        company: document.getElementById('contact-company').value.trim(),
+        subject: document.getElementById('contact-subject').value.trim(),
+        message: document.getElementById('contact-message').value.trim()
+      };
+
+      if (!payload.name || !payload.email || !payload.message) {
+        statusBox.className = 'status-msg error';
+        statusBox.textContent = 'Please fill in all required fields (Name, Email, Message).';
+        statusBox.style.display = 'block';
+        return;
+      }
+
+      submitBtn.disabled = true;
+      submitBtn.innerHTML = 'Sending Inquiry...';
+
+      try {
+        const res = await fetch('/api/contact/submit', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+        const data = await res.json();
+
+        if (res.ok && data.success) {
+          statusBox.className = 'status-msg success';
+          statusBox.textContent = '🎉 ' + (data.message || 'Thank you! Your message has been received. Our team will contact you shortly.');
+          statusBox.style.display = 'block';
+          form.reset();
+        } else {
+          statusBox.className = 'status-msg error';
+          statusBox.textContent = '⚠️ ' + (data.error || 'Failed to send message. Please try again or email support@leakgrader.com.');
+          statusBox.style.display = 'block';
+        }
+      } catch (err) {
+        statusBox.className = 'status-msg error';
+        statusBox.textContent = 'Network error. Please email support@leakgrader.com directly.';
+        statusBox.style.display = 'block';
+      } finally {
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = '<i data-lucide="send" style="width:16px; height:16px;"></i><span>Send Inquiry</span>';
+        if (window.lucide) lucide.createIcons();
+      }
+    });
+  </script>
+</body>
+</html>

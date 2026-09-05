@@ -142,6 +142,7 @@ class FounderAnalyticsDashboard:
             "social_webhook": social_config.get("webhook_url", ""),
             "viral_reels": viral_reels,
             "reel_creds": reel_creds,
+            "contact_messages": self._read_json("contact_messages.json", []),
             "last_updated": time.strftime("%Y-%m-%d %H:%M:%S UTC")
         }
 
@@ -193,6 +194,23 @@ class FounderAnalyticsDashboard:
               <td style="padding:12px 14px;"><span style="background:rgba(16,185,129,0.15); color:#34d399; padding:3px 8px; border-radius:6px; font-weight:800; font-size:11px;">100% DISPATCHED</span></td>
             </tr>""" for o in data["outreach_feed"]
         ])
+
+        # Build Contact Inquiries Rows
+        contact_messages = data.get("contact_messages", [])
+        if not contact_messages:
+            contact_rows = """<tr><td colspan="7" style="padding:20px; text-align:center; color:#64748b;">No client inquiries received yet. Inbound messages from the Contact Us form appear here in real-time.</td></tr>"""
+        else:
+            contact_rows = "".join([
+                f"""<tr style="border-bottom: 1px solid rgba(255,255,255,0.05);">
+                  <td style="padding:12px 14px; font-weight:700; color:#94a3b8; font-family:'JetBrains Mono', monospace; font-size:11px;">{m.get('timestamp', '')}</td>
+                  <td style="padding:12px 14px; font-weight:800; color:#fff;">{m.get('name', '')}</td>
+                  <td style="padding:12px 14px;"><a href="mailto:{m.get('email', '')}" style="color:#38bdf8; text-decoration:none; font-weight:700;">{m.get('email', '')}</a></td>
+                  <td style="padding:12px 14px; color:#cbd5e1;">{m.get('company', '—') or '—'}</td>
+                  <td style="padding:12px 14px;"><span style="background:rgba(56,189,248,0.12); color:#38bdf8; border:1px solid rgba(56,189,248,0.3); font-size:10.5px; padding:2px 8px; border-radius:12px; font-weight:700;">{m.get('subject', 'General Inquiry')}</span></td>
+                  <td style="padding:12px 14px; color:#94a3b8; font-size:11.5px; max-width:300px; white-space:normal; line-height:1.4;">{m.get('message', '')}</td>
+                  <td style="padding:12px 14px; text-align:right;"><span style="background:rgba(16,185,129,0.15); color:#10b981; border:1px solid rgba(16,185,129,0.3); font-size:10px; font-weight:800; padding:2px 8px; border-radius:12px;">{m.get('status', 'NEW')}</span></td>
+                </tr>""" for m in contact_messages[:25]
+            ])
 
         # Build Social Rows
         published_posts = data.get("social_published", [])
@@ -607,6 +625,40 @@ class FounderAnalyticsDashboard:
           </thead>
           <tbody>
             {visitor_rows}
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- 📬 Inbound Contact Inquiries & Client Leads -->
+    <div class="section-card" style="border: 1px solid rgba(56,189,248,0.35); background: linear-gradient(180deg, rgba(15,23,42,0.95), rgba(10,12,18,0.95));">
+      <div class="section-header">
+        <div>
+          <div class="section-title" style="color:#fff; display:flex; align-items:center; gap:8px;">
+            📬 Inbound Contact Messages & Client Leads
+            <span style="background:rgba(56,189,248,0.15); color:#38bdf8; border:1px solid rgba(56,189,248,0.3); font-size:10px; padding:2px 8px; border-radius:12px; font-weight:800;">{len(contact_messages)} Inquiries</span>
+          </div>
+          <p style="font-size:11px; color:#94a3b8; margin-top:3px;">Live messages, enterprise custom AI setup requests, and partner inquiries submitted via the Contact Us form</p>
+        </div>
+        <div style="display:flex; gap:8px;">
+          <a href="/api/contact/export-csv" download style="background:linear-gradient(135deg, #10b981, #059669); color:#fff; text-decoration:none; padding:8px 14px; border-radius:6px; font-size:11px; font-weight:800; display:inline-flex; align-items:center; gap:6px;">📥 Download Excel / CSV</a>
+        </div>
+      </div>
+      <div style="overflow-x:auto;">
+        <table>
+          <thead>
+            <tr>
+              <th>Timestamp (UTC)</th>
+              <th>Full Name</th>
+              <th>Email Address</th>
+              <th>Company / Website</th>
+              <th>Subject / Category</th>
+              <th>Message Details</th>
+              <th style="text-align:right;">Status</th>
+            </tr>
+          </thead>
+          <tbody>
+            {contact_rows}
           </tbody>
         </table>
       </div>

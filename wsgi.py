@@ -18,6 +18,7 @@ from app import (
     CONTENT_CREW, AUDIT_ENGINE, SEO_ENGINE, PAYMENT_ENGINE, GROWTH_AGENT, PLANS,
     ANALYTICS_DASHBOARD, WEBSITE_MANAGER, SOCIAL_POSTER, SENTINEL_AGENT,
     TRAFFIC_BLASTER, VIRAL_REEL_STUDIO, COMPETITOR_SPY, SECURITY_HEADERS,
+    CONTACT_ENGINE,
     WEB_DIR, save_index, save_bookings, save_leads, save_audits, load_all_data,
     start_autonomous_cloud_growth_daemon
 )
@@ -533,6 +534,19 @@ def application(environ, start_response):
             start_response(status, response_headers)
             return [json.dumps(res).encode('utf-8')]
 
+        # Route: /api/contact/submit & /api/contact/send
+        elif path in ['/api/contact/submit', '/api/contact/send']:
+            name = body_json.get('name', '')
+            email = body_json.get('email', '')
+            company = body_json.get('company', '')
+            subject = body_json.get('subject', 'General Inquiry')
+            message = body_json.get('message', '')
+            res = CONTACT_ENGINE.save_message(name, email, company, subject, message)
+            status = '200 OK' if res.get('success') else '400 Bad Request'
+            response_headers = [('Content-Type', 'application/json; charset=utf-8'), ('Access-Control-Allow-Origin', '*')]
+            start_response(status, response_headers)
+            return [json.dumps(res).encode('utf-8')]
+
     # 2. Handle GET endpoints
     if path in ['/analytics', '/dashboard', '/founder']:
         dashboard_html = ANALYTICS_DASHBOARD.render_html()
@@ -540,6 +554,33 @@ def application(environ, start_response):
         response_headers = [('Content-Type', 'text/html; charset=utf-8'), ('Cache-Control', 'no-cache')]
         start_response(status, response_headers)
         return [dashboard_html.encode('utf-8')]
+
+    elif path == '/api/contact/list':
+        messages = CONTACT_ENGINE.get_all_messages()
+        status = '200 OK'
+        response_headers = [('Content-Type', 'application/json; charset=utf-8'), ('Access-Control-Allow-Origin', '*')]
+        start_response(status, response_headers)
+        return [json.dumps({"success": True, "messages": messages, "total": len(messages)}).encode('utf-8')]
+
+    elif path == '/api/contact/export-csv':
+        csv_data = CONTACT_ENGINE.export_csv()
+        status = '200 OK'
+        response_headers = [
+            ('Content-Type', 'text/csv; charset=utf-8'),
+            ('Content-Disposition', 'attachment; filename="leakgrader_contact_inquiries.csv"'),
+            ('Access-Control-Allow-Origin', '*')
+        ]
+        start_response(status, response_headers)
+        return [csv_data.encode('utf-8')]
+
+    elif path in ['/contact', '/contact-us']:
+        contact_path = os.path.join(WEB_DIR_PATH, 'contact.html')
+        if os.path.exists(contact_path):
+            status = '200 OK'
+            response_headers = [('Content-Type', 'text/html; charset=utf-8'), ('Cache-Control', 'public, max-age=3600')]
+            start_response(status, response_headers)
+            with open(contact_path, 'rb') as f:
+                return [f.read()]
 
     elif path == '/api/analytics/live':
         status = '200 OK'
