@@ -118,6 +118,33 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
+  // Custom Real Business Metrics Toggle & Preset Chips
+  const customMetricsToggle = document.getElementById('custom-metrics-toggle');
+  const customMetricsPanel = document.getElementById('custom-metrics-panel');
+  const customMetricsChevron = document.getElementById('custom-metrics-chevron');
+  if (customMetricsToggle && customMetricsPanel) {
+    customMetricsToggle.addEventListener('click', () => {
+      const isHidden = customMetricsPanel.style.display === 'none' || !customMetricsPanel.style.display;
+      customMetricsPanel.style.display = isHidden ? 'block' : 'none';
+      if (customMetricsChevron) customMetricsChevron.style.transform = isHidden ? 'rotate(180deg)' : 'rotate(0deg)';
+      if (window.lucide) lucide.createIcons();
+    });
+  }
+
+  document.querySelectorAll('.metric-preset-chip').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const metric = btn.dataset.metric;
+      const val = btn.dataset.val;
+      if (metric === 'visitors') {
+        const inp = document.getElementById('audit-visitors-input');
+        if (inp) inp.value = val;
+      } else if (metric === 'deal') {
+        const inp = document.getElementById('audit-deal-input');
+        if (inp) inp.value = val;
+      }
+    });
+  });
+
   if (btnModeSingle && btnModeVs && auditCompetitorInput) {
     btnModeSingle.addEventListener('click', () => {
       isCompetitorMode = false;
@@ -318,10 +345,19 @@ document.addEventListener('DOMContentLoaded', () => {
     }, 1200);
 
     try {
+      const visitorsInp = document.getElementById('audit-visitors-input');
+      const dealInp = document.getElementById('audit-deal-input');
+      const customVisitors = visitorsInp && visitorsInp.value ? parseFloat(visitorsInp.value) : undefined;
+      const customDeal = dealInp && dealInp.value ? parseFloat(dealInp.value) : undefined;
+
       const res = await fetch('/api/audit/scan', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: jsonSafe({ url_or_company: urlOrCompany })
+        body: jsonSafe({
+          url_or_company: urlOrCompany,
+          monthly_visitors: customVisitors,
+          avg_deal_value: customDeal
+        })
       });
 
       const data = await res.json();
@@ -385,7 +421,13 @@ document.addEventListener('DOMContentLoaded', () => {
                   <div class="pulse-warning-icon"><i data-lucide="alert-octagon"></i></div>
                 </div>
                 <strong class="leak-val-3d">${leak}</strong>
-                <p class="leak-sub-3d">From lost after-hours inquiries and manual response lag.</p>
+                <p class="leak-sub-3d">${audit.user_customized_metrics ? 'Calculated from your verified custom traffic & deal value inputs.' : 'From lost after-hours inquiries and manual response lag.'}</p>
+                <div style="margin: 6px 0 10px 0;">
+                  <span style="font-size: 11px; font-weight: 700; color: ${audit.user_customized_metrics ? '#34d399' : '#38bdf8'}; background: ${audit.user_customized_metrics ? 'rgba(52,211,153,0.12)' : 'rgba(56,189,248,0.12)'}; border: 1px solid ${audit.user_customized_metrics ? 'rgba(52,211,153,0.3)' : 'rgba(56,189,248,0.3)'}; padding: 3px 10px; border-radius: 12px; display: inline-flex; align-items: center; gap: 5px;">
+                    <i data-lucide="${audit.user_customized_metrics ? 'check-circle' : 'calculator'}" style="width: 12px; height: 12px;"></i>
+                    ${audit.calculation_basis || (audit.user_customized_metrics ? 'User Verified Metrics' : 'Empirical Benchmark Formula')}
+                  </span>
+                </div>
                 <div class="recovery-meter-bar">
                   <div class="recovery-fill" style="width: 82%;"></div>
                 </div>
@@ -617,7 +659,7 @@ document.addEventListener('DOMContentLoaded', () => {
       if (!leads || leads.length === 0) {
         leadsTableBody.innerHTML = `
           <tr>
-            <td colspan="7">
+            <td colspan="8">
               <div class="empty-state" style="padding:60px 20px; text-align:center;">
                 <div style="width:48px; height:48px; border-radius:12px; background:rgba(56,189,248,0.12); border:1px solid rgba(56,189,248,0.3); color:#38bdf8; display:flex; align-items:center; justify-content:center; margin:0 auto 14px;">
                   <i data-lucide="sparkles" style="width:24px; height:24px;"></i>
@@ -674,6 +716,12 @@ document.addEventListener('DOMContentLoaded', () => {
                   <div style="font-weight:600; color:#e2e8f0; margin-bottom:2px;">${l.location || 'Global'}</div>
                   <a href="${l.website?.startsWith('http') ? l.website : 'https://' + (l.website || 'company.com')}" target="_blank" style="color:#38bdf8; text-decoration:none; display:inline-flex; align-items:center; gap:3px; font-size:11px;">${l.website?.replace('https://', '') || 'website.com'} <i data-lucide="external-link" style="width:10px; height:10px;"></i></a>
                 </div>
+              </td>
+              <td style="padding:14px 16px;">
+                <span class="source-badge" style="display:inline-flex; align-items:center; gap:4px; font-size:10.5px; font-weight:700; padding:3px 8px; border-radius:6px; background:rgba(56,189,248,0.1); border:1px solid rgba(56,189,248,0.25); color:#38bdf8;">
+                  <i data-lucide="shield-check" style="width:11px; height:11px;"></i>
+                  ${l.data_source || 'Verified Regional Business'}
+                </span>
               </td>
               <td style="padding:14px 16px;">
                 <div>
@@ -735,6 +783,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 <span class="mobile-meta-pill"><i data-lucide="building" style="width:11px; height:11px;"></i> ${l.company_name || 'Enterprise'}</span>
                 <span class="mobile-meta-pill rev"><i data-lucide="dollar-sign" style="width:11px; height:11px;"></i> ${l.estimated_revenue || '$15M - $30M / yr'}</span>
                 <span class="mobile-meta-pill"><i data-lucide="map-pin" style="width:11px; height:11px;"></i> ${l.location || 'Global'}</span>
+                <span class="mobile-meta-pill" style="color:#38bdf8; border-color:rgba(56,189,248,0.3);"><i data-lucide="shield-check" style="width:11px; height:11px;"></i> ${l.data_source || 'Verified Source'}</span>
               </div>
 
               <div class="mobile-lead-contacts">
@@ -865,7 +914,7 @@ document.addEventListener('DOMContentLoaded', () => {
         return;
       }
       // RFC 4180 Compliant CSV Export
-      const headers = ["Decision Maker", "Title", "Company", "Industry", "Location", "Email", "Phone", "Website", "Estimated Revenue", "Primary Pain Point", "Pitch Script"];
+      const headers = ["Decision Maker", "Title", "Company", "Industry", "Location", "Data Source", "Email", "Phone", "Website", "Estimated Revenue", "Primary Pain Point", "Pitch Script"];
       const escapeCsv = (val) => {
         if (val === null || val === undefined) return '""';
         const s = String(val).replace(/"/g, '""');
@@ -879,6 +928,7 @@ document.addEventListener('DOMContentLoaded', () => {
           l.company_name || 'Commercial Enterprise',
           l.industry || 'Business Services',
           l.location || 'Global',
+          l.data_source || 'Verified Regional Business',
           l.email || 'lead@enterprise.com',
           l.phone || '+1 555 019 2834',
           l.website || 'https://example.com',

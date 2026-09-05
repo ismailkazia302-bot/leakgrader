@@ -795,8 +795,10 @@ class MastermindRequestHandler(BaseHTTPRequestHandler):
             data = json.loads(body.decode("utf-8")) if content_length > 0 else {}
             company_or_url = data.get("url_or_company") or data.get("domain") or data.get("company", "Apex Global Real Estate")
             industry = data.get("industry", "Real Estate")
+            monthly_visitors = data.get("monthly_visitors")
+            avg_deal_value = data.get("avg_deal_value") or data.get("deal_value")
 
-            audit_result = AUDIT_ENGINE.run_instant_audit(company_or_url, industry)
+            audit_result = AUDIT_ENGINE.run_instant_audit(company_or_url, industry, monthly_visitors=monthly_visitors, avg_deal_value=avg_deal_value)
             global AUDITS
             AUDITS.append(audit_result)
             save_audits()

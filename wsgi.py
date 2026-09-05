@@ -92,7 +92,10 @@ def application(environ, start_response):
         # Route: /api/audit/scan & /api/audit/run
         if path in ['/api/audit/scan', '/api/audit/run']:
             url_or_comp = body_json.get('url_or_company') or body_json.get('domain') or body_json.get('company', '')
-            res = AUDIT_ENGINE.run_instant_audit(url_or_comp)
+            ind_hint = body_json.get('industry', '')
+            m_visitors = body_json.get('monthly_visitors')
+            a_deal = body_json.get('avg_deal_value') or body_json.get('deal_value')
+            res = AUDIT_ENGINE.run_instant_audit(url_or_comp, ind_hint, monthly_visitors=m_visitors, avg_deal_value=a_deal)
             AUDITS.append(res)
             save_audits()
             status = '200 OK'

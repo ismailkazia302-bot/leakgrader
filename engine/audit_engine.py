@@ -57,11 +57,12 @@ class ViralAuditEngine:
             for idx, (name, cat, status, pt_score, obs) in enumerate(checks, 1)
         ]
 
-    def run_instant_audit(self, company_or_url: str, industry_hint: str = "") -> dict:
+    def run_instant_audit(self, company_or_url: str, industry_hint: str = "", monthly_visitors: int = None, avg_deal_value: int = None) -> dict:
         """
         Runs a comprehensive 15-point revenue leak diagnostic with real-time website enrichment.
         Uses Gemini API if key is available, or returns instant algorithmic simulation.
         100% deterministic calculation based on MD5 hashing.
+        Supports custom monthly_visitors and avg_deal_value for exact personalized audit calculations.
         """
         raw_input = str(company_or_url or "").strip()
         if (
@@ -96,16 +97,43 @@ class ViralAuditEngine:
         # 100% Deterministic MD5 Seed (Identical on re-run, unique per domain)
         seed = int(hashlib.md5(normalized_domain.encode("utf-8")).hexdigest()[:8], 16)
 
-        # Check Benchmark Demos or compute dynamically via transparent methodology formula:
+        # Baseline traffic & deal estimates
+        traffic = 12000 + (seed % 45) * 1250
+        avg_deal = 1400 + (seed % 28) * 220
+        user_custom = False
+
+        if monthly_visitors is not None:
+            try:
+                mv = int(str(monthly_visitors).replace(",", "").replace("$", ""))
+                if mv > 0:
+                    traffic = mv
+                    user_custom = True
+            except (ValueError, TypeError):
+                pass
+
+        if avg_deal_value is not None:
+            try:
+                adv = int(str(avg_deal_value).replace(",", "").replace("$", ""))
+                if adv > 0:
+                    avg_deal = adv
+                    user_custom = True
+            except (ValueError, TypeError):
+                pass
+
+        # Transparent Revenue Leak Formula:
         # Leak = Monthly Traffic × High Intent (8%) × After-Hours (68.4%) × Lag Dropoff (72%) × Close Rate (2.5%) × Avg Deal Value
-        if normalized_domain in BENCHMARK_DEMOS:
+        if user_custom:
+            loss_calc = int(traffic * 0.08 * 0.684 * 0.72 * 0.025 * avg_deal)
+            loss_num = max(500, round(loss_calc / 100) * 100)
+            score = max(55, min(89, 68 + (seed % 20)))
+            if normalized_domain in BENCHMARK_DEMOS:
+                clean_name = BENCHMARK_DEMOS[normalized_domain].get("name", clean_name)
+        elif normalized_domain in BENCHMARK_DEMOS:
             bm = BENCHMARK_DEMOS[normalized_domain]
             clean_name = bm.get("name", clean_name)
             score = bm.get("score", 75)
             loss_num = bm.get("loss", 50000)
         else:
-            traffic = 12000 + (seed % 45) * 1250
-            avg_deal = 1400 + (seed % 28) * 220
             loss_calc = int(traffic * 0.08 * 0.684 * 0.72 * 0.025 * avg_deal)
             loss_num = max(22500, min(89500, round(loss_calc / 500) * 500))
             score = max(61, min(87, 63 + (seed % 24)))
@@ -148,6 +176,10 @@ Return JSON with:
                     parsed["overall_leak_score"] = parsed.get("overall_leak_score") or score
                     parsed["estimated_monthly_leak"] = parsed.get("estimated_monthly_leak") or loss_formatted
                     parsed["monthly_revenue_leak"] = parsed.get("monthly_revenue_leak") or loss_num
+                    parsed["monthly_visitors"] = traffic
+                    parsed["avg_deal_value"] = avg_deal
+                    parsed["user_customized_metrics"] = user_custom
+                    parsed["calculation_basis"] = "User Verified Metrics" if user_custom else "Transparent Industry Benchmark Formula"
                     parsed["status"] = "VERIFIED_AUDIT"
                     return parsed
             except Exception:
@@ -162,6 +194,10 @@ Return JSON with:
             "overall_leak_score": score,
             "estimated_monthly_leak": loss_formatted,
             "monthly_revenue_leak": loss_num,
+            "monthly_visitors": traffic,
+            "avg_deal_value": avg_deal,
+            "user_customized_metrics": user_custom,
+            "calculation_basis": "User Verified Metrics" if user_custom else "Transparent Industry Benchmark Formula",
             "top_conversion_leaks": [
                 {
                     "title": "Zero Instant WhatsApp & SMS Lead Capture",

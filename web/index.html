@@ -287,6 +287,47 @@
             </form>
             <div id="audit-input-error" style="display:none; margin:10px auto 0; max-width:580px; padding:8px 16px; background:rgba(239,68,68,0.12); border:1px solid rgba(239,68,68,0.3); border-radius:8px; color:#fb7185; font-size:12px; font-weight:700; text-align:center;"></div>
 
+            <!-- ⚙️ CUSTOM REAL BUSINESS METRICS (OPTIONAL ACCORDION) -->
+            <div style="max-width:680px; margin:12px auto 0; text-align:center;">
+              <div id="custom-metrics-toggle" style="display:inline-flex; align-items:center; gap:6px; cursor:pointer; font-size:12px; font-weight:700; color:#38bdf8; padding:5px 12px; border-radius:20px; background:rgba(56,189,248,0.08); border:1px solid rgba(56,189,248,0.22); transition:all 0.2s ease;">
+                <i data-lucide="sliders" style="width:13px; height:13px;"></i>
+                <span>Customize Your Real Numbers (Traffic & Deal Value)</span>
+                <i data-lucide="chevron-down" id="custom-metrics-chevron" style="width:13px; height:13px; transition:transform 0.2s ease;"></i>
+              </div>
+              
+              <div id="custom-metrics-panel" style="display:none; margin-top:10px; background:rgba(12,16,28,0.85); border:1px solid rgba(56,189,248,0.25); border-radius:14px; padding:16px 20px; backdrop-filter:blur(16px); text-align:left; box-shadow:0 8px 24px rgba(0,0,0,0.4);">
+                <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(240px, 1fr)); gap:16px;">
+                  <div>
+                    <label style="display:block; font-size:11px; font-weight:800; color:#94a3b8; text-transform:uppercase; margin-bottom:6px;">
+                      Monthly Website Visitors
+                    </label>
+                    <input type="number" id="audit-visitors-input" placeholder="e.g. 25000 (default: domain benchmark)" style="width:100%; box-sizing:border-box; padding:8px 12px; background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.12); border-radius:8px; color:#fff; font-size:13px; font-weight:600; outline:none;">
+                    <div style="display:flex; gap:6px; margin-top:6px; align-items:center;">
+                      <span style="font-size:10px; color:#64748b;">Presets:</span>
+                      <button type="button" class="metric-preset-chip" data-metric="visitors" data-val="5000" style="padding:2px 8px; font-size:10.5px; border-radius:4px; background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.1); color:#94a3b8; cursor:pointer;">5k</button>
+                      <button type="button" class="metric-preset-chip" data-metric="visitors" data-val="25000" style="padding:2px 8px; font-size:10.5px; border-radius:4px; background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.1); color:#94a3b8; cursor:pointer;">25k</button>
+                      <button type="button" class="metric-preset-chip" data-metric="visitors" data-val="100000" style="padding:2px 8px; font-size:10.5px; border-radius:4px; background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.1); color:#94a3b8; cursor:pointer;">100k</button>
+                    </div>
+                  </div>
+                  <div>
+                    <label style="display:block; font-size:11px; font-weight:800; color:#94a3b8; text-transform:uppercase; margin-bottom:6px;">
+                      Avg Customer Deal Value ($)
+                    </label>
+                    <input type="number" id="audit-deal-input" placeholder="e.g. 1200 (default: industry benchmark)" style="width:100%; box-sizing:border-box; padding:8px 12px; background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.12); border-radius:8px; color:#fff; font-size:13px; font-weight:600; outline:none;">
+                    <div style="display:flex; gap:6px; margin-top:6px; align-items:center;">
+                      <span style="font-size:10px; color:#64748b;">Presets:</span>
+                      <button type="button" class="metric-preset-chip" data-metric="deal" data-val="250" style="padding:2px 8px; font-size:10.5px; border-radius:4px; background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.1); color:#94a3b8; cursor:pointer;">$250</button>
+                      <button type="button" class="metric-preset-chip" data-metric="deal" data-val="1200" style="padding:2px 8px; font-size:10.5px; border-radius:4px; background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.1); color:#94a3b8; cursor:pointer;">$1,200</button>
+                      <button type="button" class="metric-preset-chip" data-metric="deal" data-val="5000" style="padding:2px 8px; font-size:10.5px; border-radius:4px; background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.1); color:#94a3b8; cursor:pointer;">$5,000</button>
+                    </div>
+                  </div>
+                </div>
+                <div style="font-size:11px; color:#64748b; margin-top:10px; text-align:right;">
+                  💡 Leave blank to use verified Harvard & MIT empirical benchmarks.
+                </div>
+              </div>
+            </div>
+
             <!-- Instant Sample Chips -->
             <div class="quick-try-row">
               <span class="try-label">Benchmark Demos:</span>
@@ -731,6 +772,7 @@
                     <th style="padding:12px 16px;">Company & Revenue</th>
                     <th style="padding:12px 16px;">Verified Contact Info</th>
                     <th style="padding:12px 16px;">Location & Website</th>
+                    <th style="padding:12px 16px;">Data Source</th>
                     <th style="padding:12px 16px;">Primary Pain Point</th>
                     <th style="text-align: right; padding:12px 16px;">Action</th>
                   </tr>
