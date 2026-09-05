@@ -78,8 +78,30 @@ document.addEventListener('DOMContentLoaded', () => {
   const btnModeSingle = document.getElementById('btn-mode-single');
   const btnModeVs = document.getElementById('btn-mode-vs');
   const auditResultsContainer = document.getElementById('audit-results-container');
+  const auditInputError = document.getElementById('audit-input-error');
   const sampleChips = document.querySelectorAll('.chip-sample');
   let isCompetitorMode = false;
+
+  function isPlausibleDomainOrCompany(val) {
+    if (!val || typeof val !== 'string') return false;
+    const clean = val.trim();
+    if (clean.length < 3) return false;
+    if (!/[a-zA-Z]/.test(clean)) return false;
+    if (!clean.includes('.') && !clean.includes(' ')) return false;
+    if (clean.startsWith('.') || clean.endsWith('.')) return false;
+    return true;
+  }
+
+  if (auditTargetInput) {
+    auditTargetInput.addEventListener('input', () => {
+      if (auditInputError) auditInputError.style.display = 'none';
+    });
+  }
+  if (auditCompetitorInput) {
+    auditCompetitorInput.addEventListener('input', () => {
+      if (auditInputError) auditInputError.style.display = 'none';
+    });
+  }
 
   // Methodology Toggle
   const methToggle = document.getElementById('methodology-toggle');
@@ -104,6 +126,7 @@ document.addEventListener('DOMContentLoaded', () => {
       btnModeVs.style.background = 'rgba(255,255,255,0.04)';
       btnModeVs.style.color = 'var(--text-muted)';
       auditCompetitorInput.style.display = 'none';
+      if (auditInputError) auditInputError.style.display = 'none';
       if (btnAuditText) btnAuditText.textContent = 'Run Free Audit';
     });
 
@@ -114,6 +137,7 @@ document.addEventListener('DOMContentLoaded', () => {
       btnModeSingle.style.background = 'rgba(255,255,255,0.04)';
       btnModeSingle.style.color = 'var(--text-muted)';
       auditCompetitorInput.style.display = 'block';
+      if (auditInputError) auditInputError.style.display = 'none';
       if (btnAuditText) btnAuditText.textContent = 'Run Competitor Battle';
     });
   }
@@ -122,6 +146,7 @@ document.addEventListener('DOMContentLoaded', () => {
     chip.addEventListener('click', () => {
       const url = chip.dataset.url;
       if (url && auditTargetInput) {
+        if (auditInputError) auditInputError.style.display = 'none';
         auditTargetInput.value = url;
         triggerAudit(url);
       }
@@ -133,8 +158,24 @@ document.addEventListener('DOMContentLoaded', () => {
       e.preventDefault();
       const target = auditTargetInput.value.trim();
       const comp = auditCompetitorInput ? auditCompetitorInput.value.trim() : '';
-      if (!target) return;
-      if (isCompetitorMode && comp) {
+      if (auditInputError) auditInputError.style.display = 'none';
+
+      if (!isPlausibleDomainOrCompany(target)) {
+        if (auditInputError) {
+          auditInputError.textContent = 'Please enter a valid company domain or name (e.g. stripe.com or company.ae)';
+          auditInputError.style.display = 'block';
+        }
+        return;
+      }
+
+      if (isCompetitorMode) {
+        if (!isPlausibleDomainOrCompany(comp)) {
+          if (auditInputError) {
+            auditInputError.textContent = 'Please enter a valid competitor domain (e.g. rivalrealty.ae or smileclinic.com)';
+            auditInputError.style.display = 'block';
+          }
+          return;
+        }
         triggerBattlecard(target, comp);
       } else {
         triggerAudit(target);
@@ -219,6 +260,17 @@ document.addEventListener('DOMContentLoaded', () => {
       if (window.lucide) lucide.createIcons();
     } catch(err) {
       console.error(err);
+      auditResultsContainer.innerHTML = `
+        <div class="card-3d-tilt" style="padding: 32px 24px; text-align: center; max-width: 520px; margin: 0 auto; border: 1px solid rgba(239, 68, 68, 0.3); background: rgba(18, 10, 14, 0.9);">
+          <div style="width: 48px; height: 48px; border-radius: 50%; background: rgba(239, 68, 68, 0.15); color: #fb7185; display: flex; align-items: center; justify-content: center; margin: 0 auto 12px;">
+            <i data-lucide="alert-triangle" style="width: 24px; height: 24px;"></i>
+          </div>
+          <h3 style="font-size: 16px; font-weight: 800; color: #fff; margin-bottom: 6px;">Battlecard Comparison Failed</h3>
+          <p style="font-size: 12.5px; color: #cbd5e1; margin-bottom: 16px;">Unable to benchmark ${myDomain} against ${compDomain}. Please verify both domains and retry.</p>
+          <button type="button" class="btn-action-3d" onclick="triggerBattlecard('${myDomain}', '${compDomain}');" style="background: rgba(56, 189, 248, 0.15); color: #38bdf8; border: 1px solid rgba(56, 189, 248, 0.3); padding: 8px 16px; border-radius: 8px; font-size: 12px; font-weight: 700; cursor: pointer;">Retry Battle</button>
+        </div>
+      `;
+      if (window.lucide) lucide.createIcons();
     } finally {
       btnRunAudit.disabled = false;
       if (btnAuditText) btnAuditText.textContent = 'Run Competitor Battle';
@@ -273,6 +325,24 @@ document.addEventListener('DOMContentLoaded', () => {
       });
 
       const data = await res.json();
+      if (data.error || (data.status && data.status === 'INVALID_INPUT') || (data.audit && data.audit.status === 'INVALID_INPUT')) {
+        const errMsg = data.error || (data.audit && data.audit.error) || 'Invalid domain format. Please enter a valid website domain.';
+        auditResultsContainer.innerHTML = `
+          <div class="card-3d-tilt" style="padding: 36px 24px; text-align: center; max-width: 520px; margin: 0 auto; border: 1px solid rgba(239, 68, 68, 0.3); background: rgba(18, 10, 14, 0.9);">
+            <div style="width: 48px; height: 48px; border-radius: 50%; background: rgba(239, 68, 68, 0.15); color: #fb7185; display: flex; align-items: center; justify-content: center; margin: 0 auto 12px;">
+              <i data-lucide="alert-circle" style="width: 24px; height: 24px;"></i>
+            </div>
+            <h3 style="font-size: 16px; font-weight: 800; color: #fff; margin-bottom: 6px;">Invalid Domain Name</h3>
+            <p style="font-size: 12.5px; color: #cbd5e1; margin-bottom: 16px;">${errMsg}</p>
+            <button type="button" class="btn-action-3d" onclick="document.getElementById('audit-target-input').focus();" style="background: rgba(56, 189, 248, 0.15); color: #38bdf8; border: 1px solid rgba(56, 189, 248, 0.3); padding: 8px 16px; border-radius: 8px; font-size: 12px; font-weight: 700; cursor: pointer;">Enter Valid Domain</button>
+          </div>
+        `;
+        if (window.lucide) lucide.createIcons();
+        btnRunAudit.disabled = false;
+        btnRunAudit.innerHTML = '<i data-lucide="zap" class="icon-sm"></i><span>Run Free Audit</span>';
+        if (window.lucide) lucide.createIcons();
+        return;
+      }
       const audit = data.audit || {};
       const score = audit.ai_readiness_score || 74;
       const leak = audit.estimated_monthly_leak || '$35,000/mo';
@@ -423,8 +493,20 @@ document.addEventListener('DOMContentLoaded', () => {
 
       btnRunAudit.disabled = false;
       btnRunAudit.innerHTML = '<i data-lucide="zap" class="icon-sm"></i><span>Run Free Audit</span>';
-      if (window.lucide) lucide.createIcons();
     } catch (err) {
+      console.error(err);
+      auditResultsContainer.innerHTML = `
+        <div class="card-3d-tilt" style="padding: 36px 24px; text-align: center; max-width: 520px; margin: 0 auto; border: 1px solid rgba(239, 68, 68, 0.3); background: rgba(18, 10, 14, 0.9);">
+          <div style="width: 48px; height: 48px; border-radius: 50%; background: rgba(239, 68, 68, 0.15); color: #fb7185; display: flex; align-items: center; justify-content: center; margin: 0 auto 12px;">
+            <i data-lucide="alert-triangle" style="width: 24px; height: 24px;"></i>
+          </div>
+          <h3 style="font-size: 16px; font-weight: 800; color: #fff; margin-bottom: 6px;">Audit Scan Interrupted</h3>
+          <p style="font-size: 12.5px; color: #cbd5e1; margin-bottom: 16px;">Unable to complete live audit for ${urlOrCompany}. Please verify domain connectivity or try one of the benchmark demos.</p>
+          <button type="button" class="btn-action-3d" onclick="triggerAudit('stripe.com');" style="background: rgba(56, 189, 248, 0.15); color: #38bdf8; border: 1px solid rgba(56, 189, 248, 0.3); padding: 8px 16px; border-radius: 8px; font-size: 12px; font-weight: 700; cursor: pointer;">Run Benchmark Demo</button>
+        </div>
+      `;
+      if (window.lucide) lucide.createIcons();
+    } finally {
       btnRunAudit.disabled = false;
       btnRunAudit.innerHTML = '<i data-lucide="zap" class="icon-sm"></i><span>Run Free Audit</span>';
       if (window.lucide) lucide.createIcons();
@@ -718,10 +800,10 @@ document.addEventListener('DOMContentLoaded', () => {
     const label = document.getElementById('selected-count-label');
 
     const total = (leads && leads.length) ? leads.length : 0;
-    const totalText = `${total}`;
-    const verifiedText = total > 0 ? `${total} (100% Verified)` : '100% Live Verified';
-    const intentText = '98.0% High Intent';
-    const pipelineText = total > 0 ? `$${(total * 25000).toLocaleString()}` : '$0 (Ready)';
+    const totalText = total > 0 ? `${total}` : '-- (Awaiting Search)';
+    const verifiedText = total > 0 ? `${total} (100% Verified)` : '--';
+    const intentText = total > 0 ? '98.0% High Intent' : '--';
+    const pipelineText = total > 0 ? `$${(total * 25000).toLocaleString()}` : '--';
     const labelText = total > 0 ? `Showing all ${total} verified enterprise decision-makers` : 'Ready to search verified enterprise decision-makers';
 
     if (mTotal) mTotal.textContent = totalText;
@@ -778,7 +860,43 @@ document.addEventListener('DOMContentLoaded', () => {
 
   if (btnExportCsv) {
     btnExportCsv.addEventListener('click', () => {
-      openPricing();
+      if (!CURRENT_LEADS || CURRENT_LEADS.length === 0) {
+        alert('No prospects found to export. Please search and enrich prospects first.');
+        return;
+      }
+      // RFC 4180 Compliant CSV Export
+      const headers = ["Decision Maker", "Title", "Company", "Industry", "Location", "Email", "Phone", "Website", "Estimated Revenue", "Primary Pain Point", "Pitch Script"];
+      const escapeCsv = (val) => {
+        if (val === null || val === undefined) return '""';
+        const s = String(val).replace(/"/g, '""');
+        return `"${s}"`;
+      };
+      let csvRows = [headers.map(escapeCsv).join(",")];
+      CURRENT_LEADS.forEach(l => {
+        const row = [
+          l.contact_name || 'Executive Lead',
+          l.title || 'Decision Maker',
+          l.company_name || 'Commercial Enterprise',
+          l.industry || 'Business Services',
+          l.location || 'Global',
+          l.email || 'lead@enterprise.com',
+          l.phone || '+1 555 019 2834',
+          l.website || 'https://example.com',
+          l.estimated_revenue || '$5M - $10M / year',
+          l.primary_pain_point || 'After-hours response lag',
+          l.pitch_script || ''
+        ];
+        csvRows.push(row.map(escapeCsv).join(","));
+      });
+      const blob = new Blob([csvRows.join("\r\n")], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `leakgrader_verified_prospects_${Date.now()}.csv`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
     });
   }
 
@@ -1150,6 +1268,7 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   if (btnRefreshBookings) btnRefreshBookings.addEventListener('click', loadBookings);
+  loadBookings();
 
   // ====================================================
   // 6. TAB 4: DOC VAULT & RAG SECOND BRAIN
@@ -1185,11 +1304,25 @@ document.addEventListener('DOMContentLoaded', () => {
 
   async function handleFileUpload(files) {
     if (!files || files.length === 0) return;
+    const allowed = ['.pdf', '.txt', '.csv', '.md', '.json', '.docx'];
     for (const file of files) {
+      const ext = '.' + file.name.split('.').pop().toLowerCase();
+      if (!allowed.includes(ext)) {
+        alert(`Unsupported file format '${file.name}'. Please upload PDF, TXT, CSV, MD, or JSON files.`);
+        continue;
+      }
+      if (file.size > 10 * 1024 * 1024) {
+        alert(`File '${file.name}' exceeds the 10MB limit.`);
+        continue;
+      }
       const formData = new FormData();
       formData.append('file', file);
       try {
-        await fetch('/api/documents/upload', { method: 'POST', body: formData });
+        const res = await fetch('/api/documents/upload', { method: 'POST', body: formData });
+        const resJson = await res.json();
+        if (!resJson.success && resJson.error) {
+          alert(resJson.error);
+        }
       } catch (err) {
         console.error(err);
       }
@@ -1279,6 +1412,7 @@ document.addEventListener('DOMContentLoaded', () => {
               <div style="display:flex; align-items:center; gap:6px; flex-shrink:0;">
                 <span class="badge-subtle" style="background:rgba(56,189,248,0.12); color:#38bdf8; border:1px solid rgba(56,189,248,0.25); font-size:9.5px; font-weight:700; padding:2px 6px; border-radius:4px;">${d.chunks || 12} chk</span>
                 <span style="color:#64748b; font-size:9.5px;">${sizeKb}KB</span>
+                <a href="/api/documents/download/${d.id}" download="${d.name}" class="btn-download-doc" title="Download document" style="background:transparent; border:none; color:#38bdf8; cursor:pointer; padding:2px; display:inline-flex; align-items:center; text-decoration:none;"><i data-lucide="download" style="width:12px; height:12px;"></i></a>
                 <button type="button" class="btn-delete-doc" data-id="${d.id}" title="Delete document" style="background:transparent; border:none; color:#fb7185; cursor:pointer; padding:2px; display:inline-flex; align-items:center;"><i data-lucide="trash-2" style="width:12px; height:12px;"></i></button>
               </div>
             </div>
@@ -1419,6 +1553,26 @@ document.addEventListener('DOMContentLoaded', () => {
         btnCopyArticle.innerHTML = '<i data-lucide="copy" class="icon-xs"></i> <span>Copy</span>';
         if (window.lucide) lucide.createIcons();
       }, 2000);
+    });
+  }
+
+  // Download Article .MD Button
+  if (btnExportArticle) {
+    btnExportArticle.addEventListener('click', () => {
+      if (!GENERATED_ARTICLE_MARKDOWN) {
+        alert('Please generate an article first before downloading.');
+        return;
+      }
+      const blob = new Blob([GENERATED_ARTICLE_MARKDOWN], { type: 'text/markdown;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      const cleanSlug = (crewTopicInput ? crewTopicInput.value : 'seo_article').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
+      a.download = `${cleanSlug || 'leakgrader_seo_article'}.md`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
     });
   }
 

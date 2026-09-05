@@ -91,25 +91,29 @@ def application(environ, start_response):
 
         # Route: /api/audit/scan & /api/audit/run
         if path in ['/api/audit/scan', '/api/audit/run']:
-            url_or_comp = body_json.get('url_or_company', '')
+            url_or_comp = body_json.get('url_or_company') or body_json.get('domain') or body_json.get('company', '')
             res = AUDIT_ENGINE.run_instant_audit(url_or_comp)
             AUDITS.append(res)
             save_audits()
             status = '200 OK'
             response_headers = [('Content-Type', 'application/json; charset=utf-8'), ('Access-Control-Allow-Origin', '*')]
             start_response(status, response_headers)
-            return [json.dumps({"success": True, "audit": res}).encode('utf-8')]
+            resp_dict = {"success": True, "audit": res}
+            resp_dict.update(res)
+            return [json.dumps(resp_dict).encode('utf-8')]
 
         # Route: /api/competitor/battlecard & /api/audit/competitor-battle
         elif path in ['/api/competitor/battlecard', '/api/audit/competitor-battle']:
-            my_d = body_json.get('my_domain', 'Company')
-            comp_d = body_json.get('competitor_domain', 'Competitor')
+            my_d = body_json.get('my_domain') or body_json.get('domain', 'Company')
+            comp_d = body_json.get('competitor_domain') or body_json.get('competitor', 'Competitor')
             ind = body_json.get('industry', '')
             battle_res = COMPETITOR_SPY.run_battlecard(my_d, comp_d, ind)
             status = '200 OK'
             response_headers = [('Content-Type', 'application/json; charset=utf-8'), ('Access-Control-Allow-Origin', '*')]
             start_response(status, response_headers)
-            return [json.dumps({"success": True, "battlecard": battle_res}).encode('utf-8')]
+            resp_dict = {"success": True, "battlecard": battle_res}
+            resp_dict.update(battle_res)
+            return [json.dumps(resp_dict).encode('utf-8')]
 
         # Route: /api/leads/generate
         elif path == '/api/leads/generate':
@@ -168,12 +172,15 @@ def application(environ, start_response):
                         "email": b_info.get("email", "client@company.com"),
                         "phone": b_info.get("phone", "+1 555 019 2834"),
                         "budget": b_info.get("budget", "$15,000 Deal"),
+                        "deal_value": b_info.get("budget", "$15,000 Deal"),
                         "time_slot": b_info.get("time_slot", "Tomorrow 3:00 PM UTC"),
                         "intent": b_info.get("intent", "24/7 AI Closer Demo & Strategy Walkthrough"),
                         "timestamp": time.strftime("%Y-%m-%d %H:%M:%S")
                     })
                     save_bookings()
                     res['auto_booked'] = True
+                    res['confirmed_slot'] = b_info.get("time_slot", "Tomorrow @ 3:00 PM GST")
+                    res['time_slot'] = res['confirmed_slot']
                 status = '200 OK'
                 response_headers = [('Content-Type', 'application/json; charset=utf-8'), ('Access-Control-Allow-Origin', '*')]
                 start_response(status, response_headers)
@@ -188,6 +195,12 @@ def application(environ, start_response):
         elif path in ['/api/upload', '/api/documents/upload']:
             uploaded_count = 0
             new_chunks_count = 0
+            last_doc_id = None
+            last_file_name = None
+            ALLOWED_EXTENSIONS = {'.pdf', '.txt', '.csv', '.md', '.json', '.docx'}
+            MAX_FILE_SIZE = 10 * 1024 * 1024 # 10MB
+            upload_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "storage", "uploads")
+            os.makedirs(upload_dir, exist_ok=True)
             try:
                 if 'multipart/form-data' in content_type:
                     boundary = content_type.split('boundary=')[-1].encode()
@@ -201,31 +214,71 @@ def application(environ, start_response):
                             if fn_match:
                                 raw_name = fn_match[0].split('filename="')[-1].split('"')[0]
                                 file_name = os.path.basename(raw_name)
+                                ext = os.path.splitext(file_name)[1].lower()
+                                if ext not in ALLOWED_EXTENSIONS:
+                                    status = '400 Bad Request'
+                                    response_headers = [('Content-Type', 'application/json; charset=utf-8'), ('Access-Control-Allow-Origin', '*')]
+                                    start_response(status, response_headers)
+                                    return [json.dumps({"success": False, "status": "error", "error": f"File type '{ext}' is not supported. Please upload PDF, TXT, CSV, MD, or JSON."}).encode('utf-8')]
+                                if len(file_data) > MAX_FILE_SIZE:
+                                    status = '400 Bad Request'
+                                    response_headers = [('Content-Type', 'application/json; charset=utf-8'), ('Access-Control-Allow-Origin', '*')]
+                                    start_response(status, response_headers)
+                                    return [json.dumps({"success": False, "status": "error", "error": "File size exceeds 10MB limit."}).encode('utf-8')]
                                 if file_name and len(file_data) > 0:
                                     chunks = parse_file(file_name, file_data)
                                     doc_id = f"doc_{int(time.time()*1000)}_{uploaded_count}"
+                                    saved_path = os.path.join(upload_dir, f"{doc_id}_{file_name}")
+                                    try:
+                                        with open(saved_path, "wb") as f:
+                                            f.write(file_data)
+                                    except Exception:
+                                        saved_path = None
                                     ALL_DOCUMENTS[doc_id] = {
                                         "name": file_name,
                                         "chunks": chunks,
                                         "size": len(file_data),
-                                        "type": "file"
+                                        "type": "file",
+                                        "file_path": saved_path
                                     }
                                     ALL_CHUNKS.extend(chunks)
+                                    last_doc_id = doc_id
+                                    last_file_name = file_name
                                     uploaded_count += 1
                                     new_chunks_count += len(chunks)
                 elif 'application/json' in content_type:
                     file_name = body_json.get('filename', 'document.txt')
                     content_str = body_json.get('content', '')
+                    ext = os.path.splitext(file_name)[1].lower()
+                    if ext and ext not in ALLOWED_EXTENSIONS:
+                        status = '400 Bad Request'
+                        response_headers = [('Content-Type', 'application/json; charset=utf-8'), ('Access-Control-Allow-Origin', '*')]
+                        start_response(status, response_headers)
+                        return [json.dumps({"success": False, "status": "error", "error": f"File type '{ext}' is not supported. Please upload PDF, TXT, CSV, MD, or JSON."}).encode('utf-8')]
                     file_bytes = content_str.encode('utf-8')
+                    if len(file_bytes) > MAX_FILE_SIZE:
+                        status = '400 Bad Request'
+                        response_headers = [('Content-Type', 'application/json; charset=utf-8'), ('Access-Control-Allow-Origin', '*')]
+                        start_response(status, response_headers)
+                        return [json.dumps({"success": False, "status": "error", "error": "File size exceeds 10MB limit."}).encode('utf-8')]
                     chunks = parse_file(file_name, file_bytes)
                     doc_id = f"doc_{int(time.time()*1000)}"
+                    saved_path = os.path.join(upload_dir, f"{doc_id}_{file_name}")
+                    try:
+                        with open(saved_path, "wb") as f:
+                            f.write(file_bytes)
+                    except Exception:
+                        saved_path = None
                     ALL_DOCUMENTS[doc_id] = {
                         "name": file_name,
                         "chunks": chunks,
                         "size": len(file_bytes),
-                        "type": "file"
+                        "type": "file",
+                        "file_path": saved_path
                     }
                     ALL_CHUNKS.extend(chunks)
+                    last_doc_id = doc_id
+                    last_file_name = file_name
                     uploaded_count = 1
                     new_chunks_count = len(chunks)
 
@@ -236,6 +289,9 @@ def application(environ, start_response):
                 start_response(status, response_headers)
                 return [json.dumps({
                     "success": True,
+                    "status": "success",
+                    "doc_id": last_doc_id,
+                    "filename": last_file_name,
                     "uploaded_count": uploaded_count,
                     "new_chunks": new_chunks_count,
                     "total_chunks": len(ALL_CHUNKS)
@@ -347,11 +403,23 @@ def application(environ, start_response):
             aud = body_json.get('audience', 'Tech Founders')
             tone = body_json.get('tone', 'Authoritative')
             res = CONTENT_CREW.run_multi_agent_pipeline(top, aud, tone)
-            article_md = res.get('full_article_markdown', '')
+            article_md = res.get('full_article_markdown') or res.get('article_markdown', '')
+            words = res.get('word_count') or len(article_md.split())
+            seo_info = res.get('seo_audit', {})
+            slug = seo_info.get('url_slug', 'seo-article')
             status = '200 OK'
             response_headers = [('Content-Type', 'application/json; charset=utf-8'), ('Access-Control-Allow-Origin', '*')]
             start_response(status, response_headers)
-            return [json.dumps({"success": True, "article": article_md, "data": res}).encode('utf-8')]
+            resp_dict = {
+                "success": True,
+                "article": article_md,
+                "article_markdown": article_md,
+                "full_article_markdown": article_md,
+                "word_count": words,
+                "slug": slug,
+                "data": res
+            }
+            return [json.dumps(resp_dict).encode('utf-8')]
 
         # Route: /api/checkout/create
         elif path == '/api/checkout/create':
@@ -637,6 +705,39 @@ def application(environ, start_response):
         start_response(status, response_headers)
         return [json.dumps({"documents": doc_list}).encode('utf-8')]
 
+    elif path.startswith('/api/documents/download/'):
+        doc_id = path.split('/api/documents/download/')[-1]
+        doc = ALL_DOCUMENTS.get(doc_id)
+        if not doc:
+            status = '404 Not Found'
+            response_headers = [('Content-Type', 'application/json; charset=utf-8'), ('Access-Control-Allow-Origin', '*')]
+            start_response(status, response_headers)
+            return [json.dumps({"success": False, "error": "Document not found"}).encode('utf-8')]
+
+        file_path = doc.get("file_path")
+        doc_name = doc.get("name", "document.txt")
+        file_bytes = b""
+        if file_path and os.path.isfile(file_path):
+            try:
+                with open(file_path, "rb") as f:
+                    file_bytes = f.read()
+            except Exception:
+                file_bytes = b""
+        if not file_bytes:
+            text_content = "\n\n".join([c.get("content", "") for c in doc.get("chunks", [])])
+            file_bytes = text_content.encode("utf-8")
+
+        guessed_type = mimetypes.guess_type(doc_name)[0] or 'application/octet-stream'
+        status = '200 OK'
+        response_headers = [
+            ('Content-Type', guessed_type),
+            ('Content-Disposition', f'attachment; filename="{doc_name}"'),
+            ('Content-Length', str(len(file_bytes))),
+            ('Access-Control-Allow-Origin', '*')
+        ]
+        start_response(status, response_headers)
+        return [file_bytes]
+
     elif path == '/api/booking/list':
         status = '200 OK'
         response_headers = [('Content-Type', 'application/json; charset=utf-8'), ('Access-Control-Allow-Origin', '*')]
@@ -708,10 +809,25 @@ def application(environ, start_response):
     file_path = path.lstrip('/')
     full_path = os.path.join(WEB_DIR_PATH, file_path)
     if os.path.exists(full_path) and os.path.isfile(full_path):
-        mime, _ = mimetypes.guess_type(full_path)
-        content_type = mime or 'text/plain'
-        if 'text/' in content_type or 'javascript' in content_type:
-            content_type += '; charset=utf-8'
+        if file_path.endswith('.js'):
+            content_type = 'application/javascript; charset=utf-8'
+        elif file_path.endswith('.css'):
+            content_type = 'text/css; charset=utf-8'
+        elif file_path.endswith('.json'):
+            content_type = 'application/json; charset=utf-8'
+        elif file_path.endswith('.svg'):
+            content_type = 'image/svg+xml'
+        elif file_path.endswith('.ico'):
+            content_type = 'image/x-icon'
+        elif file_path.endswith('.png'):
+            content_type = 'image/png'
+        elif file_path.endswith(('.jpg', '.jpeg')):
+            content_type = 'image/jpeg'
+        else:
+            mime, _ = mimetypes.guess_type(full_path)
+            content_type = mime or 'text/plain'
+            if 'text/' in content_type or 'javascript' in content_type:
+                content_type += '; charset=utf-8'
 
         if query_string or file_path.endswith(('.css', '.js', '.svg', '.png', '.ico', '.woff2', '.woff')):
             cache_ctrl = 'public, max-age=31536000, immutable' if query_string else 'public, max-age=86400'

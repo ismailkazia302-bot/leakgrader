@@ -285,14 +285,15 @@
                 <span id="btn-audit-text">Run Free Audit</span>
               </button>
             </form>
+            <div id="audit-input-error" style="display:none; margin:10px auto 0; max-width:580px; padding:8px 16px; background:rgba(239,68,68,0.12); border:1px solid rgba(239,68,68,0.3); border-radius:8px; color:#fb7185; font-size:12px; font-weight:700; text-align:center;"></div>
 
             <!-- Instant Sample Chips -->
             <div class="quick-try-row">
               <span class="try-label">Benchmark Demos:</span>
-              <button type="button" class="chip-sample" data-url="https://luxehaven.ae">🏖️ LuxeHaven Real Estate</button>
-              <button type="button" class="chip-sample" data-url="https://apexcare-dental.com">🏥 ApexCare Dental Clinic</button>
-              <button type="button" class="chip-sample" data-url="https://cloudscale-app.io">⚡ CloudScale B2B SaaS</button>
-              <button type="button" class="chip-sample" data-url="https://veritaslegal.com">🏛️ Veritas Law Partners</button>
+              <button type="button" class="chip-sample" data-url="https://stripe.com">💳 Stripe.com</button>
+              <button type="button" class="chip-sample" data-url="https://luxehaven.ae">🏖️ LuxeHaven</button>
+              <button type="button" class="chip-sample" data-url="https://airbnb.com">🏡 Airbnb.com</button>
+              <button type="button" class="chip-sample" data-url="https://uber.com">🚗 Uber.com</button>
             </div>
 
             <!-- 📐 TRANSPARENT MATHEMATICAL REVENUE LEAK METHODOLOGY -->
@@ -565,7 +566,7 @@
                   <ul style="list-style:none; padding:0; margin:0; display:flex; flex-direction:column; gap:9px; font-size:12px; color:var(--text-muted);">
                     <li><span style="color:#34d399; display:inline-flex; align-items:center; gap:6px;"><i data-lucide="shield-check" class="icon-xs"></i> 256-Bit SSL Encrypted</span></li>
                     <li><span style="color:#38bdf8; display:inline-flex; align-items:center; gap:6px;"><i data-lucide="shield" class="icon-xs"></i> GDPR Compliant Architecture</span></li>
-                    <li><span style="color:#a855f7; display:inline-flex; align-items:center; gap:6px;"><i data-lucide="zap" class="icon-xs"></i> 99.99% Uptime Guarantee</span></li>
+                    <li><span style="color:#a855f7; display:inline-flex; align-items:center; gap:6px;"><i data-lucide="zap" class="icon-xs"></i> 24/7 Monitored Availability</span></li>
                   </ul>
                 </div>
               </div>
@@ -600,44 +601,44 @@
               <div class="marquee-item">
                 <i data-lucide="users" class="icon-xs" style="color:#38bdf8;"></i>
                 <span class="m-lbl">Decision Makers:</span>
-                <strong class="metric-val text-white" id="m-total-leads">0</strong>
+                <strong class="metric-val text-white" id="m-total-leads">-- (Awaiting Search)</strong>
               </div>
               <div class="marquee-item">
                 <i data-lucide="shield-check" class="icon-xs" style="color:#34d399;"></i>
                 <span class="m-lbl">Contact Accuracy:</span>
-                <strong class="metric-val text-emerald" id="m-verified-leads">100% Live Verified</strong>
+                <strong class="metric-val text-emerald" id="m-verified-leads">--</strong>
               </div>
               <div class="marquee-item">
                 <i data-lucide="zap" class="icon-xs" style="color:#c084fc;"></i>
                 <span class="m-lbl">Buyer Intent:</span>
-                <strong class="metric-val text-purple" id="m-intent-val">98.0% High Intent</strong>
+                <strong class="metric-val text-purple" id="m-intent-val">--</strong>
               </div>
               <div class="marquee-item">
                 <i data-lucide="dollar-sign" class="icon-xs" style="color:#fbbf24;"></i>
                 <span class="m-lbl">Est. Pipeline:</span>
-                <strong class="metric-val text-amber" id="m-pipeline-val">$0 (Ready)</strong>
+                <strong class="metric-val text-amber" id="m-pipeline-val">--</strong>
               </div>
 
               <!-- Duplicate for seamless continuous looping marquee -->
               <div class="marquee-item" aria-hidden="true">
                 <i data-lucide="users" class="icon-xs" style="color:#38bdf8;"></i>
                 <span class="m-lbl">Decision Makers:</span>
-                <strong class="metric-val text-white" id="m-total-leads-dup">0</strong>
+                <strong class="metric-val text-white" id="m-total-leads-dup">-- (Awaiting Search)</strong>
               </div>
               <div class="marquee-item" aria-hidden="true">
                 <i data-lucide="shield-check" class="icon-xs" style="color:#34d399;"></i>
                 <span class="m-lbl">Contact Accuracy:</span>
-                <strong class="metric-val text-emerald" id="m-verified-leads-dup">100% Live Verified</strong>
+                <strong class="metric-val text-emerald" id="m-verified-leads-dup">--</strong>
               </div>
               <div class="marquee-item" aria-hidden="true">
                 <i data-lucide="zap" class="icon-xs" style="color:#c084fc;"></i>
                 <span class="m-lbl">Buyer Intent:</span>
-                <strong class="metric-val text-purple" id="m-intent-val-dup">98.0% High Intent</strong>
+                <strong class="metric-val text-purple" id="m-intent-val-dup">--</strong>
               </div>
               <div class="marquee-item" aria-hidden="true">
                 <i data-lucide="dollar-sign" class="icon-xs" style="color:#fbbf24;"></i>
                 <span class="m-lbl">Est. Pipeline:</span>
-                <strong class="metric-val text-amber" id="m-pipeline-val-dup">$0 (Ready)</strong>
+                <strong class="metric-val text-amber" id="m-pipeline-val-dup">--</strong>
               </div>
             </div>
           </div>

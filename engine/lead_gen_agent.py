@@ -509,8 +509,10 @@ class LeadPulseAgent:
             enriched_leads.append({
                 "id": f"ld_{int(time.time()*1000)}_{i+1}",
                 "contact_name": f"{contact_first} {person['last']}",
+                "name": f"{contact_first} {person['last']}",
                 "title": title,
                 "company_name": comp_name,
+                "company": comp_name,
                 "estimated_revenue": revenue,
                 "email": email,
                 "phone": phone_num,
@@ -581,6 +583,14 @@ RETURN VALID JSON ARRAY of objects with this schema:
             # Format and enrich with IDs
             for idx, item in enumerate(leads_list):
                 item["id"] = f"ld_{int(time.time()*1000)}_{idx+1}"
+                if "contact_name" not in item and "name" in item:
+                    item["contact_name"] = item["name"]
+                if "name" not in item and "contact_name" in item:
+                    item["name"] = item["contact_name"]
+                if "company_name" not in item and "company" in item:
+                    item["company_name"] = item["company"]
+                if "company" not in item and "company_name" in item:
+                    item["company"] = item["company_name"]
                 if not item.get("website", "").startswith("http"):
                     item["website"] = f"https://{item.get('website', 'company.com')}"
             return leads_list
@@ -744,8 +754,10 @@ RETURN VALID JSON ARRAY of objects with this schema:
             leads.append({
                 "id": f"ld_{int(time.time()*1000)}_{i+1}",
                 "contact_name": f"{contact_first} {person['last']}",
+                "name": f"{contact_first} {person['last']}",
                 "title": title,
                 "company_name": comp_name,
+                "company": comp_name,
                 "estimated_revenue": revenue,
                 "email": email,
                 "phone": phone_num,

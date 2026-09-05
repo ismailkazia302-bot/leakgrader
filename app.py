@@ -255,6 +255,8 @@ def load_all_data():
             with open(BOOKINGS_FILE, "r", encoding="utf-8") as f:
                 loaded_bookings = json.load(f)
                 BOOKINGS.clear()
+                for b in loaded_bookings:
+                    b['deal_value'] = b.get('deal_value') or b.get('budget', '$15,000 Deal')
                 BOOKINGS.extend(loaded_bookings)
         except Exception:
             BOOKINGS.clear()
@@ -676,6 +678,38 @@ class MastermindRequestHandler(BaseHTTPRequestHandler):
             self.wfile.write(json.dumps({"documents": doc_list, "stats": stats}).encode("utf-8"))
             return
 
+        elif path.startswith("/api/documents/download/"):
+            doc_id = unquote(path.split("/api/documents/download/")[-1])
+            doc = ALL_DOCUMENTS.get(doc_id)
+            if not doc:
+                self._set_headers(404)
+                self.wfile.write(json.dumps({"success": False, "error": "Document not found"}).encode("utf-8"))
+                return
+
+            file_path = doc.get("file_path")
+            doc_name = doc.get("name", "document.txt")
+            file_bytes = b""
+            if file_path and os.path.isfile(file_path):
+                try:
+                    with open(file_path, "rb") as f:
+                        file_bytes = f.read()
+                except Exception:
+                    file_bytes = b""
+            if not file_bytes:
+                text_content = "\n\n".join([c.get("content", "") for c in doc.get("chunks", [])])
+                file_bytes = text_content.encode("utf-8")
+
+            guessed_type = mimetypes.guess_type(doc_name)[0] or "application/octet-stream"
+            self.send_response(200)
+            self.send_header("Content-Type", guessed_type)
+            self.send_header("Content-Disposition", f'attachment; filename="{doc_name}"')
+            self.send_header("Content-Length", str(len(file_bytes)))
+            for sec_k, sec_v in SECURITY_HEADERS:
+                self.send_header(sec_k, sec_v)
+            self.end_headers()
+            self.wfile.write(file_bytes)
+            return
+
         # 3. LeadPulse Endpoints
         elif path == "/api/leads/list":
             self._set_headers(200)
@@ -759,7 +793,7 @@ class MastermindRequestHandler(BaseHTTPRequestHandler):
         if path in ["/api/audit/run", "/api/audit/scan"]:
             body = self.rfile.read(content_length)
             data = json.loads(body.decode("utf-8")) if content_length > 0 else {}
-            company_or_url = data.get("url_or_company", "Apex Global Real Estate")
+            company_or_url = data.get("url_or_company") or data.get("domain") or data.get("company", "Apex Global Real Estate")
             industry = data.get("industry", "Real Estate")
 
             audit_result = AUDIT_ENGINE.run_instant_audit(company_or_url, industry)
@@ -768,20 +802,24 @@ class MastermindRequestHandler(BaseHTTPRequestHandler):
             save_audits()
 
             self._set_headers(200)
-            self.wfile.write(json.dumps({"success": True, "audit": audit_result}).encode("utf-8"))
+            resp_dict = {"success": True, "audit": audit_result}
+            resp_dict.update(audit_result)
+            self.wfile.write(json.dumps(resp_dict).encode("utf-8"))
             return
 
         # --- COMPETITOR BATTLECARD ENGINE ---
-        elif path == "/api/competitor/battlecard":
+        elif path in ["/api/competitor/battlecard", "/api/audit/competitor-battle"]:
             body = self.rfile.read(content_length)
             data = json.loads(body.decode("utf-8")) if content_length > 0 else {}
-            my_domain = data.get("my_domain", "Apex Enterprise")
-            comp_domain = data.get("competitor_domain", "Rival Corp")
+            my_domain = data.get("my_domain") or data.get("domain", "Apex Enterprise")
+            comp_domain = data.get("competitor_domain") or data.get("competitor", "Rival Corp")
             industry = data.get("industry", "General Business")
 
             battle_result = COMPETITOR_SPY.run_battlecard(my_domain, comp_domain, industry)
             self._set_headers(200)
-            self.wfile.write(json.dumps({"success": True, "battlecard": battle_result}).encode("utf-8"))
+            resp_dict = {"success": True, "battlecard": battle_result}
+            resp_dict.update(battle_result)
+            self.wfile.write(json.dumps(resp_dict).encode("utf-8"))
             return
 
         # --- 2. AUTOMATED CHECKOUT GATEWAY ---
@@ -876,9 +914,52 @@ class MastermindRequestHandler(BaseHTTPRequestHandler):
             self.wfile.write(json.dumps({"success": True, "config": res}).encode("utf-8"))
             return
 
+        # --- BOOKFLOW AI CLOSER ROUTE ---
+        elif path == "/api/booking/chat":
+            body = self.rfile.read(content_length) if content_length > 0 else b""
+            data = json.loads(body.decode("utf-8")) if body else {}
+            msg = data.get("message", "")
+            hist = data.get("history", [])
+            ctx = data.get("business_context", "LeakGrader AI Solutions")
+            if len(ALL_CHUNKS) > 0 and msg:
+                try:
+                    retrieved = RETRIEVER.search(msg, top_k=2)
+                    if retrieved:
+                        kb_text = "\n".join([f"[Source: {c.get('doc_name', 'Doc')}]: {c.get('content', '')}" for c in retrieved])
+                        ctx = f"{ctx}\n\nRELEVANT KNOWLEDGE BASE DOCUMENTS:\n{kb_text}"
+                except Exception:
+                    pass
+            res = BOOKING_AGENT.chat_and_qualify(ctx, hist, msg)
+            if res.get('booking_ready') or res.get('extracted_data') or (res.get('is_qualified') and 'book' in msg.lower()):
+                b_info = res.get('extracted_data') or res.get('booking_details') or {}
+                BOOKINGS.append({
+                    "id": f"bk_{len(BOOKINGS)+1}",
+                    "name": b_info.get("name", "High-Intent Inbound Lead"),
+                    "company": b_info.get("company", "Commercial Enterprise"),
+                    "email": b_info.get("email", "client@company.com"),
+                    "phone": b_info.get("phone", "+1 555 019 2834"),
+                    "budget": b_info.get("budget", "$15,000 Deal"),
+                    "deal_value": b_info.get("budget", "$15,000 Deal"),
+                    "time_slot": b_info.get("time_slot", "Tomorrow 3:00 PM UTC"),
+                    "intent": b_info.get("intent", "24/7 AI Closer Demo & Strategy Walkthrough"),
+                    "timestamp": time.strftime("%Y-%m-%d %H:%M:%S")
+                })
+                save_bookings()
+                res['auto_booked'] = True
+                res['confirmed_slot'] = b_info.get("time_slot", "Tomorrow @ 3:00 PM GST")
+                res['time_slot'] = res['confirmed_slot']
+            self._set_headers(200)
+            self.wfile.write(json.dumps(res).encode("utf-8"))
+            return
+
         # --- 4. OMNIBRAIN AI ENDPOINTS ---
         elif path in ["/api/upload", "/api/documents/upload"]:
             content_type = self.headers.get("Content-Type", "")
+            ALLOWED_EXTENSIONS = {'.pdf', '.txt', '.csv', '.md', '.json', '.docx'}
+            MAX_FILE_SIZE = 10 * 1024 * 1024 # 10MB
+            upload_dir = os.path.join(STORAGE_DIR, "uploads")
+            os.makedirs(upload_dir, exist_ok=True)
+
             if "multipart/form-data" in content_type:
                 boundary = content_type.split("boundary=")[-1].encode()
                 body = self.rfile.read(content_length)
@@ -890,19 +971,36 @@ class MastermindRequestHandler(BaseHTTPRequestHandler):
                     if b'filename="' in part:
                         headers_raw, file_data = part.split(b"\r\n\r\n", 1)
                         file_data = file_data.rstrip(b"\r\n")
-                        header_str = headers_raw.decode('latin-1')
+                        header_str = headers_raw.decode('latin-1', errors='ignore')
                         filename_match = [line for line in header_str.split("\r\n") if 'filename="' in line]
                         if filename_match:
                             raw_name = filename_match[0].split('filename="')[-1].split('"')[0]
                             file_name = os.path.basename(raw_name)
+                            ext = os.path.splitext(file_name)[1].lower()
+                            if ext not in ALLOWED_EXTENSIONS:
+                                self._set_headers(400)
+                                self.wfile.write(json.dumps({"success": False, "error": f"File type '{ext}' is not supported. Please upload PDF, TXT, CSV, MD, or JSON."}).encode("utf-8"))
+                                return
+                            if len(file_data) > MAX_FILE_SIZE:
+                                self._set_headers(400)
+                                self.wfile.write(json.dumps({"success": False, "error": "File size exceeds 10MB limit."}).encode("utf-8"))
+                                return
+
                             if file_name and len(file_data) > 0:
                                 chunks = parse_file(file_name, file_data)
                                 doc_id = f"doc_{int(time.time()*1000)}_{uploaded_count}"
+                                saved_path = os.path.join(upload_dir, f"{doc_id}_{file_name}")
+                                try:
+                                    with open(saved_path, "wb") as f:
+                                        f.write(file_data)
+                                except Exception:
+                                    saved_path = None
                                 ALL_DOCUMENTS[doc_id] = {
                                     "name": file_name,
                                     "chunks": chunks,
                                     "size": len(file_data),
-                                    "type": "file"
+                                    "type": "file",
+                                    "file_path": saved_path
                                 }
                                 ALL_CHUNKS.extend(chunks)
                                 uploaded_count += 1
@@ -985,28 +1083,21 @@ class MastermindRequestHandler(BaseHTTPRequestHandler):
             self.wfile.write(json.dumps({"success": True}).encode("utf-8"))
             return
 
-        # --- 5. BOOKFLOW AI ENDPOINTS ---
-        elif path == "/api/booking/chat":
-            body = self.rfile.read(content_length)
-            data = json.loads(body.decode("utf-8"))
-            business_context = data.get("business_context", "Galicon AI Solutions: Enterprise AI Agents starting at $2,500.")
-            chat_history = data.get("history", [])
-            user_message = data.get("message", "")
-
-            ai_resp = BOOKING_AGENT.chat_and_qualify(business_context, chat_history, user_message)
-            
-            if ai_resp.get("booking_ready") and ai_resp.get("extracted_data"):
-                booking_entry = ai_resp["extracted_data"]
-                booking_entry["id"] = f"apt_{int(time.time()*1000)}"
-                booking_entry["timestamp"] = time.strftime("%Y-%m-%d %H:%M:%S")
-                booking_entry["status"] = "CONFIRMED"
-                global BOOKINGS
-                BOOKINGS.append(booking_entry)
-                save_bookings()
-                ai_resp["auto_booked"] = True
-
-            self._set_headers(200)
-            self.wfile.write(json.dumps(ai_resp).encode("utf-8"))
+        elif path == "/api/documents/delete":
+            body = self.rfile.read(content_length) if content_length > 0 else b""
+            payload = json.loads(body.decode("utf-8")) if body else {}
+            doc_id = payload.get("doc_id") or payload.get("id")
+            if doc_id and doc_id in ALL_DOCUMENTS:
+                doc_name = ALL_DOCUMENTS[doc_id]["name"]
+                del ALL_DOCUMENTS[doc_id]
+                ALL_CHUNKS[:] = [c for c in ALL_CHUNKS if c.get("doc_name") != doc_name]
+                RETRIEVER.index(ALL_CHUNKS)
+                save_index()
+                self._set_headers(200)
+                self.wfile.write(json.dumps({"success": True, "deleted_id": doc_id}).encode("utf-8"))
+                return
+            self._set_headers(404)
+            self.wfile.write(json.dumps({"success": False, "error": "Document not found"}).encode("utf-8"))
             return
 
         elif path == "/api/booking/clear":
@@ -1025,11 +1116,19 @@ class MastermindRequestHandler(BaseHTTPRequestHandler):
             tone = data.get("tone", "Authoritative & Results-Driven")
 
             result = CONTENT_CREW.run_multi_agent_pipeline(topic, audience, tone)
+            article_md = result.get('full_article_markdown') or result.get('article_markdown', '')
+            words = result.get('word_count') or len(article_md.split())
+            seo_info = result.get('seo_audit', {})
+            slug = seo_info.get('url_slug', 'seo-article')
             self._set_headers(200)
             self.wfile.write(json.dumps({
                 "success": True,
                 "data": result,
-                "article": result.get("full_article_markdown", "")
+                "article": article_md,
+                "article_markdown": article_md,
+                "full_article_markdown": article_md,
+                "word_count": words,
+                "slug": slug
             }).encode("utf-8"))
             return
 

@@ -8,6 +8,7 @@ Analyzes and benchmarks two competing businesses side-by-side:
 
 import json
 import time
+import hashlib
 from engine.audit_engine import ViralAuditEngine
 from engine.realtime_enricher import RealtimeWebsiteEnricher
 
@@ -67,10 +68,17 @@ class CompetitorSpyAgent:
             f"Embed Verified LeakGrader Badge to display certified AI readiness to prospective clients."
         ]
 
-        battle_id = f"battle_{abs(hash(my_domain + competitor_domain)) % 1000000}"
+        battle_seed = int(hashlib.md5((my_domain + competitor_domain).lower().encode('utf-8')).hexdigest()[:8], 16)
+        battle_id = f"battle_{battle_seed % 1000000}"
 
         return {
             "battle_id": battle_id,
+            "domain": my_domain,
+            "my_domain": my_domain,
+            "competitor": competitor_domain,
+            "competitor_domain": competitor_domain,
+            "leak_score_diff": abs(my_score - comp_score),
+            "strengths": tactical_advantages,
             "timestamp": time.strftime("%Y-%m-%d %H:%M:%S UTC"),
             "my_business": my_audit,
             "competitor_business": comp_audit,

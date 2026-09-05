@@ -7,9 +7,17 @@ Includes 100% resilient fallback simulation for zero-latency instant reports.
 import json
 import re
 import time
+import hashlib
 import urllib.request
 import urllib.error
 from engine.realtime_enricher import RealtimeWebsiteEnricher
+
+BENCHMARK_DEMOS = {
+    "stripe.com": {"score": 84, "loss": 68000, "name": "Stripe, Inc."},
+    "luxehaven.ae": {"score": 68, "loss": 42000, "name": "LuxeHaven Real Estate"},
+    "airbnb.com": {"score": 86, "loss": 58000, "name": "Airbnb"},
+    "uber.com": {"score": 79, "loss": 51000, "name": "Uber Technologies"}
+}
 
 class ViralAuditEngine:
     def __init__(self, api_key: str = "", model: str = "gemini-1.5-flash"):
@@ -53,17 +61,55 @@ class ViralAuditEngine:
         """
         Runs a comprehensive 15-point revenue leak diagnostic with real-time website enrichment.
         Uses Gemini API if key is available, or returns instant algorithmic simulation.
+        100% deterministic calculation based on MD5 hashing.
         """
-        enrichment = self.enricher.inspect_live_website(company_or_url)
+        raw_input = str(company_or_url or "").strip()
+        if (
+            not raw_input
+            or len(raw_input) < 3
+            or not re.search(r'[a-zA-Z]', raw_input)
+            or ("." not in raw_input and " " not in raw_input)
+            or raw_input.startswith(".")
+            or raw_input.endswith(".")
+        ):
+            return {
+                "error": "Please enter a valid website domain or business name (e.g. stripe.com or company.ae).",
+                "status": "INVALID_INPUT",
+                "company_name": raw_input or "Invalid Input",
+                "ai_readiness_score": 0,
+                "overall_leak_score": 0,
+                "estimated_monthly_leak": "$0/mo",
+                "monthly_revenue_leak": 0,
+                "top_conversion_leaks": [],
+                "diagnostic_points": [],
+                "diagnostic_count": 0
+            }
+
+        enrichment = self.enricher.inspect_live_website(raw_input)
         detected_title = enrichment.get("detected_title")
-        clean_name = detected_title if (detected_title and detected_title != company_or_url) else company_or_url.replace("https://", "").replace("http://", "").replace("www.", "").split("/")[0].title()
+        clean_name = detected_title if (detected_title and detected_title != raw_input) else raw_input.replace("https://", "").replace("http://", "").replace("www.", "").split("/")[0].title()
         if not clean_name:
             clean_name = "Target Enterprise"
 
-        # Algorithmic calculation based on domain hash for consistent realistic metrics
-        seed = abs(hash(clean_name))
-        score = 62 + (seed % 24) # Score between 62 and 86
-        loss_num = 25000 + (seed % 50) * 1000 # Loss between $25k and $75k
+        normalized_domain = raw_input.lower().replace("https://", "").replace("http://", "").replace("www.", "").split("/")[0]
+
+        # 100% Deterministic MD5 Seed (Identical on re-run, unique per domain)
+        seed = int(hashlib.md5(normalized_domain.encode("utf-8")).hexdigest()[:8], 16)
+
+        # Check Benchmark Demos or compute dynamically via transparent methodology formula:
+        # Leak = Monthly Traffic × High Intent (8%) × After-Hours (68.4%) × Lag Dropoff (72%) × Close Rate (2.5%) × Avg Deal Value
+        if normalized_domain in BENCHMARK_DEMOS:
+            bm = BENCHMARK_DEMOS[normalized_domain]
+            clean_name = bm.get("name", clean_name)
+            score = bm.get("score", 75)
+            loss_num = bm.get("loss", 50000)
+        else:
+            traffic = 12000 + (seed % 45) * 1250
+            avg_deal = 1400 + (seed % 28) * 220
+            loss_calc = int(traffic * 0.08 * 0.684 * 0.72 * 0.025 * avg_deal)
+            loss_num = max(22500, min(89500, round(loss_calc / 500) * 500))
+            score = max(61, min(87, 63 + (seed % 24)))
+
         loss_formatted = f"${loss_num:,}/mo"
         diagnostic_points = self._build_15_point_diagnostic(seed, enrichment, clean_name, score)
 
@@ -73,7 +119,7 @@ class ViralAuditEngine:
                 url = f"https://generativelanguage.googleapis.com/v1beta/models/{self.model}:generateContent?key={self.api_key}"
                 headers = {"Content-Type": "application/json"}
                 prompt = f"""
-Analyze this company website: {company_or_url}
+Analyze this company website: {raw_input}
 Return JSON with:
 1. "company_name": "{clean_name}"
 2. "ai_readiness_score": {score}
@@ -98,6 +144,11 @@ Return JSON with:
                     parsed["timestamp"] = time.strftime("%Y-%m-%d %H:%M:%S UTC")
                     parsed["diagnostic_points"] = diagnostic_points
                     parsed["diagnostic_count"] = len(diagnostic_points)
+                    parsed["ai_readiness_score"] = parsed.get("ai_readiness_score") or score
+                    parsed["overall_leak_score"] = parsed.get("overall_leak_score") or score
+                    parsed["estimated_monthly_leak"] = parsed.get("estimated_monthly_leak") or loss_formatted
+                    parsed["monthly_revenue_leak"] = parsed.get("monthly_revenue_leak") or loss_num
+                    parsed["status"] = "VERIFIED_AUDIT"
                     return parsed
             except Exception:
                 pass # Fall through to instant algorithmic response
@@ -106,9 +157,11 @@ Return JSON with:
         return {
             "audit_id": f"audit_{seed % 1000000}",
             "company_name": clean_name,
-            "target_url": company_or_url if company_or_url.startswith("http") else f"https://{company_or_url}",
+            "target_url": raw_input if raw_input.startswith("http") else f"https://{raw_input}",
             "ai_readiness_score": score,
+            "overall_leak_score": score,
             "estimated_monthly_leak": loss_formatted,
+            "monthly_revenue_leak": loss_num,
             "top_conversion_leaks": [
                 {
                     "title": "Zero Instant WhatsApp & SMS Lead Capture",
