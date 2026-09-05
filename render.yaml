@@ -16,3 +16,5 @@ services:
         value: https://leakgrader.com
       - key: GA_MEASUREMENT_ID
         value: G-8FJ97MPDWD
+      - key: SEO_DAEMON_INTERVAL
+        value: 300

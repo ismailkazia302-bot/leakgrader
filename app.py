@@ -1232,7 +1232,8 @@ def start_autonomous_cloud_growth_daemon():
         _CLOUD_DAEMON_STARTED = True
 
     def daemon_loop():
-        time.sleep(10)  # Quick first run on startup
+        time.sleep(5)  # Quick first run on startup
+        interval = int(os.environ.get("SEO_DAEMON_INTERVAL", 300))  # Runs every 5 minutes (300s)
         while True:
             try:
                 # 1. IndexNow, Search Engine Broadcast & Full SEO Cycle
@@ -1243,14 +1244,21 @@ def start_autonomous_cloud_growth_daemon():
                 entry = ledger.log_backlink_submission()
                 # 3. Sentinel heartbeat
                 SENTINEL_AGENT.get_health_status()
-                print(f"[Cloud 24/7 SEO Daemon] Sprint executed for {entry['platform']} (DA {entry['domain_authority']}) at {time.strftime('%Y-%m-%d %H:%M:%S UTC')}")
+                # 4. Keep-Alive self ping to prevent Render free instance idle sleep
+                base_url = os.environ.get("BASE_URL", "https://leakgrader.com")
+                try:
+                    import urllib.request
+                    urllib.request.urlopen(f"{base_url}/api/system/health", timeout=6)
+                except Exception:
+                    pass
+                print(f"[Cloud 24/7 SEO Daemon] 5-Min Sprint executed for {entry['platform']} (DA {entry['domain_authority']}) at {time.strftime('%Y-%m-%d %H:%M:%S UTC')}", flush=True)
             except Exception as e:
-                print(f"[Cloud 24/7 SEO Daemon Error] {e}")
-            time.sleep(900)  # Runs every 15 minutes on Render cloud
+                print(f"[Cloud 24/7 SEO Daemon Error] {e}", flush=True)
+            time.sleep(interval)
 
     t = threading.Thread(target=daemon_loop, daemon=True)
     t.start()
-    print("[Cloud Daemon] 24/7 Autonomous SEO & Growth Agent Thread Active on Cloud Server!")
+    print("[Cloud Daemon] 24/7 Autonomous SEO & Growth Agent Thread Active (Every 5 Mins)!", flush=True)
 
 
 def run_server():
