@@ -52,7 +52,26 @@ MASSIVE_PLATFORM_CORPUS = [
 
 ACTION_VERBS = ["Analyze", "Calculate", "Diagnose", "Recover", "Stop", "Automate", "Audit", "Inspect", "Benchmark", "Transform"]
 CORE_TOPICS = ["After-Hours Revenue Leaks", "Visitor Drop-off Friction", "30-Second WhatsApp Sales Closer", "Commercial Conversion Delay", "B2B Buyer Intent Loss"]
-CITIES_POOL = ["Dubai", "London", "New York", "Singapore", "Zurich", "Miami", "Toronto", "Sydney", "Riyadh", "Los Angeles", "Berlin", "Paris"]
+CITIES_POOL = [
+    # USA (Tier-1 Primary)
+    "New York", "San Francisco", "Los Angeles", "Chicago", "Miami", "Austin", "Seattle", "Boston",
+    # Canada (Tier-1)
+    "Toronto", "Vancouver", "Montreal",
+    # France (Tier-1 Europe)
+    "Paris", "Lyon",
+    # Japan (Tier-1 Asia)
+    "Tokyo", "Osaka",
+    # South Korea (Tier-1 Asia)
+    "Seoul", "Busan",
+    # Australia (Tier-1)
+    "Sydney", "Melbourne", "Brisbane",
+    # India (High Volume Growth)
+    "Mumbai", "Bangalore", "Delhi",
+    # Philippines (Southeast Asia Tech)
+    "Manila", "Cebu",
+    # Other High-Yield Global Hubs
+    "London", "Zurich", "Dubai", "Singapore", "Berlin"
+]
 NICHES_POOL = ["Luxury Real Estate", "Private Dental Implants", "High-End Cosmetic Clinics", "Corporate Law Firms", "B2B Cloud SaaS", "Wealth Management", "Private Equity", "Yacht Charters"]
 
 class BacklinkLedgerEngine:

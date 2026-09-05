@@ -62,6 +62,10 @@ CITIES_EXPANDED = [
     {"name": "Bangalore", "slug": "bangalore", "country": "India", "region": "Asia Pacific"},
     {"name": "Delhi", "slug": "delhi", "country": "India", "region": "Asia Pacific"},
     {"name": "Seoul", "slug": "seoul", "country": "South Korea", "region": "Asia Pacific"},
+    {"name": "Osaka", "slug": "osaka", "country": "Japan", "region": "Asia Pacific"},
+    {"name": "Manila", "slug": "manila", "country": "Philippines", "region": "Asia Pacific"},
+    {"name": "Cebu", "slug": "cebu", "country": "Philippines", "region": "Asia Pacific"},
+    {"name": "Lyon", "slug": "lyon", "country": "France", "region": "Europe"},
     {"name": "Auckland", "slug": "auckland", "country": "New Zealand", "region": "Asia Pacific"}
 ]
 

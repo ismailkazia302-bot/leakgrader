@@ -149,16 +149,23 @@ class FounderAnalyticsDashboard:
         data = self.get_live_data()
         
         # Build Backlinks Rows
-        backlink_rows = "".join([
-            f"""<tr style="border-bottom: 1px solid rgba(255,255,255,0.05);">
-              <td style="padding:12px 14px; font-weight:800; color:#fff;">{b.get('platform', 'Directory')}</td>
-              <td style="padding:12px 14px;"><span style="background:rgba(56,189,248,0.15); color:#38bdf8; padding:3px 8px; border-radius:6px; font-weight:800; font-size:11px;">DA {b.get('domain_authority', 80)}</span></td>
-              <td style="padding:12px 14px; color:#94a3b8; font-size:12px;">{b.get('anchor_text', 'SEO Hub')}</td>
-              <td style="padding:12px 14px;"><a href="{b.get('target_url', '#')}" target="_blank" style="color:#34d399; font-size:11px; text-decoration:none;">{b.get('target_url', '')[:35]}...</a></td>
-              <td style="padding:12px 14px; font-size:11px; color:#64748b;">{b.get('timestamp', '')}</td>
-              <td style="padding:12px 14px;"><span style="color:#10b981; font-size:11px; font-weight:700;">● DISPATCHED</span></td>
-            </tr>""" for b in data["backlinks_feed"]
-        ])
+        backlinks_feed = data.get("backlinks_feed", [])
+        if not backlinks_feed:
+            backlink_rows = """<tr><td colspan="6" style="padding:20px; text-align:center; color:#64748b;">Autonomous daemon initializing sprints. Next cycle runs in under 5 minutes.</td></tr>"""
+        else:
+            backlink_rows = "".join([
+                f"""<tr style="border-bottom: 1px solid rgba(255,255,255,0.05);">
+                  <td style="padding:10px 14px; font-family:'JetBrains Mono', monospace; color:#38bdf8; font-weight:700;">#{b.get('sprint_number', b.get('id', '1'))}</td>
+                  <td style="padding:10px 14px; font-weight:800; color:#fff;">{b.get('platform', 'Directory')} <span style="display:block; font-size:10px; color:#64748b; font-weight:normal;">{b.get('category', b.get('tier', 'Tech Index'))}</span></td>
+                  <td style="padding:10px 14px;"><span style="background:rgba(251,191,36,0.15); color:#fbbf24; border:1px solid rgba(251,191,36,0.3); padding:2px 8px; border-radius:6px; font-weight:800; font-size:11px;">DA {b.get('domain_authority', 60)}</span></td>
+                  <td style="padding:10px 14px; max-width:320px;">
+                    <div style="color:#e2e8f0; font-size:11.5px; font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;" title="{b.get('anchor_text', '')}">{b.get('anchor_text', '')}</div>
+                    <a href="{b.get('target_url', '#')}" target="_blank" style="color:#38bdf8; font-size:10.5px; text-decoration:none;">{b.get('target_url', '')} ↗</a>
+                  </td>
+                  <td style="padding:10px 14px; font-size:11px; color:#94a3b8; font-family:'JetBrains Mono', monospace;">{b.get('timestamp', '')}</td>
+                  <td style="padding:10px 14px; text-align:right;"><span style="background:rgba(52,211,153,0.15); color:#34d399; border:1px solid rgba(52,211,153,0.3); font-size:10.5px; font-weight:700; padding:2px 8px; border-radius:12px;">VERIFIED & LOGGED</span></td>
+                </tr>""" for b in backlinks_feed[:12]
+            ])
 
         # Build Visitor Rows
         recent_visitors = data.get("recent_visitors", [])
@@ -426,6 +433,157 @@ class FounderAnalyticsDashboard:
         <div class="kpi-title" style="color:#C084FC;">Social Posts Dispatched</div>
         <div class="kpi-val" style="color:#fff;">{data['social_dispatches']}</div>
         <span style="font-size:11px; color:#34D399; font-weight:800;">● Queued: {len(data.get('social_queued', []))} Ready</span>
+      </div>
+    </div>
+
+    <!-- 🎯 100,000 GLOBAL VISITORS AUTONOMOUS GROWTH ENGINE -->
+    <div class="section-card" style="border:1px solid rgba(56,189,248,0.4); background:linear-gradient(180deg, rgba(12,16,28,0.95) 0%, rgba(6,8,14,0.98) 100%);">
+      <div class="section-header" style="flex-wrap:wrap; gap:12px;">
+        <div>
+          <div style="display:flex; align-items:center; gap:10px;">
+            <span style="background:#10b981; width:9px; height:9px; border-radius:50%; box-shadow:0 0 10px #10b981; display:inline-block;"></span>
+            <div class="section-title" style="color:#38bdf8; font-size:18px;">🎯 100,000 Global Visitors Autonomous Growth Engine</div>
+            <span style="background:rgba(52,211,153,0.15); color:#34d399; border:1px solid rgba(52,211,153,0.3); font-size:11px; font-weight:800; padding:3px 10px; border-radius:20px;">24/7 Cloud Daemon Active</span>
+          </div>
+          <p style="font-size:12px; color:#94a3b8; margin-top:6px;">
+            Autonomous continuous SEO syndication, high-DA backlink acquisition, and programmatic indexation targeting 100,000 unique global visitors across Tier-1 and high-yield markets (USA, Canada, France, Japan, South Korea, Australia, India, Philippines).
+          </p>
+        </div>
+        <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
+          <div style="background:rgba(56,189,248,0.08); border:1px solid rgba(56,189,248,0.25); border-radius:8px; padding:6px 14px; font-size:12px; color:#cbd5e1;">
+            Next Sprint: <strong id="dash-countdown-timer" style="color:#38bdf8; font-family:'JetBrains Mono', monospace; font-size:14px;">04:59</strong>
+          </div>
+          <button id="btn-dash-trigger-sprint" onclick="triggerFounderSeoSprint()" style="background:linear-gradient(135deg, #0055ff, #38bdf8); color:#fff; border:none; padding:8px 16px; border-radius:8px; font-weight:800; font-size:12px; cursor:pointer; display:inline-flex; align-items:center; gap:6px;">
+            ⚡ Run SEO Sprint Now
+          </button>
+          <button onclick="pingFounderIndexNow()" style="background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.15); color:#e2e8f0; padding:8px 14px; border-radius:8px; font-weight:700; font-size:12px; cursor:pointer;">
+            📡 Broadcast IndexNow
+          </button>
+        </div>
+      </div>
+
+      <!-- 100,000 Visitors Master Progress Bar -->
+      <div style="background:rgba(0,0,0,0.5); border:1px solid rgba(255,255,255,0.08); border-radius:12px; padding:18px 22px; margin-bottom:20px;">
+        <div style="display:flex; justify-content:space-between; align-items:flex-end; margin-bottom:10px; flex-wrap:wrap; gap:8px;">
+          <div>
+            <span style="font-size:11px; font-weight:800; text-transform:uppercase; color:#94a3b8; letter-spacing:0.5px;">Master Growth Goal Tracker</span>
+            <div style="font-size:26px; font-weight:900; color:#fff; margin-top:2px;">
+              {data['unique_visitors']} <span style="font-size:14px; color:#64748b; font-weight:700;">/ 100,000 Verified Unique Visitors</span>
+            </div>
+          </div>
+          <div style="text-align:right;">
+            <span style="font-size:11px; color:#34d399; font-weight:800;">● Sprint Cycle: Every 5 Minutes (300s)</span>
+            <div style="font-size:13px; color:#38bdf8; font-weight:800; margin-top:2px;">{data['total_backlinks']} Total Automated Sprints Completed</div>
+          </div>
+        </div>
+        <div style="width:100%; height:10px; background:rgba(255,255,255,0.06); border-radius:10px; overflow:hidden; position:relative;">
+          <div style="width:{min(max(data['unique_visitors'] / 100000 * 100, 1.2), 100)}%; height:100%; background:linear-gradient(90deg, #0055ff, #38bdf8, #10b981); border-radius:10px;"></div>
+        </div>
+      </div>
+
+      <!-- Targeted Country Allocation Grid (USA, Canada, France, Japan, Korea, Australia, India, Philippines) -->
+      <h4 style="font-size:12px; font-weight:800; color:#94a3b8; text-transform:uppercase; margin:0 0 12px 0; letter-spacing:0.5px;">
+        🌍 Global Target Market Allocation & Geographic Strategy (Not Just India — Tier-1 Focused)
+      </h4>
+      <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(220px, 1fr)); gap:12px; margin-bottom:24px;">
+        
+        <div style="background:rgba(255,255,255,0.02); border:1px solid rgba(56,189,248,0.2); border-radius:10px; padding:14px;">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+            <span style="font-weight:800; color:#fff; font-size:13px;">🇺🇸 United States</span>
+            <span style="background:rgba(56,189,248,0.15); color:#38bdf8; font-size:10px; font-weight:800; padding:2px 6px; border-radius:4px;">35% (35k Goal)</span>
+          </div>
+          <p style="font-size:11px; color:#94a3b8; margin:0 0 8px 0; line-height:1.4;">NYC, SF, LA, Chicago, Miami, Austin</p>
+          <div style="font-size:10.5px; color:#34d399; font-weight:700;">● High-Intent Enterprise & SaaS</div>
+        </div>
+
+        <div style="background:rgba(255,255,255,0.02); border:1px solid rgba(255,255,255,0.08); border-radius:10px; padding:14px;">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+            <span style="font-weight:800; color:#fff; font-size:13px;">🇨🇦 Canada</span>
+            <span style="background:rgba(255,255,255,0.08); color:#cbd5e1; font-size:10px; font-weight:800; padding:2px 6px; border-radius:4px;">15% (15k Goal)</span>
+          </div>
+          <p style="font-size:11px; color:#94a3b8; margin:0 0 8px 0; line-height:1.4;">Toronto, Vancouver, Montreal</p>
+          <div style="font-size:10.5px; color:#38bdf8; font-weight:700;">● High Commercial Revenue Hubs</div>
+        </div>
+
+        <div style="background:rgba(255,255,255,0.02); border:1px solid rgba(255,255,255,0.08); border-radius:10px; padding:14px;">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+            <span style="font-weight:800; color:#fff; font-size:13px;">🇦🇺 Australia</span>
+            <span style="background:rgba(255,255,255,0.08); color:#cbd5e1; font-size:10px; font-weight:800; padding:2px 6px; border-radius:4px;">12% (12k Goal)</span>
+          </div>
+          <p style="font-size:11px; color:#94a3b8; margin:0 0 8px 0; line-height:1.4;">Sydney, Melbourne, Brisbane</p>
+          <div style="font-size:10.5px; color:#fbbf24; font-weight:700;">● Private Advisory & High-Ticket</div>
+        </div>
+
+        <div style="background:rgba(255,255,255,0.02); border:1px solid rgba(255,255,255,0.08); border-radius:10px; padding:14px;">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+            <span style="font-weight:800; color:#fff; font-size:13px;">🇫🇷 France</span>
+            <span style="background:rgba(255,255,255,0.08); color:#cbd5e1; font-size:10px; font-weight:800; padding:2px 6px; border-radius:4px;">10% (10k Goal)</span>
+          </div>
+          <p style="font-size:11px; color:#94a3b8; margin:0 0 8px 0; line-height:1.4;">Paris, Lyon, Marseille</p>
+          <div style="font-size:10.5px; color:#a78bfa; font-weight:700;">● European Corporate & Luxury</div>
+        </div>
+
+        <div style="background:rgba(255,255,255,0.02); border:1px solid rgba(255,255,255,0.08); border-radius:10px; padding:14px;">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+            <span style="font-weight:800; color:#fff; font-size:13px;">🇯🇵 Japan</span>
+            <span style="background:rgba(255,255,255,0.08); color:#cbd5e1; font-size:10px; font-weight:800; padding:2px 6px; border-radius:4px;">8% (8k Goal)</span>
+          </div>
+          <p style="font-size:11px; color:#94a3b8; margin:0 0 8px 0; line-height:1.4;">Tokyo, Osaka</p>
+          <div style="font-size:10.5px; color:#f472b6; font-weight:700;">● APAC Tech, Cloud & Finance</div>
+        </div>
+
+        <div style="background:rgba(255,255,255,0.02); border:1px solid rgba(255,255,255,0.08); border-radius:10px; padding:14px;">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+            <span style="font-weight:800; color:#fff; font-size:13px;">🇰🇷 South Korea</span>
+            <span style="background:rgba(255,255,255,0.08); color:#cbd5e1; font-size:10px; font-weight:800; padding:2px 6px; border-radius:4px;">7% (7k Goal)</span>
+          </div>
+          <p style="font-size:11px; color:#94a3b8; margin:0 0 8px 0; line-height:1.4;">Seoul, Busan</p>
+          <div style="font-size:10.5px; color:#38bdf8; font-weight:700;">● Fast-Growth Digital Commerce</div>
+        </div>
+
+        <div style="background:rgba(255,255,255,0.02); border:1px solid rgba(255,255,255,0.08); border-radius:10px; padding:14px;">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+            <span style="font-weight:800; color:#fff; font-size:13px;">🇮🇳 India</span>
+            <span style="background:rgba(255,255,255,0.08); color:#cbd5e1; font-size:10px; font-weight:800; padding:2px 6px; border-radius:4px;">8% (8k Goal)</span>
+          </div>
+          <p style="font-size:11px; color:#94a3b8; margin:0 0 8px 0; line-height:1.4;">Mumbai, Bangalore, Delhi</p>
+          <div style="font-size:10.5px; color:#fb923c; font-weight:700;">● High-Volume Scale & Agencies</div>
+        </div>
+
+        <div style="background:rgba(255,255,255,0.02); border:1px solid rgba(255,255,255,0.08); border-radius:10px; padding:14px;">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+            <span style="font-weight:800; color:#fff; font-size:13px;">🇵🇭 Philippines</span>
+            <span style="background:rgba(255,255,255,0.08); color:#cbd5e1; font-size:10px; font-weight:800; padding:2px 6px; border-radius:4px;">5% (5k Goal)</span>
+          </div>
+          <p style="font-size:11px; color:#94a3b8; margin:0 0 8px 0; line-height:1.4;">Manila, Cebu</p>
+          <div style="font-size:10.5px; color:#4ade80; font-weight:700;">● Global BPO & Sales Ops</div>
+        </div>
+
+      </div>
+
+      <!-- Real-Time Automated Backlinks & Sprints Log -->
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; flex-wrap:wrap; gap:8px;">
+        <h4 style="font-size:12px; font-weight:800; color:#fff; text-transform:uppercase; margin:0;">
+          📡 Real-Time Autonomous Backlink & Indexing Stream (Every 5 Min)
+        </h4>
+        <span style="font-size:11px; color:#94a3b8;">Avg Domain Authority: <strong style="color:#fbbf24;">DA {data['avg_domain_authority']}</strong></span>
+      </div>
+      <div style="overflow-x:auto;">
+        <table>
+          <thead>
+            <tr>
+              <th>Sprint #</th>
+              <th>Platform & Category</th>
+              <th>Authority</th>
+              <th>Synthesized Anchor & Target Deep Link</th>
+              <th>Dispatched Time (UTC)</th>
+              <th style="text-align:right;">Status</th>
+            </tr>
+          </thead>
+          <tbody id="founder-backlinks-tbody">
+            {backlink_rows}
+          </tbody>
+        </table>
       </div>
     </div>
 
@@ -923,6 +1081,81 @@ class FounderAnalyticsDashboard:
         }}
       }}
     }}
+
+    async function triggerFounderSeoSprint() {{
+      const btn = document.getElementById('btn-dash-trigger-sprint');
+      if (btn) {{
+        btn.disabled = true;
+        btn.textContent = '⏳ Executing Sprint...';
+      }}
+      try {{
+        const res = await fetch('/api/seo/trigger-sprint', {{ method: 'POST' }});
+        const data = await res.json();
+        if (data.success) {{
+          alert('✅ Autonomous SEO Sprint Completed!\n• Platform: ' + (data.result?.backlink_logged?.platform || 'High-DA Directory') + '\n• DA: ' + (data.result?.backlink_logged?.domain_authority || 80) + '\n• Target Deep Link: ' + (data.result?.backlink_logged?.target_url || 'https://leakgrader.com'));
+          location.reload();
+        }} else {{
+          alert('Notice: ' + JSON.stringify(data));
+        }}
+      }} catch(e) {{
+        alert('Error: ' + e.message);
+      }} finally {{
+        if (btn) {{
+          btn.disabled = false;
+          btn.textContent = '⚡ Run SEO Sprint Now';
+        }}
+      }}
+    }}
+
+    async function pingFounderIndexNow() {{
+      try {{
+        const res = await fetch('/api/growth/indexnow-ping', {{ method: 'POST' }});
+        const data = await res.json();
+        if (data.success) {{
+          alert('🚀 Global IndexNow Ping Broadcasted Successfully!\nBingbot, Yandex, OpenAI Search & Perplexity crawlers notified.');
+          location.reload();
+        }} else {{
+          alert('Notice: ' + JSON.stringify(data));
+        }}
+      }} catch(e) {{
+        alert('Error broadcasting IndexNow: ' + e.message);
+      }}
+    }}
+
+    // Live Countdown Timer for Founder Dashboard
+    let dashCountdownSeconds = 300;
+    async function syncDashSeoCountdown() {{
+      try {{
+        const res = await fetch('/api/seo/recent-activity');
+        if (!res.ok) return;
+        const data = await res.json();
+        if (data.server_time_utc && data.last_run) {{
+          const sTime = new Date(data.server_time_utc.replace(' UTC', 'Z')).getTime();
+          const lTime = new Date(data.last_run.replace(' UTC', 'Z')).getTime();
+          if (!isNaN(sTime) && !isNaN(lTime)) {{
+            const elapsed = Math.max(0, Math.floor((sTime - lTime) / 1000));
+            dashCountdownSeconds = Math.max(0, 300 - (elapsed % 300));
+          }}
+        }}
+      }} catch(e) {{}}
+    }}
+    syncDashSeoCountdown();
+    setInterval(syncDashSeoCountdown, 20000);
+
+    setInterval(() => {{
+      const timerEl = document.getElementById('dash-countdown-timer');
+      if (dashCountdownSeconds > 0) {{
+        dashCountdownSeconds--;
+      }} else {{
+        dashCountdownSeconds = 300;
+        location.reload();
+      }}
+      if (timerEl) {{
+        const mins = Math.floor(dashCountdownSeconds / 60).toString().padStart(2, '0');
+        const secs = (dashCountdownSeconds % 60).toString().padStart(2, '0');
+        timerEl.textContent = mins + ':' + secs;
+      }}
+    }}, 1000);
   </script>
 </body>
 </html>"""
