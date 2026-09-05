@@ -468,6 +468,23 @@ class MastermindRequestHandler(BaseHTTPRequestHandler):
             self.wfile.write(sitemap_xml.encode("utf-8"))
             return
 
+        elif path.startswith("/directory/"):
+            parts = [p for p in path.split("/") if p]
+            if len(parts) >= 3:
+                city_slug = parts[1]
+                niche_slug = parts[2]
+                html_content = SEO_ENGINE.render_directory_page(city_slug, niche_slug)
+                if html_content:
+                    self.send_response(200)
+                    self.send_header("Content-Type", "text/html; charset=utf-8")
+                    self.send_header("Cache-Control", "public, max-age=86400, stale-while-revalidate=604800")
+                    self.end_headers()
+                    self.wfile.write(html_content.encode("utf-8"))
+                    return
+            self._set_headers(404, "text/plain")
+            self.wfile.write(b"Directory hub not found")
+            return
+
         elif path.startswith("/google") and path.endswith(".html"):
             # Auto-respond to Google Search Console HTML file verification requests
             self.send_response(200)

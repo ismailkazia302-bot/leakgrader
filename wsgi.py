@@ -648,6 +648,25 @@ def application(environ, start_response):
         start_response(status, response_headers)
         return [sitemap_xml.encode('utf-8')]
 
+    elif path.startswith('/directory/'):
+        parts = [p for p in path.split('/') if p]
+        if len(parts) >= 3:
+            city_slug = parts[1]
+            niche_slug = parts[2]
+            html_content = SEO_ENGINE.render_directory_page(city_slug, niche_slug)
+            if html_content:
+                status = '200 OK'
+                response_headers = [
+                    ('Content-Type', 'text/html; charset=utf-8'),
+                    ('Cache-Control', 'public, max-age=86400, stale-while-revalidate=604800')
+                ]
+                start_response(status, response_headers)
+                return [html_content.encode('utf-8')]
+        status = '404 Not Found'
+        response_headers = [('Content-Type', 'text/plain; charset=utf-8')]
+        start_response(status, response_headers)
+        return [b'Directory hub not found']
+
     elif path.startswith('/badge/') and path.endswith('.svg'):
         slug = path.replace('/badge/', '').replace('.svg', '').replace('-', ' ').title()
         svg_content = f"""<svg xmlns="http://www.w3.org/2000/svg" width="220" height="40" viewBox="0 0 220 40">

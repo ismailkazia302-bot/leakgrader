@@ -108,21 +108,26 @@ class BacklinkLedgerEngine:
         """
         total_used = len(self.history)
         
+        from engine.seo_engine import CITIES_EXPANDED, NICHES_EXPANDED
+        
         # Pick fresh platform strictly based on incrementing sequence
         platform_idx = total_used % len(MASSIVE_PLATFORM_CORPUS)
         dir_info = MASSIVE_PLATFORM_CORPUS[platform_idx]
 
-        # Synthesize completely fresh, dynamic anchor text
+        # Synthesize completely fresh, dynamic anchor text across all 315 global cities and 40 niches
         verb = ACTION_VERBS[total_used % len(ACTION_VERBS)]
         topic = CORE_TOPICS[total_used % len(CORE_TOPICS)]
-        city = CITIES_POOL[total_used % len(CITIES_POOL)]
-        niche = NICHES_POOL[total_used % len(NICHES_POOL)]
+        city_obj = CITIES_EXPANDED[total_used % len(CITIES_EXPANDED)]
+        niche_obj = NICHES_EXPANDED[total_used % len(NICHES_EXPANDED)]
+        
+        city = city_obj["name"]
+        niche = niche_obj["name"]
+        city_slug = city_obj["slug"]
+        niche_slug = niche_obj["slug"]
 
         dynamic_anchor = f"{verb} {city} {niche} {topic}"
         
-        # Generate targeted landing URL
-        city_slug = city.lower().replace(" ", "-")
-        niche_slug = niche.lower().replace(" ", "-")
+        # Generate targeted landing URL from valid 12,600 programmatic hubs
         resolved_url = target_url or f"https://leakgrader.com/directory/{city_slug}/{niche_slug}"
 
         entry = {
