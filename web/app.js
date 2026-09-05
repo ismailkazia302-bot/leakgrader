@@ -1026,7 +1026,7 @@ document.addEventListener('DOMContentLoaded', () => {
     GBP: { symbol: '£', rate: 0.79, name: 'GBP (£)' },
     EUR: { symbol: '€', rate: 0.92, name: 'EUR (€)' }
   };
-  let activeCurrency = localStorage.getItem('leakgrader_curr') || 'USD';
+  let activeCurrency = 'USD';
 
   function updateCurrencyDisplays() {
     const curr = CURRENCIES[activeCurrency] || CURRENCIES.USD;
