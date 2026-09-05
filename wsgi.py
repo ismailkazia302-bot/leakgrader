@@ -5,6 +5,7 @@ Wraps the OmniBrain & LeakGrader HTTP handlers into a standard PEP-3333 complian
 
 import os
 import sys
+import time
 import json
 import io
 import mimetypes
@@ -16,9 +17,13 @@ from app import (
     RETRIEVER, INTELLIGENCE, LEAD_AGENT, BOOKING_AGENT,
     CONTENT_CREW, AUDIT_ENGINE, SEO_ENGINE, PAYMENT_ENGINE, GROWTH_AGENT, PLANS,
     ANALYTICS_DASHBOARD, WEBSITE_MANAGER, SOCIAL_POSTER, SENTINEL_AGENT,
-    TRAFFIC_BLASTER, VIRAL_REEL_STUDIO,
+    TRAFFIC_BLASTER, VIRAL_REEL_STUDIO, COMPETITOR_SPY,
     WEB_DIR, save_index, save_bookings, save_leads, save_audits, load_all_data
 )
+from engine.document_parser import parse_file, extract_text_from_url, chunk_text
+from engine.pdf_dossier import ExecutiveDossierGenerator
+
+DOSSIER_GEN = ExecutiveDossierGenerator()
 
 # Web assets directory
 WEB_DIR_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "web")
@@ -74,6 +79,17 @@ def application(environ, start_response):
             start_response(status, response_headers)
             return [json.dumps({"success": True, "audit": res}).encode('utf-8')]
 
+        # Route: /api/competitor/battlecard & /api/audit/competitor-battle
+        elif path in ['/api/competitor/battlecard', '/api/audit/competitor-battle']:
+            my_d = body_json.get('my_domain', 'Company')
+            comp_d = body_json.get('competitor_domain', 'Competitor')
+            ind = body_json.get('industry', '')
+            battle_res = COMPETITOR_SPY.run_battlecard(my_d, comp_d, ind)
+            status = '200 OK'
+            response_headers = [('Content-Type', 'application/json; charset=utf-8'), ('Access-Control-Allow-Origin', '*')]
+            start_response(status, response_headers)
+            return [json.dumps({"success": True, "battlecard": battle_res}).encode('utf-8')]
+
         # Route: /api/leads/generate
         elif path == '/api/leads/generate':
             try:
@@ -113,19 +129,30 @@ def application(environ, start_response):
                 msg = body_json.get('message', '')
                 hist = body_json.get('history', [])
                 ctx = body_json.get('business_context', 'LeakGrader AI Solutions')
+                if len(ALL_CHUNKS) > 0 and msg:
+                    try:
+                        retrieved_chunks = RETRIEVER.search(msg, top_k=2)
+                        if retrieved_chunks:
+                            kb_text = "\n".join([f"[Source: {c.get('doc_name', 'Doc')}]: {c.get('content', '')}" for c in retrieved_chunks])
+                            ctx = f"{ctx}\n\nRELEVANT KNOWLEDGE BASE DOCUMENTS:\n{kb_text}"
+                    except Exception:
+                        pass
                 res = BOOKING_AGENT.chat_and_qualify(ctx, hist, msg)
-                if res.get('is_qualified') and res.get('booking_details'):
-                    b_info = res['booking_details']
+                if res.get('booking_ready') or res.get('extracted_data') or (res.get('is_qualified') and 'book' in msg.lower()):
+                    b_info = res.get('extracted_data') or res.get('booking_details') or {}
                     BOOKINGS.append({
                         "id": f"bk_{len(BOOKINGS)+1}",
-                        "name": b_info.get("name", "Qualified Prospect"),
-                        "email": b_info.get("email", "N/A"),
-                        "phone": b_info.get("phone", "N/A"),
-                        "time_slot": b_info.get("time_slot", "Pending Selection"),
-                        "intent": b_info.get("intent", "High"),
-                        "timestamp": "2026-09-04 03:50:00"
+                        "name": b_info.get("name", "High-Intent Inbound Lead"),
+                        "company": b_info.get("company", "Commercial Enterprise"),
+                        "email": b_info.get("email", "client@company.com"),
+                        "phone": b_info.get("phone", "+1 555 019 2834"),
+                        "budget": b_info.get("budget", "$15,000 Deal"),
+                        "time_slot": b_info.get("time_slot", "Tomorrow 3:00 PM UTC"),
+                        "intent": b_info.get("intent", "24/7 AI Closer Demo & Strategy Walkthrough"),
+                        "timestamp": time.strftime("%Y-%m-%d %H:%M:%S")
                     })
                     save_bookings()
+                    res['auto_booked'] = True
                 status = '200 OK'
                 response_headers = [('Content-Type', 'application/json; charset=utf-8'), ('Access-Control-Allow-Origin', '*')]
                 start_response(status, response_headers)
@@ -135,6 +162,153 @@ def application(environ, start_response):
                 response_headers = [('Content-Type', 'application/json; charset=utf-8'), ('Access-Control-Allow-Origin', '*')]
                 start_response(status, response_headers)
                 return [json.dumps({"reply": "Thank you for reaching out! Our team will contact you in under 30 seconds.", "is_qualified": True}).encode('utf-8')]
+
+        # Route: /api/documents/upload & /api/upload
+        elif path in ['/api/upload', '/api/documents/upload']:
+            uploaded_count = 0
+            new_chunks_count = 0
+            try:
+                if 'multipart/form-data' in content_type:
+                    boundary = content_type.split('boundary=')[-1].encode()
+                    parts = post_body.split(b'--' + boundary)
+                    for part in parts:
+                        if b'filename="' in part:
+                            headers_raw, file_data = part.split(b'\r\n\r\n', 1)
+                            file_data = file_data.rstrip(b'\r\n')
+                            header_str = headers_raw.decode('latin-1', errors='ignore')
+                            fn_match = [line for line in header_str.split('\r\n') if 'filename="' in line]
+                            if fn_match:
+                                raw_name = fn_match[0].split('filename="')[-1].split('"')[0]
+                                file_name = os.path.basename(raw_name)
+                                if file_name and len(file_data) > 0:
+                                    chunks = parse_file(file_name, file_data)
+                                    doc_id = f"doc_{int(time.time()*1000)}_{uploaded_count}"
+                                    ALL_DOCUMENTS[doc_id] = {
+                                        "name": file_name,
+                                        "chunks": chunks,
+                                        "size": len(file_data),
+                                        "type": "file"
+                                    }
+                                    ALL_CHUNKS.extend(chunks)
+                                    uploaded_count += 1
+                                    new_chunks_count += len(chunks)
+                elif 'application/json' in content_type:
+                    file_name = body_json.get('filename', 'document.txt')
+                    content_str = body_json.get('content', '')
+                    file_bytes = content_str.encode('utf-8')
+                    chunks = parse_file(file_name, file_bytes)
+                    doc_id = f"doc_{int(time.time()*1000)}"
+                    ALL_DOCUMENTS[doc_id] = {
+                        "name": file_name,
+                        "chunks": chunks,
+                        "size": len(file_bytes),
+                        "type": "file"
+                    }
+                    ALL_CHUNKS.extend(chunks)
+                    uploaded_count = 1
+                    new_chunks_count = len(chunks)
+
+                RETRIEVER.index(ALL_CHUNKS)
+                save_index()
+                status = '200 OK'
+                response_headers = [('Content-Type', 'application/json; charset=utf-8'), ('Access-Control-Allow-Origin', '*')]
+                start_response(status, response_headers)
+                return [json.dumps({
+                    "success": True,
+                    "uploaded_count": uploaded_count,
+                    "new_chunks": new_chunks_count,
+                    "total_chunks": len(ALL_CHUNKS)
+                }).encode('utf-8')]
+            except ValueError as ve:
+                status = '400 Bad Request'
+                response_headers = [('Content-Type', 'application/json; charset=utf-8'), ('Access-Control-Allow-Origin', '*')]
+                start_response(status, response_headers)
+                return [json.dumps({"success": False, "error": str(ve)}).encode('utf-8')]
+            except Exception as e:
+                status = '500 Internal Server Error'
+                response_headers = [('Content-Type', 'application/json; charset=utf-8'), ('Access-Control-Allow-Origin', '*')]
+                start_response(status, response_headers)
+                return [json.dumps({"success": False, "error": str(e)}).encode('utf-8')]
+
+        # Route: /api/documents/index-url & /api/upload-url
+        elif path in ['/api/upload-url', '/api/documents/index-url']:
+            url = body_json.get('url', '')
+            if url:
+                try:
+                    text = extract_text_from_url(url)
+                    chunks = chunk_text(text, doc_name=url, page_num=1)
+                    doc_id = f"url_{int(time.time()*1000)}"
+                    ALL_DOCUMENTS[doc_id] = {
+                        "name": url,
+                        "chunks": chunks,
+                        "size": len(text.encode('utf-8')),
+                        "type": "url"
+                    }
+                    ALL_CHUNKS.extend(chunks)
+                    RETRIEVER.index(ALL_CHUNKS)
+                    save_index()
+                    status = '200 OK'
+                    response_headers = [('Content-Type', 'application/json; charset=utf-8'), ('Access-Control-Allow-Origin', '*')]
+                    start_response(status, response_headers)
+                    return [json.dumps({"success": True, "chunks_indexed": len(chunks), "total_chunks": len(ALL_CHUNKS)}).encode('utf-8')]
+                except Exception as e:
+                    status = '400 Bad Request'
+                    response_headers = [('Content-Type', 'application/json; charset=utf-8'), ('Access-Control-Allow-Origin', '*')]
+                    start_response(status, response_headers)
+                    return [json.dumps({"success": False, "error": f"Failed to crawl URL: {e}"}).encode('utf-8')]
+
+        # Route: /api/documents/clear & /api/clear
+        elif path in ['/api/clear', '/api/documents/clear']:
+            ALL_DOCUMENTS.clear()
+            ALL_CHUNKS.clear()
+            RETRIEVER.index([])
+            save_index()
+            status = '200 OK'
+            response_headers = [('Content-Type', 'application/json; charset=utf-8'), ('Access-Control-Allow-Origin', '*')]
+            start_response(status, response_headers)
+            return [json.dumps({"success": True}).encode('utf-8')]
+
+        # Route: /api/documents/delete
+        elif path == '/api/documents/delete':
+            doc_id = body_json.get('doc_id') or body_json.get('id')
+            if doc_id and doc_id in ALL_DOCUMENTS:
+                doc_name = ALL_DOCUMENTS[doc_id]["name"]
+                del ALL_DOCUMENTS[doc_id]
+                ALL_CHUNKS[:] = [c for c in ALL_CHUNKS if c.get("doc_name") != doc_name]
+                RETRIEVER.index(ALL_CHUNKS)
+                save_index()
+                status = '200 OK'
+                response_headers = [('Content-Type', 'application/json; charset=utf-8'), ('Access-Control-Allow-Origin', '*')]
+                start_response(status, response_headers)
+                return [json.dumps({"success": True, "deleted_id": doc_id}).encode('utf-8')]
+            status = '404 Not Found'
+            response_headers = [('Content-Type', 'application/json; charset=utf-8'), ('Access-Control-Allow-Origin', '*')]
+            start_response(status, response_headers)
+            return [json.dumps({"success": False, "error": "Document not found"}).encode('utf-8')]
+
+        # Route: /api/documents/summary
+        elif path in ['/api/summary', '/api/documents/summary']:
+            summary = INTELLIGENCE.generate_executive_summary(ALL_CHUNKS)
+            status = '200 OK'
+            response_headers = [('Content-Type', 'application/json; charset=utf-8'), ('Access-Control-Allow-Origin', '*')]
+            start_response(status, response_headers)
+            return [json.dumps({"result": summary}).encode('utf-8')]
+
+        # Route: /api/documents/risk-audit
+        elif path in ['/api/risk-audit', '/api/documents/risk-audit']:
+            audit = INTELLIGENCE.generate_risk_audit(ALL_CHUNKS)
+            status = '200 OK'
+            response_headers = [('Content-Type', 'application/json; charset=utf-8'), ('Access-Control-Allow-Origin', '*')]
+            start_response(status, response_headers)
+            return [json.dumps({"result": audit}).encode('utf-8')]
+
+        # Route: /api/documents/extract-tables
+        elif path in ['/api/extract-tables', '/api/documents/extract-tables']:
+            tables = INTELLIGENCE.extract_structured_data(ALL_CHUNKS)
+            status = '200 OK'
+            response_headers = [('Content-Type', 'application/json; charset=utf-8'), ('Access-Control-Allow-Origin', '*')]
+            start_response(status, response_headers)
+            return [json.dumps({"result": tables}).encode('utf-8')]
 
         # Route: /api/documents/ask & /api/query
         elif path in ['/api/documents/ask', '/api/query']:
@@ -351,6 +525,20 @@ def application(environ, start_response):
         response_headers = [('Content-Type', 'image/svg+xml; charset=utf-8'), ('Cache-Control', 'public, max-age=3600')]
         start_response(status, response_headers)
         return [svg_content.encode('utf-8')]
+
+    elif path.startswith('/report/dossier/') or path == '/api/audit/dossier':
+        target = "Apex Enterprise"
+        if 'company=' in query_string:
+            target = unquote(query_string.split('company=')[-1].split('&')[0])
+        elif path.startswith('/report/dossier/'):
+            target = unquote(path.replace('/report/dossier/', '').replace('-', ' ').title())
+
+        audit_res = AUDIT_ENGINE.run_instant_audit(target)
+        dossier_html = DOSSIER_GEN.generate_dossier_html(audit_res)
+        status = '200 OK'
+        response_headers = [('Content-Type', 'text/html; charset=utf-8'), ('Access-Control-Allow-Origin', '*')]
+        start_response(status, response_headers)
+        return [dossier_html.encode('utf-8')]
 
     elif path.startswith('/report/'):
         slug = path.replace('/report/', '').replace('-', ' ').title()

@@ -508,6 +508,22 @@ class MastermindRequestHandler(BaseHTTPRequestHandler):
             self.wfile.write(svg_favicon.encode("utf-8"))
             return
 
+        elif path.startswith("/report/dossier/") or path == "/api/audit/dossier":
+            query = unquote(parsed.query)
+            target = "Apex Enterprise"
+            if "company=" in query:
+                target = query.split("company=")[-1].split("&")[0]
+            elif path.startswith("/report/dossier/"):
+                target = path.replace("/report/dossier/", "").replace("-", " ").title()
+
+            audit_res = AUDIT_ENGINE.run_instant_audit(target)
+            dossier_html = DOSSIER_GEN.generate_dossier_html(audit_res)
+            self.send_response(200)
+            self.send_header("Content-Type", "text/html; charset=utf-8")
+            self.end_headers()
+            self.wfile.write(dossier_html.encode("utf-8"))
+            return
+
         elif path.startswith("/report/"):
             slug = path.replace("/report/", "").replace("-", " ").title()
             clean_slug = path.replace("/report/", "")
@@ -571,22 +587,6 @@ class MastermindRequestHandler(BaseHTTPRequestHandler):
             self.send_header("Content-Type", "text/html; charset=utf-8")
             self.end_headers()
             self.wfile.write(report_html.encode("utf-8"))
-            return
-
-        elif path.startswith("/report/dossier/") or path == "/api/audit/dossier":
-            query = unquote(parsed.query)
-            target = "Apex Enterprise"
-            if "company=" in query:
-                target = query.split("company=")[-1].split("&")[0]
-            elif path.startswith("/report/dossier/"):
-                target = path.replace("/report/dossier/", "").replace("-", " ").title()
-
-            audit_res = AUDIT_ENGINE.run_instant_audit(target)
-            dossier_html = DOSSIER_GEN.generate_dossier_html(audit_res)
-            self.send_response(200)
-            self.send_header("Content-Type", "text/html; charset=utf-8")
-            self.end_headers()
-            self.wfile.write(dossier_html.encode("utf-8"))
             return
 
         elif path in ["/analytics", "/dashboard", "/founder"]:

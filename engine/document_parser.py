@@ -113,11 +113,21 @@ def chunk_text(text: str, doc_name: str, page_num: int = 1, chunk_size: int = 70
 
     return chunks
 
+ALLOWED_EXTENSIONS = {".pdf", ".txt", ".md", ".markdown", ".csv", ".json", ".docx"}
+MAX_FILE_SIZE_BYTES = 10 * 1024 * 1024  # 10MB
+
 def parse_file(file_name: str, file_bytes: bytes) -> list[dict]:
     """
     Main entrypoint: parses file content based on extension and returns indexed chunks.
+    Validates supported file formats and maximum file size (10MB).
     """
+    if len(file_bytes) > MAX_FILE_SIZE_BYTES:
+        raise ValueError(f"File size exceeds 10MB limit ({len(file_bytes)} bytes).")
+
     ext = os.path.splitext(file_name)[1].lower()
+    if ext not in ALLOWED_EXTENSIONS:
+        raise ValueError(f"Unsupported file format '{ext}'. Allowed formats: PDF, TXT, MD, CSV, JSON.")
+
     all_chunks = []
 
     if ext == ".pdf":

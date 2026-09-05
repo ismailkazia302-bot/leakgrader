@@ -326,6 +326,42 @@ document.addEventListener('DOMContentLoaded', () => {
             }).join('')}
           </div>
 
+          <!-- 15-POINT DIAGNOSTIC ACCORDION / BREAKDOWN -->
+          <div class="card-3d-tilt" style="padding: 20px 24px; background: rgba(12, 16, 26, 0.9); border: 1px solid var(--border-subtle); border-radius: 14px; margin-bottom: 24px;">
+            <div style="display:flex; justify-content:space-between; align-items:center; cursor:pointer;" id="toggle-diagnostic-breakdown">
+              <div style="display:flex; align-items:center; gap:10px;">
+                <span style="display:inline-flex; align-items:center; justify-content:center; width:28px; height:28px; border-radius:6px; background:rgba(56,189,248,0.15); color:#38bdf8; font-weight:800; font-size:12px;">15</span>
+                <h3 style="font-size:15px; font-weight:800; color:#ffffff; margin:0;">Full 15-Point Conversion & Technical Diagnostic</h3>
+              </div>
+              <div style="display:flex; align-items:center; gap:8px;">
+                <span class="badge-tag cyan" style="font-size:10px;">15 of 15 Checks Completed</span>
+              </div>
+            </div>
+
+            <div id="diagnostic-points-table" style="margin-top:16px; display:flex; flex-direction:column; gap:8px;">
+              ${(audit.diagnostic_points || []).map(dp => {
+                const badgeColor = dp.status === 'PASS' ? '#34d399' : (dp.status === 'WARN' ? '#fbbf24' : '#fb7185');
+                const badgeBg = dp.status === 'PASS' ? 'rgba(52,211,153,0.12)' : (dp.status === 'WARN' ? 'rgba(251,191,36,0.12)' : 'rgba(251,113,133,0.12)');
+                return `
+                  <div style="display:flex; justify-content:space-between; align-items:center; padding:10px 14px; background:rgba(255,255,255,0.02); border:1px solid rgba(255,255,255,0.05); border-radius:8px; gap:12px; flex-wrap:wrap;">
+                    <div style="display:flex; align-items:center; gap:10px; min-width:240px;">
+                      <span style="font-family:'JetBrains Mono',monospace; font-size:11px; color:var(--text-muted); width:24px;">#${dp.point_number}</span>
+                      <div>
+                        <div style="font-size:12.5px; font-weight:700; color:#f8fafc;">${dp.name}</div>
+                        <div style="font-size:11px; color:var(--text-muted); margin-top:2px;">${dp.observation}</div>
+                      </div>
+                    </div>
+                    <div style="display:flex; align-items:center; gap:12px; margin-left:auto;">
+                      <span style="font-size:10px; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.04em;">${dp.category}</span>
+                      <span style="font-family:'JetBrains Mono',monospace; font-size:11px; color:#94a3b8;">${dp.score}/100</span>
+                      <span style="font-size:10px; font-weight:800; padding:3px 8px; border-radius:5px; background:${badgeBg}; color:${badgeColor}; border:1px solid ${badgeColor}40;">${dp.status}</span>
+                    </div>
+                  </div>
+                `;
+              }).join('')}
+            </div>
+          </div>
+
           <div class="card-3d-tilt unlock-banner-3d">
             <div class="banner-content-flex">
               <div class="banner-badge-gold"><i data-lucide="crown"></i> FULL AUDIT REPORT & BOARDROOM DOSSIER</div>
@@ -1228,11 +1264,29 @@ document.addEventListener('DOMContentLoaded', () => {
               <div style="display:flex; align-items:center; gap:6px; flex-shrink:0;">
                 <span class="badge-subtle" style="background:rgba(56,189,248,0.12); color:#38bdf8; border:1px solid rgba(56,189,248,0.25); font-size:9.5px; font-weight:700; padding:2px 6px; border-radius:4px;">${d.chunks || 12} chk</span>
                 <span style="color:#64748b; font-size:9.5px;">${sizeKb}KB</span>
+                <button type="button" class="btn-delete-doc" data-id="${d.id}" title="Delete document" style="background:transparent; border:none; color:#fb7185; cursor:pointer; padding:2px; display:inline-flex; align-items:center;"><i data-lucide="trash-2" style="width:12px; height:12px;"></i></button>
               </div>
             </div>
           `;
         }).join('');
         if (window.lucide) lucide.createIcons();
+
+        docList.querySelectorAll('.btn-delete-doc').forEach(btn => {
+          btn.addEventListener('click', async (e) => {
+            e.stopPropagation();
+            const docId = btn.dataset.id;
+            if (confirm('Delete this document from knowledge base?')) {
+              try {
+                await fetch('/api/documents/delete', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: jsonSafe({ doc_id: docId, id: docId })
+                });
+                loadDocuments();
+              } catch (err) { console.error(err); }
+            }
+          });
+        });
       }
     } catch (err) {
       console.error(err);

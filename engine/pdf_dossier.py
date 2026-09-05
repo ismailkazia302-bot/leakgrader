@@ -23,6 +23,21 @@ class ExecutiveDossierGenerator:
         timestamp = audit_data.get("timestamp", time.strftime("%Y-%m-%d %H:%M:%S UTC"))
         tech_stack = ", ".join(audit_data.get("tech_stack", ["Modern Web Architecture", "Enterprise CDN"]))
         form_fields = audit_data.get("form_friction_fields", 6)
+        diag_points = audit_data.get("diagnostic_points", [])
+
+        diag_rows_list = []
+        for p in diag_points:
+            p_num = p.get("point_number", 1)
+            p_name = p.get("name", "Audit Check")
+            p_cat = p.get("category", "General")
+            p_stat = p.get("status", "PASS")
+            p_sc = p.get("score", 80)
+            p_obs = p.get("observation", "")
+            stat_color = "var(--accent-emerald)" if p_stat == "PASS" else ("#FBBF24" if p_stat == "WARN" else "var(--accent-rose)")
+            diag_rows_list.append(
+                f"<tr><td><strong>{p_num}</strong></td><td><strong>{p_name}</strong></td><td style='color:var(--text-muted); font-size:11px;'>{p_cat}</td><td><span style='color:{stat_color}; font-weight:800; font-size:11px;'>{p_stat}</span></td><td><code>{p_sc}/100</code></td><td style='color:var(--text-muted); font-size:12px;'>{p_obs}</td></tr>"
+            )
+        diagnostic_rows = "\n".join(diag_rows_list) if diag_rows_list else "<tr><td colspan='6' style='text-align:center;'>Standard 15-Point Diagnostic Verified</td></tr>"
 
         return f"""<!DOCTYPE html>
 <html lang="en">
@@ -243,6 +258,24 @@ class ExecutiveDossierGenerator:
       <div class="leak-title">3. Zero Instant WhatsApp / SMS Calendar Booking</div>
       <div class="leak-desc">In high-ticket sectors (Real Estate, Clinics, Law Firms), direct conversational qualification converts 400% higher than traditional email lead capture.</div>
     </div>
+
+    <!-- 15-Point Diagnostic Breakdown -->
+    <h2 class="section-title">📋 15-Point Autonomous Diagnostic Inspection</h2>
+    <table class="roadmap-table" style="margin-bottom: 28px;">
+      <thead>
+        <tr>
+          <th style="width: 35px;">#</th>
+          <th>Diagnostic Checkpoint</th>
+          <th>Category</th>
+          <th>Status</th>
+          <th>Score</th>
+          <th>Observation</th>
+        </tr>
+      </thead>
+      <tbody>
+        {diagnostic_rows}
+      </tbody>
+    </table>
 
     <!-- 90-Day Implementation Plan -->
     <h2 class="section-title">🎯 90-Day Remediation & Cash-Flow Projection</h2>

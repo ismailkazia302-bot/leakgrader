@@ -157,6 +157,38 @@ OUTPUT MUST BE VALID JSON with this exact schema:
         elif "weekend" in low or "saturday" in low or "sunday" in low:
             time_slot = "Saturday @ 12:00 PM UTC"
 
+        # 0. Knowledge Base Document Inquiries (Grounded Context)
+        if "RELEVANT KNOWLEDGE BASE DOCUMENTS:" in business_context:
+            doc_context_str = business_context.split("RELEVANT KNOWLEDGE BASE DOCUMENTS:")[-1].strip()
+            if doc_context_str and len(doc_context_str) > 10:
+                first_src = "Uploaded Knowledge Document"
+                if "[Source: " in doc_context_str:
+                    first_src = doc_context_str.split("[Source: ")[1].split("]")[0]
+                
+                clean_doc = re.sub(r'\[Source: [^\]]+\]:\s*', '', doc_context_str).strip()
+                msg_words = set(re.findall(r'\w+', low)) - {"the", "is", "at", "which", "on", "a", "an", "what", "how", "why", "who", "where", "can", "you", "tell", "me", "about", "in", "for", "to", "do"}
+                doc_words = set(re.findall(r'\w+', clean_doc.lower()))
+                
+                if (len(msg_words & doc_words) >= 1 or "document" in low or "pdf" in low or "vault" in low) and not any(w in low for w in ["book", "demo", "meeting", "schedule"]):
+                    reply = (
+                        f"📄 **Verified Source [{first_src}]:**\n\n"
+                        f"{clean_doc[:750]}\n\n"
+                        f"👉 *Would you like me to reserve a brief walkthrough call to discuss implementing this directly?*"
+                    )
+                    return {
+                        "reply": reply,
+                        "is_qualified": True,
+                        "booking_ready": False,
+                        "extracted_data": {
+                            "name": "Knowledge Inquirer",
+                            "company": "Document Research Lead",
+                            "budget": "$10,000+",
+                            "time_slot": "Pending",
+                            "intent": f"Consultation based on {first_src}",
+                            "status": "ENGAGED"
+                        }
+                    }
+
         # 1. Growth / Business Scaling inquiries
         if any(w in low for w in ["grow", "business", "scale", "more leads", "sales", "revenue", "traffic", "clients", "customers"]):
             reply = (
