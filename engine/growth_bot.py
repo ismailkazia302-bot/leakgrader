@@ -57,3 +57,18 @@ class GrowthAndIndexingAgent:
         res = cycle["off_page_seo"]
         res["autonomous_outreach"] = cycle["autonomous_outbound"]
         return res
+
+    def generate_viral_campaign(self, company_name: str = "Company", niche: str = "B2B", lost_revenue: str = "$48,000/mo") -> dict:
+        """
+        Generates targeted SEO & social campaign hooks for a company
+        """
+        return {
+            "company_name": company_name,
+            "niche": niche,
+            "lost_revenue": lost_revenue,
+            "campaign_headline": f"How {company_name} Leaks {lost_revenue} After Hours (And How 24/7 AI Recovers It)",
+            "twitter_hook": f"🚨 We audited {company_name}'s inbound sales response time. Average lag: 8.4 hours. Estimated leak: {lost_revenue}. Here's the 1-line fix:",
+            "linkedin_breakdown": f"Why {niche} leaders lose up to 72% of after-hours buyer inquiries before 9:00 AM.",
+            "status": "CAMPAIGN_GENERATED"
+        }
+

@@ -382,6 +382,9 @@ class FounderAnalyticsDashboard:
         <p style="font-size:12px; color:#94A3B8; margin-top:4px;">Live Autonomous SEO, Real-Time Unique Visitors, Backlinks & Outbound Telemetry</p>
       </div>
       <div style="display:flex; gap:12px; align-items:center;">
+        <button id="btn-run-seo" onclick="triggerSeoSprint()" style="background:linear-gradient(135deg, #0055ff, #38bdf8); color:#fff; border:none; padding:8px 16px; border-radius:8px; font-weight:800; font-size:12px; cursor:pointer; display:flex; align-items:center; gap:6px;">
+          ⚡ Run Autonomous SEO Sprint Now
+        </button>
         <span class="live-indicator"><span class="dot"></span> LIVE AUTONOMOUS SYSTEM</span>
         <a href="/" class="btn-action">View Public Site ➔</a>
       </div>
@@ -894,6 +897,31 @@ class FounderAnalyticsDashboard:
       const text = document.getElementById('raw-reel-caption')?.value || '';
       navigator.clipboard.writeText(text);
       alert('📝 Caption & Hashtags copied to clipboard!');
+    }}
+
+    async function triggerSeoSprint() {{
+      const btn = document.getElementById('btn-run-seo');
+      if (btn) {{
+        btn.disabled = true;
+        btn.textContent = '⏳ Running Autonomous SEO Sprint...';
+      }}
+      try {{
+        const res = await fetch('/api/seo/trigger-sprint', {{ method: 'POST' }});
+        const data = await res.json();
+        if (data.success) {{
+          alert('✅ Autonomous SEO Sprint Executed Successfully!\n• High-DA backlink logged to ledger\n• IndexNow search engine broadcast complete');
+          location.reload();
+        }} else {{
+          alert('Notice: ' + JSON.stringify(data));
+        }}
+      }} catch(e) {{
+        alert('Error: ' + e.message);
+      }} finally {{
+        if (btn) {{
+          btn.disabled = false;
+          btn.textContent = '⚡ Run Autonomous SEO Sprint Now';
+        }}
+      }}
     }}
   </script>
 </body>

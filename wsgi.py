@@ -18,7 +18,8 @@ from app import (
     CONTENT_CREW, AUDIT_ENGINE, SEO_ENGINE, PAYMENT_ENGINE, GROWTH_AGENT, PLANS,
     ANALYTICS_DASHBOARD, WEBSITE_MANAGER, SOCIAL_POSTER, SENTINEL_AGENT,
     TRAFFIC_BLASTER, VIRAL_REEL_STUDIO, COMPETITOR_SPY, SECURITY_HEADERS,
-    WEB_DIR, save_index, save_bookings, save_leads, save_audits, load_all_data
+    WEB_DIR, save_index, save_bookings, save_leads, save_audits, load_all_data,
+    start_autonomous_cloud_growth_daemon
 )
 from engine.document_parser import parse_file, extract_text_from_url, chunk_text
 from engine.pdf_dossier import ExecutiveDossierGenerator
@@ -30,6 +31,12 @@ WEB_DIR_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "web")
 
 # Load existing index & storage data on startup
 load_all_data()
+
+# Start 24/7 Cloud Autonomous SEO & Growth Daemon
+try:
+    start_autonomous_cloud_growth_daemon()
+except Exception as e:
+    print(f"[WSGI Startup] Cloud Growth Daemon Init Error: {e}")
 
 def make_headers(base_headers):
     """Merges base response headers with standard production security headers"""
@@ -359,6 +366,19 @@ def application(environ, start_response):
         # Route: /api/growth/indexnow-ping
         elif path == '/api/growth/indexnow-ping':
             res = GROWTH_AGENT.submit_to_indexnow()
+            status = '200 OK'
+            response_headers = [('Content-Type', 'application/json; charset=utf-8'), ('Access-Control-Allow-Origin', '*')]
+            start_response(status, response_headers)
+            return [json.dumps({"success": True, "result": res}).encode('utf-8')]
+
+        # Route: /api/seo/trigger-sprint & /api/growth/run-cycle
+        elif path in ['/api/seo/trigger-sprint', '/api/growth/run-cycle']:
+            res = GROWTH_AGENT.run_full_seo_cycle()
+            from engine.backlink_ledger import BacklinkLedgerEngine
+            storage_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "storage")
+            ledger = BacklinkLedgerEngine(storage_dir)
+            entry = ledger.log_backlink_submission()
+            res['backlink_logged'] = entry
             status = '200 OK'
             response_headers = [('Content-Type', 'application/json; charset=utf-8'), ('Access-Control-Allow-Origin', '*')]
             start_response(status, response_headers)

@@ -1039,6 +1039,16 @@ class MastermindRequestHandler(BaseHTTPRequestHandler):
             self.wfile.write(json.dumps({"success": True, "result": result}).encode("utf-8"))
             return
 
+        elif path in ["/api/seo/trigger-sprint", "/api/growth/run-cycle"]:
+            result = GROWTH_AGENT.run_full_seo_cycle()
+            from engine.backlink_ledger import BacklinkLedgerEngine
+            ledger = BacklinkLedgerEngine(STORAGE_DIR)
+            entry = ledger.log_backlink_submission()
+            result["backlink_logged"] = entry
+            self._set_headers(200)
+            self.wfile.write(json.dumps({"success": True, "result": result}).encode("utf-8"))
+            return
+
         elif path == "/api/growth/generate-campaign":
             body = self.rfile.read(content_length)
             data = json.loads(body.decode("utf-8")) if content_length > 0 else {}
@@ -1102,19 +1112,29 @@ class MastermindRequestHandler(BaseHTTPRequestHandler):
 
 import threading
 
+_CLOUD_DAEMON_STARTED = False
+_CLOUD_DAEMON_LOCK = threading.Lock()
+
 def start_autonomous_cloud_growth_daemon():
     """
     Runs 24/7/365 in Render Cloud in the background even when the laptop is off!
     Every 15 minutes:
     - Pings IndexNow & Search Engines
     - Logs fresh unique high-DA backlink target in BacklinkLedger
+    - Runs full autonomous on-page & off-page SEO cycles
     - Checks Sentinel Watchdog
     """
+    global _CLOUD_DAEMON_STARTED
+    with _CLOUD_DAEMON_LOCK:
+        if _CLOUD_DAEMON_STARTED:
+            return
+        _CLOUD_DAEMON_STARTED = True
+
     def daemon_loop():
-        time.sleep(30)
+        time.sleep(10)  # Quick first run on startup
         while True:
             try:
-                # 1. IndexNow & Search Engine Broadcast
+                # 1. IndexNow, Search Engine Broadcast & Full SEO Cycle
                 GROWTH_AGENT.submit_to_indexnow()
                 # 2. Non-repeating Backlink Acquisition
                 from engine.backlink_ledger import BacklinkLedgerEngine
