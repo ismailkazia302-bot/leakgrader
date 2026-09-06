@@ -91,11 +91,13 @@ class PipelineLedger:
             "Redesign Sent": business_data.get("redesign_sent", "No"),
             "Email Sent": business_data.get("email_sent", "No"),
             "Response": business_data.get("response", "Pending"),
+            "Email": (business_data.get("email") or business_data.get("Email") or "").strip(),
             "demo_id": business_data.get("demo_id", ""),
             "pitch_email": business_data.get("pitch_email", ""),
             "pitch_wa": business_data.get("pitch_wa", ""),
             "pitch_price": business_data.get("pitch_price", "₹50,000")
         }
+
         self.leads.append(new_row)
         self.save()
         return new_row

@@ -104,6 +104,7 @@ VIRAL_REEL_STUDIO = ViralReelStudioEngine(STORAGE_DIR)
 from engine.contact_engine import ContactEngine
 CONTACT_ENGINE = ContactEngine(STORAGE_DIR)
 from engine.pipeline_orchestrator import PIPELINE_ORCHESTRATOR
+from engine.pipeline_mail_dispatcher import PIPELINE_MAIL_DISPATCHER
 
 def save_index():
     try:
@@ -869,6 +870,19 @@ class MastermindRequestHandler(BaseHTTPRequestHandler):
             self.wfile.write(csv_data.encode("utf-8"))
             return
 
+        elif path == "/api/pipeline/mail-config":
+            cfg = dict(PIPELINE_MAIL_DISPATCHER.config)
+            if cfg.get("smtp_password"):
+                cfg["smtp_password"] = "••••••••"
+            if cfg.get("brevo_api_key"):
+                cfg["brevo_api_key"] = cfg["brevo_api_key"][:4] + "••••" + cfg["brevo_api_key"][-4:]
+            if cfg.get("resend_api_key"):
+                cfg["resend_api_key"] = cfg["resend_api_key"][:4] + "••••" + cfg["resend_api_key"][-4:]
+            self._set_headers(200)
+            self.wfile.write(json.dumps({"success": True, "config": cfg}).encode("utf-8"))
+            return
+
+
 
         # Static Web Files
         file_path = path.lstrip("/")
@@ -1322,11 +1336,35 @@ class MastermindRequestHandler(BaseHTTPRequestHandler):
             except Exception:
                 max_results = 20
             token = data.get("token") or data.get("apify_token") or ""
+            auto_send = bool(data.get("auto_send_email") or data.get("auto_send"))
 
-            res = PIPELINE_ORCHESTRATOR.start_pipeline_async(city, niche, max_results, token)
+            res = PIPELINE_ORCHESTRATOR.start_pipeline_async(city, niche, max_results, token, auto_send)
             self._set_headers(200 if res.get("success") else 400)
             self.wfile.write(json.dumps(res).encode("utf-8"))
             return
+
+        # --- DIRECT EMAIL DISPATCH TO CLIENT ---
+        elif path in ["/api/pipeline/send-email", "/api/pipeline/send-mail"]:
+            body = self.rfile.read(content_length)
+            data = json.loads(body.decode("utf-8")) if content_length > 0 else {}
+            lead_id = data.get("lead_id", "")
+            custom_body = data.get("custom_body") or data.get("email_body")
+            res = PIPELINE_ORCHESTRATOR.send_lead_email(lead_id, custom_body)
+            self._set_headers(200 if res.get("success") else 400)
+            self.wfile.write(json.dumps(res).encode("utf-8"))
+            return
+
+        # --- SAVE FREE MAIL SERVICE CONFIGURATION ---
+        elif path == "/api/pipeline/mail-config":
+            body = self.rfile.read(content_length)
+            data = json.loads(body.decode("utf-8")) if content_length > 0 else {}
+            if data.get("smtp_password") == "••••••••":
+                del data["smtp_password"]
+            res_cfg = PIPELINE_MAIL_DISPATCHER.save_config(data)
+            self._set_headers(200)
+            self.wfile.write(json.dumps({"success": True, "message": "Mail configuration saved successfully", "config": res_cfg}).encode("utf-8"))
+            return
+
 
 
         else:

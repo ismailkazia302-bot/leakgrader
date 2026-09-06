@@ -20,6 +20,7 @@ from engine.pipeline_ledger import PipelineLedger
 from engine.pipeline_classifier import PipelineClassifier
 from engine.redesign_factory import RedesignFactory
 from engine.pitch_generator import PitchGenerator
+from engine.pipeline_mail_dispatcher import PIPELINE_MAIL_DISPATCHER
 
 class PipelineOrchestrator:
     def __init__(self, storage_dir: str = None, apify_token: str = None):
@@ -30,6 +31,7 @@ class PipelineOrchestrator:
         self.classifier = PipelineClassifier()
         self.redesign_factory = RedesignFactory(self.storage_dir)
         self.pitch_generator = PitchGenerator()
+        self.mail_dispatcher = PIPELINE_MAIL_DISPATCHER
 
         self.current_job = {
             "is_running": False,
@@ -42,20 +44,21 @@ class PipelineOrchestrator:
             "log": []
         }
 
-    def start_pipeline_async(self, city: str, niche: str, max_results: int = 50, apify_token: str = None):
+    def start_pipeline_async(self, city: str, niche: str, max_results: int = 50, apify_token: str = None, auto_send_email: bool = False):
         """Launches pipeline execution in a background daemon thread."""
         if self.current_job["is_running"]:
             return {"success": False, "error": "Pipeline job already running. Please wait for completion."}
 
         t = threading.Thread(
             target=self._run_pipeline,
-            args=(city, niche, max_results, apify_token or self.apify_token),
+            args=(city, niche, max_results, apify_token or self.apify_token, auto_send_email),
             daemon=True
         )
         t.start()
         return {"success": True, "message": f"Pipeline started for '{niche} in {city}'"}
 
-    def _run_pipeline(self, city: str, niche: str, max_results: int, token: str):
+    def _run_pipeline(self, city: str, niche: str, max_results: int, token: str, auto_send_email: bool = False):
+
         self.current_job = {
             "is_running": True,
             "city": city,
@@ -126,13 +129,30 @@ class PipelineOrchestrator:
                 updates["pitch_email"] = pitch_meta["email_body"]
                 updates["pitch_wa"] = pitch_meta["whatsapp_link"]
                 updates["pitch_subject"] = pitch_meta["email_subject"]
-                updates["Redesign Sent"] = "Ready"
+
+                lead_to_dispatch = dict(lead)
+                lead_to_dispatch.update(updates)
+
+                # Stage 6: Direct Automated Free Mail Dispatcher (if auto_send_email or config enabled)
+                should_auto_send = auto_send_email or self.mail_dispatcher.config.get("auto_send_qualifying", False)
+                if should_auto_send:
+                    m_res = self.mail_dispatcher.send_lead_pitch(lead_to_dispatch)
+                    if m_res.get("success"):
+                        updates["Email Sent"] = f"Sent ({time.strftime('%Y-%m-%d %H:%M')})"
+                        updates["Redesign Sent"] = "Sent"
+                    else:
+                        updates["Email Sent"] = "Ready"
+                        updates["Redesign Sent"] = "Ready"
+                else:
+                    updates["Email Sent"] = "Ready"
+                    updates["Redesign Sent"] = "Ready"
 
             else:
                 updates["Redesign Sent"] = "Skipped (Modern)"
 
             # Update Ledger Row
             self.ledger.update_lead(lead["id"], updates)
+
 
         self.current_job["status"] = "COMPLETED"
         self.current_job["is_running"] = False
@@ -187,6 +207,7 @@ class PipelineOrchestrator:
                     "address": item.get("address", f"{city}"),
                     "phone": item.get("phone", ""),
                     "website": item.get("website", ""),
+                    "email": item.get("email") or (item.get("emails")[0] if item.get("emails") else ""),
                     "totalScore": item.get("totalScore", 4.5),
                     "reviewsCount": item.get("reviewsCount", 30),
                     "categoryName": item.get("categoryName", niche)
@@ -235,17 +256,19 @@ class PipelineOrchestrator:
             pref = prefixes[i % len(prefixes)]
             suff = suffix_list[i % len(suffix_list)]
             biz_name = f"{pref} {suff}"
+            clean_slug = re.sub(r'[^a-zA-Z0-9]', '', biz_name.lower())
 
             # Mix of no website, outdated website, and modern website
             if i % 3 == 0:
                 biz_website = ""  # Rule 1: No Website
+                lead_email = f"info.{clean_slug}@gmail.com"
             elif i % 3 == 1:
                 # Outdated legacy website
-                clean_slug = re.sub(r'[^a-zA-Z0-9]', '', biz_name.lower())
                 biz_website = f"http://www.{clean_slug}-local.com"
+                lead_email = f"contact@{clean_slug}-local.com"
             else:
-                clean_slug = re.sub(r'[^a-zA-Z0-9]', '', biz_name.lower())
                 biz_website = f"https://www.{clean_slug}.in"
+                lead_email = f"hello@{clean_slug}.in"
 
             phone = f"+91 {9800000000 + (i * 123456) % 199999999}"
 
@@ -254,6 +277,7 @@ class PipelineOrchestrator:
                 "address": localities[i % len(localities)],
                 "phone": phone,
                 "website": biz_website,
+                "email": lead_email,
                 "totalScore": round(4.0 + (i % 10) * 0.1, 1),
                 "reviewsCount": 15 + (i * 8) % 180,
                 "categoryName": niche_title
@@ -261,8 +285,29 @@ class PipelineOrchestrator:
 
         return results
 
+    def send_lead_email(self, lead_id: str, custom_body: str = None) -> dict:
+        """Sends the cold pitch email directly to the client using the active free mail service."""
+        target_lead = None
+        for item in self.ledger.leads:
+            if item.get("id") == lead_id:
+                target_lead = item
+                break
+        if not target_lead:
+            return {"success": False, "error": f"Lead with ID '{lead_id}' not found"}
+
+        if custom_body:
+            target_lead["pitch_email"] = custom_body
+
+        res = self.mail_dispatcher.send_lead_pitch(target_lead)
+        if res.get("success"):
+            target_lead["Email Sent"] = f"Sent ({time.strftime('%Y-%m-%d %H:%M')})"
+            target_lead["Redesign Sent"] = "Sent"
+            self.ledger.save()
+        return res
+
     def get_status(self) -> dict:
         return self.current_job
+
 
     def get_ledger(self) -> list:
         return self.ledger.get_all()

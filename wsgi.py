@@ -18,7 +18,7 @@ from app import (
     CONTENT_CREW, AUDIT_ENGINE, SEO_ENGINE, PAYMENT_ENGINE, GROWTH_AGENT, PLANS,
     ANALYTICS_DASHBOARD, WEBSITE_MANAGER, SOCIAL_POSTER, SENTINEL_AGENT,
     TRAFFIC_BLASTER, VIRAL_REEL_STUDIO, COMPETITOR_SPY, SECURITY_HEADERS,
-    CONTACT_ENGINE, PIPELINE_ORCHESTRATOR, STORAGE_DIR,
+    CONTACT_ENGINE, PIPELINE_ORCHESTRATOR, STORAGE_DIR, PIPELINE_MAIL_DISPATCHER,
     WEB_DIR, save_index, save_bookings, save_leads, save_audits, load_all_data,
     start_autonomous_cloud_growth_daemon
 )
@@ -556,11 +556,33 @@ def application(environ, start_response):
             except Exception:
                 max_results = 20
             token = body_json.get('token') or body_json.get('apify_token') or ''
-            res = PIPELINE_ORCHESTRATOR.start_pipeline_async(city, niche, max_results, token)
+            auto_send = bool(body_json.get('auto_send_email') or body_json.get('auto_send'))
+            res = PIPELINE_ORCHESTRATOR.start_pipeline_async(city, niche, max_results, token, auto_send)
             status = '200 OK' if res.get('success') else '400 Bad Request'
             response_headers = [('Content-Type', 'application/json; charset=utf-8'), ('Access-Control-Allow-Origin', '*')]
             start_response(status, response_headers)
             return [json.dumps(res).encode('utf-8')]
+
+        # Route: /api/pipeline/send-email
+        elif path in ['/api/pipeline/send-email', '/api/pipeline/send-mail']:
+            lead_id = body_json.get('lead_id', '')
+            custom_body = body_json.get('custom_body') or body_json.get('email_body')
+            res = PIPELINE_ORCHESTRATOR.send_lead_email(lead_id, custom_body)
+            status = '200 OK' if res.get('success') else '400 Bad Request'
+            response_headers = [('Content-Type', 'application/json; charset=utf-8'), ('Access-Control-Allow-Origin', '*')]
+            start_response(status, response_headers)
+            return [json.dumps(res).encode('utf-8')]
+
+        # Route: /api/pipeline/mail-config
+        elif path == '/api/pipeline/mail-config':
+            if body_json.get('smtp_password') == '••••••••':
+                del body_json['smtp_password']
+            res_cfg = PIPELINE_MAIL_DISPATCHER.save_config(body_json)
+            status = '200 OK'
+            response_headers = [('Content-Type', 'application/json; charset=utf-8'), ('Access-Control-Allow-Origin', '*')]
+            start_response(status, response_headers)
+            return [json.dumps({"success": True, "message": "Mail configuration saved successfully", "config": res_cfg}).encode('utf-8')]
+
 
 
     # 2. Handle GET endpoints
@@ -649,6 +671,20 @@ def application(environ, start_response):
         ]
         start_response(status, response_headers)
         return [csv_data.encode('utf-8')]
+
+    elif path == '/api/pipeline/mail-config':
+        cfg = dict(PIPELINE_MAIL_DISPATCHER.config)
+        if cfg.get('smtp_password'):
+            cfg['smtp_password'] = '••••••••'
+        if cfg.get('brevo_api_key'):
+            cfg['brevo_api_key'] = cfg['brevo_api_key'][:4] + '••••' + cfg['brevo_api_key'][-4:]
+        if cfg.get('resend_api_key'):
+            cfg['resend_api_key'] = cfg['resend_api_key'][:4] + '••••' + cfg['resend_api_key'][-4:]
+        status = '200 OK'
+        response_headers = [('Content-Type', 'application/json; charset=utf-8'), ('Access-Control-Allow-Origin', '*')]
+        start_response(status, response_headers)
+        return [json.dumps({"success": True, "config": cfg}).encode('utf-8')]
+
 
 
     elif path == '/api/analytics/live':

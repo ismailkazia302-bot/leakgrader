@@ -128,6 +128,7 @@ class FounderAnalyticsDashboard:
         demos_cnt = sum(1 for x in pipeline_leads if x.get("demo_id"))
         high_ticket_cnt = sum(1 for x in pipeline_leads if "1,00,000" in str(x.get("pitch_price", "")))
         total_val = (no_web_cnt + outdated_cnt) * 75000
+        emails_sent_cnt = sum(1 for x in pipeline_leads if "sent" in str(x.get("Email Sent", "")).lower())
 
         return {
             "pipeline_leads": pipeline_leads,
@@ -137,6 +138,7 @@ class FounderAnalyticsDashboard:
                 "outdated": outdated_cnt,
                 "qualifying": no_web_cnt + outdated_cnt,
                 "demos": demos_cnt,
+                "emails_sent": emails_sent_cnt,
                 "high_ticket": high_ticket_cnt,
                 "pipeline_value": f"₹{total_val:,}" if total_val > 0 else "₹0"
             },
@@ -205,13 +207,23 @@ class FounderAnalyticsDashboard:
                 price_color = "#a855f7" if is_1l else "#38bdf8"
                 price_badge = f'<span style="color:{price_color}; font-weight:800; font-family:monospace;">{price_tag}</span>'
 
+                lead_id = item.get("id", "")
+                lead_email = (item.get("Email") or "").strip()
                 biz_name_esc = item.get("Business Name", "").replace("'", "\\'").replace('"', '&quot;')
                 email_body_esc = item.get("pitch_email", "").replace("'", "\\'").replace("\n", "\\n").replace('"', '&quot;')
+                lead_email_esc = lead_email.replace("'", "\\'")
 
-                email_btn = f'''<button onclick="showLeadPitchModal('{biz_name_esc}', '{price_tag}', '{email_body_esc}', '{wa_url}', '/preview/{demo_id}')" style="background:rgba(255,255,255,0.08); border:1px solid rgba(255,255,255,0.2); color:#fff; padding:3px 8px; border-radius:5px; font-size:10.5px; font-weight:700; cursor:pointer;">✉️ Pitch</button>'''
+                email_btn = f'''<button onclick="showLeadPitchModal('{lead_id}', '{biz_name_esc}', '{price_tag}', '{email_body_esc}', '{lead_email_esc}', '{wa_url}', '/preview/{demo_id}')" style="background:rgba(255,255,255,0.08); border:1px solid rgba(255,255,255,0.2); color:#fff; padding:3px 8px; border-radius:5px; font-size:10.5px; font-weight:700; cursor:pointer;">✉️ Pitch</button>'''
+
+                is_sent = "sent" in str(item.get("Email Sent", "")).lower()
+                send_btn_style = "background:#059669; color:#fff;" if is_sent else "background:linear-gradient(135deg, #0284c7, #2563eb); color:#fff;"
+                send_btn_label = "✅ Sent" if is_sent else "🚀 Send"
+                send_btn = f'''<button onclick="sendDirectLeadEmail('{lead_id}', this)" style="{send_btn_style} border:none; padding:3px 8px; border-radius:5px; font-size:10.5px; font-weight:800; cursor:pointer;" title="Send direct outreach email via free mail portal">{send_btn_label}</button>'''
 
                 phone_val = item.get("Phone", "—")
                 phone_display = f'<a href="tel:{phone_val}" style="color:#94a3b8; text-decoration:none; font-family:monospace; font-size:11px;">{phone_val}</a>' if phone_val and phone_val != "—" else '<span style="color:#64748b;">—</span>'
+
+                email_display = f'<span style="color:#38bdf8; font-family:monospace; font-size:10.5px;" title="{lead_email}">{lead_email[:20]}...</span>' if len(lead_email) > 20 else (f'<span style="color:#38bdf8; font-family:monospace; font-size:10.5px;">{lead_email}</span>' if lead_email else '<span style="color:#64748b;">—</span>')
 
                 row_html = f"""<tr style="border-bottom: 1px solid rgba(255,255,255,0.05);">
                   <td style="padding:10px 12px; font-weight:800; color:#fff; white-space:nowrap;">{item.get('Business Name', '')}</td>
@@ -234,6 +246,7 @@ class FounderAnalyticsDashboard:
                       {demo_link}
                       {wa_btn}
                       {email_btn}
+                      {send_btn}
                     </div>
                   </td>
                 </tr>"""
@@ -776,6 +789,58 @@ class FounderAnalyticsDashboard:
         </div>
       </div>
 
+      <!-- ✉️ Free Mail Service Configuration (Collapsible) -->
+      <div style="background:rgba(15,23,42,0.6); border:1px solid rgba(56,189,248,0.25); border-radius:12px; padding:16px 20px; margin-bottom:18px;">
+        <div style="display:flex; justify-content:space-between; align-items:center; cursor:pointer;" onclick="toggleMailSettings()">
+          <div style="display:flex; align-items:center; gap:8px;">
+            <span style="font-size:14px;">✉️</span>
+            <h4 style="font-size:12px; font-weight:800; color:#38bdf8; text-transform:uppercase; margin:0; letter-spacing:0.5px;">
+              Free Mail Service Portal (Direct Outreach Delivery)
+            </h4>
+            <span id="mail-portal-badge" style="background:rgba(16,185,129,0.15); color:#10b981; border:1px solid rgba(16,185,129,0.3); font-size:10px; padding:2px 8px; border-radius:12px; font-weight:800;">Gmail SMTP (500/day Free)</span>
+          </div>
+          <span id="mail-toggle-icon" style="color:#94a3b8; font-size:12px; font-weight:700;">⚙️ Configure / Expand ▼</span>
+        </div>
+
+        <div id="mail-settings-panel" style="display:none; margin-top:16px; padding-top:14px; border-top:1px solid rgba(255,255,255,0.08);">
+          <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(200px, 1fr)); gap:12px;">
+            <div>
+              <label style="font-size:10.5px; color:#94a3b8; font-weight:700; text-transform:uppercase; display:block; margin-bottom:4px;">Provider</label>
+              <select id="mail-provider-select" onchange="onMailProviderChange()" style="width:100%; background:#0a0d14; border:1px solid rgba(255,255,255,0.15); border-radius:6px; padding:7px 10px; font-size:11.5px; color:#fff; outline:none;">
+                <option value="gmail_smtp">Gmail SMTP (500 free emails/day with App Password)</option>
+                <option value="brevo">Brevo / Sendinblue (300 free emails/day forever API)</option>
+                <option value="resend">Resend API (3,000 free emails/month)</option>
+                <option value="n8n_webhook">n8n / Jules Self-Hosted Webhook</option>
+              </select>
+            </div>
+            <div>
+              <label id="lbl-mail-user" style="font-size:10.5px; color:#94a3b8; font-weight:700; text-transform:uppercase; display:block; margin-bottom:4px;">Gmail / SMTP User</label>
+              <input type="text" id="mail-user-inp" placeholder="yourname@gmail.com" style="width:100%; background:#0a0d14; border:1px solid rgba(255,255,255,0.15); border-radius:6px; padding:7px 10px; font-size:11.5px; color:#fff; outline:none;">
+            </div>
+            <div>
+              <label id="lbl-mail-pass" style="font-size:10.5px; color:#94a3b8; font-weight:700; text-transform:uppercase; display:block; margin-bottom:4px;">Google App Password (16-char)</label>
+              <input type="password" id="mail-pass-inp" placeholder="xxxx xxxx xxxx xxxx" style="width:100%; background:#0a0d14; border:1px solid rgba(255,255,255,0.15); border-radius:6px; padding:7px 10px; font-size:11.5px; color:#fff; outline:none;">
+            </div>
+            <div>
+              <label style="font-size:10.5px; color:#94a3b8; font-weight:700; text-transform:uppercase; display:block; margin-bottom:4px;">Sender From Name</label>
+              <input type="text" id="mail-fromname-inp" value="LeakGrader Growth Team" placeholder="LeakGrader Growth Team" style="width:100%; background:#0a0d14; border:1px solid rgba(255,255,255,0.15); border-radius:6px; padding:7px 10px; font-size:11.5px; color:#fff; outline:none;">
+            </div>
+          </div>
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-top:14px; flex-wrap:wrap; gap:10px;">
+            <label style="font-size:11px; color:#cbd5e1; cursor:pointer; display:inline-flex; align-items:center; gap:6px;">
+              <input type="checkbox" id="mail-autosend-cfg" style="accent-color:#38bdf8; width:15px; height:15px;">
+              Always auto-send emails to qualifying leads during background runs
+            </label>
+            <div style="display:flex; gap:8px;">
+              <button onclick="saveMailSettings()" style="background:linear-gradient(135deg, #0284c7, #2563eb); color:#fff; border:none; padding:7px 16px; border-radius:6px; font-size:11px; font-weight:800; cursor:pointer;">
+                💾 Save Mail Settings
+              </button>
+            </div>
+          </div>
+          <div id="mail-save-status" style="display:none; margin-top:10px; font-size:11px; color:#10b981; font-weight:700;"></div>
+        </div>
+      </div>
+
       <!-- Pipeline Scan Launcher Form -->
       <div style="background:rgba(0,0,0,0.5); border:1px solid rgba(255,255,255,0.08); border-radius:12px; padding:18px 20px; margin-bottom:20px;">
         <h4 style="font-size:12px; font-weight:800; color:#fff; text-transform:uppercase; margin:0 0 12px 0; letter-spacing:0.5px;">
@@ -804,6 +869,12 @@ class FounderAnalyticsDashboard:
             </button>
           </div>
         </div>
+        <div style="display:flex; align-items:center; gap:8px; margin-top:12px;">
+          <label style="font-size:11px; color:#c084fc; font-weight:700; cursor:pointer; display:inline-flex; align-items:center; gap:6px;">
+            <input type="checkbox" id="pipeline-auto-email" checked style="accent-color:#a855f7; width:15px; height:15px;">
+            ⚡ Auto-Send Email to Qualifying Leads (Direct Outbound Pitch with Redesign Demo Link)
+          </label>
+        </div>
         <div id="pipeline-run-status" style="display:none; margin-top:12px; padding:8px 14px; border-radius:6px; background:rgba(168,85,247,0.15); border:1px solid rgba(168,85,247,0.3); font-size:11.5px; color:#c084fc; font-weight:700;"></div>
       </div>
 
@@ -828,6 +899,11 @@ class FounderAnalyticsDashboard:
           <div style="font-size:10.5px; color:#38bdf8; text-transform:uppercase; font-weight:800;">Watermarked Demos Ready</div>
           <div style="font-size:24px; font-weight:900; color:#38bdf8; margin:4px 0; font-family:'JetBrains Mono', monospace;">{pipeline_stats.get('demos', 0)}</div>
           <span style="font-size:10.5px; color:#38bdf8;">Hosted & Pitch-Ready</span>
+        </div>
+        <div style="background:rgba(255,255,255,0.02); border:1px solid rgba(16,185,129,0.25); border-radius:10px; padding:14px;">
+          <div style="font-size:10.5px; color:#10b981; text-transform:uppercase; font-weight:800;">Outreach Emails Sent</div>
+          <div style="font-size:24px; font-weight:900; color:#10b981; margin:4px 0; font-family:'JetBrains Mono', monospace;">{pipeline_stats.get('emails_sent', 0)}</div>
+          <span style="font-size:10.5px; color:#10b981;">Direct Client Inboxes</span>
         </div>
         <div style="background:rgba(255,255,255,0.02); border:1px solid rgba(168,85,247,0.3); border-radius:10px; padding:14px;">
           <div style="font-size:10.5px; color:#c084fc; text-transform:uppercase; font-weight:800;">Estimated Pipeline Value</div>
@@ -1425,14 +1501,21 @@ class FounderAnalyticsDashboard:
       <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px; border-bottom:1px solid rgba(255,255,255,0.08); padding-bottom:12px;">
         <div>
           <h3 id="modal-biz-name" style="font-size:18px; font-weight:900; color:#fff;">Business Name</h3>
-          <span id="modal-biz-price" style="font-size:12px; color:#c084fc; font-weight:800;">Target Pitch: ₹1,00,000</span>
+          <div style="display:flex; align-items:center; gap:12px; margin-top:4px;">
+            <span id="modal-biz-price" style="font-size:12px; color:#c084fc; font-weight:800;">Target Pitch: ₹1,00,000</span>
+            <span style="color:#64748b; font-size:11px;">•</span>
+            <span style="font-size:11.5px; color:#38bdf8; font-family:monospace;">To: <strong id="modal-biz-email">contact@business.com</strong></span>
+          </div>
         </div>
         <button onclick="closeLeadPitchModal()" style="background:none; border:none; color:#94a3b8; font-size:24px; cursor:pointer; line-height:1;">&times;</button>
       </div>
 
       <div style="margin-bottom:16px;">
-        <label style="font-size:11px; color:#94a3b8; font-weight:700; text-transform:uppercase; display:block; margin-bottom:6px;">Personalized High-Ticket Cold Email Copy</label>
-        <textarea id="modal-email-text" readonly style="width:100%; height:260px; background:#08090c; border:1px solid rgba(255,255,255,0.12); border-radius:8px; padding:12px; font-family:'JetBrains Mono', monospace; font-size:11.5px; color:#e2e8f0; line-height:1.5; resize:none;"></textarea>
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+          <label style="font-size:11px; color:#94a3b8; font-weight:700; text-transform:uppercase;">Personalized High-Ticket Cold Email Copy (Editable)</label>
+          <span style="font-size:10.5px; color:#64748b;">You can customize copy before dispatching</span>
+        </div>
+        <textarea id="modal-email-text" style="width:100%; height:260px; background:#08090c; border:1px solid rgba(255,255,255,0.12); border-radius:8px; padding:12px; font-family:monospace; font-size:11.5px; color:#e2e8f0; line-height:1.5; resize:vertical;"></textarea>
       </div>
 
       <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
@@ -1444,20 +1527,34 @@ class FounderAnalyticsDashboard:
             💬 Open WhatsApp ➔
           </a>
         </div>
-        <button onclick="copyPitchEmail()" style="background:linear-gradient(135deg, #a855f7, #6366f1); color:#fff; border:none; padding:8px 18px; border-radius:6px; font-size:11px; font-weight:800; cursor:pointer;">
-          📋 Copy Full Pitch Email
-        </button>
+        <div style="display:flex; gap:8px;">
+          <button onclick="copyPitchEmail()" style="background:rgba(255,255,255,0.08); border:1px solid rgba(255,255,255,0.2); color:#fff; padding:8px 14px; border-radius:6px; font-size:11px; font-weight:800; cursor:pointer;">
+            📋 Copy Text
+          </button>
+          <button id="modal-send-btn" onclick="sendModalPitchEmail()" style="background:linear-gradient(135deg, #0284c7, #2563eb); color:#fff; border:none; padding:8px 18px; border-radius:6px; font-size:11px; font-weight:800; cursor:pointer; display:inline-flex; align-items:center; gap:6px;">
+            🚀 Send Directly to Client Email
+          </button>
+        </div>
       </div>
     </div>
   </div>
 
   <script>
-    function showLeadPitchModal(name, price, email, waUrl, demoUrl) {{
+    let currentModalLeadId = '';
+
+    function showLeadPitchModal(id, name, price, email, emailAddress, waUrl, demoUrl) {{
+      currentModalLeadId = id || '';
       document.getElementById('modal-biz-name').textContent = name;
       document.getElementById('modal-biz-price').textContent = 'Target Pitch: ' + price;
+      document.getElementById('modal-biz-email').textContent = emailAddress || ('contact@' + name.toLowerCase().replace(/[^a-z0-9]/g, '') + '.com');
       document.getElementById('modal-email-text').value = email.replace(/\\n/g, '\n');
       document.getElementById('modal-demo-btn').href = demoUrl;
       document.getElementById('modal-wa-btn').href = waUrl;
+      const sendBtn = document.getElementById('modal-send-btn');
+      if (sendBtn) {{
+        sendBtn.disabled = false;
+        sendBtn.textContent = '🚀 Send Directly to Client Email';
+      }}
       document.getElementById('pipeline-pitch-modal').style.display = 'flex';
     }}
 
@@ -1471,11 +1568,194 @@ class FounderAnalyticsDashboard:
       alert('📋 Pitch Email copied to clipboard!');
     }}
 
+    async function sendDirectLeadEmail(leadId, btn) {{
+      if (!leadId) {{
+        alert('Lead ID is missing');
+        return;
+      }}
+      const origText = btn ? btn.textContent : '';
+      if (btn) {{
+        btn.disabled = true;
+        btn.textContent = '⏳ Sending...';
+      }}
+
+      try {{
+        const res = await fetch('/api/pipeline/send-email', {{
+          method: 'POST',
+          headers: {{ 'Content-Type': 'application/json' }},
+          body: JSON.stringify({{ lead_id: leadId }})
+        }});
+        const data = await res.json();
+        if (data.success) {{
+          if (btn) {{
+            btn.textContent = '✅ Sent!';
+            btn.style.background = '#059669';
+          }}
+          alert('🚀 ' + (data.message || 'Email successfully sent to client!'));
+        }} else {{
+          alert('Notice: ' + (data.error || 'Failed to dispatch email'));
+          if (btn) {{
+            btn.disabled = false;
+            btn.textContent = origText;
+          }}
+        }}
+      }} catch (err) {{
+        alert('Network Error: ' + err.message);
+        if (btn) {{
+          btn.disabled = false;
+          btn.textContent = origText;
+        }}
+      }}
+    }}
+
+    async function sendModalPitchEmail() {{
+      if (!currentModalLeadId) {{
+        alert('Lead ID missing');
+        return;
+      }}
+      const btn = document.getElementById('modal-send-btn');
+      const customBody = document.getElementById('modal-email-text').value;
+      if (btn) {{
+        btn.disabled = true;
+        btn.textContent = '⏳ Dispatching Outbound Email...';
+      }}
+
+      try {{
+        const res = await fetch('/api/pipeline/send-email', {{
+          method: 'POST',
+          headers: {{ 'Content-Type': 'application/json' }},
+          body: JSON.stringify({{ lead_id: currentModalLeadId, custom_body: customBody }})
+        }});
+        const data = await res.json();
+        if (data.success) {{
+          if (btn) {{
+            btn.textContent = '✅ Email Dispatched!';
+            btn.style.background = '#059669';
+          }}
+          alert('🎉 ' + (data.message || 'Outreach pitch successfully sent!'));
+        }} else {{
+          alert('Notice: ' + (data.error || 'Failed to dispatch email'));
+          if (btn) {{
+            btn.disabled = false;
+            btn.textContent = '🚀 Send Directly to Client Email';
+          }}
+        }}
+      }} catch (err) {{
+        alert('Network Error: ' + err.message);
+        if (btn) {{
+          btn.disabled = false;
+          btn.textContent = '🚀 Send Directly to Client Email';
+        }}
+      }}
+    }}
+
+    function toggleMailSettings() {{
+      const panel = document.getElementById('mail-settings-panel');
+      const icon = document.getElementById('mail-toggle-icon');
+      if (panel.style.display === 'none') {{
+        panel.style.display = 'block';
+        if (icon) icon.textContent = '▲ Hide Settings';
+        loadMailConfig();
+      }} else {{
+        panel.style.display = 'none';
+        if (icon) icon.textContent = '⚙️ Configure / Expand ▼';
+      }}
+    }}
+
+    function onMailProviderChange() {{
+      const prov = document.getElementById('mail-provider-select').value;
+      const lblUser = document.getElementById('lbl-mail-user');
+      const lblPass = document.getElementById('lbl-mail-pass');
+      const inpPass = document.getElementById('mail-pass-inp');
+      const badge = document.getElementById('mail-portal-badge');
+
+      if (prov === 'gmail_smtp') {{
+        if (lblUser) lblUser.textContent = 'Gmail Address';
+        if (lblPass) lblPass.textContent = 'Google App Password (16-char)';
+        if (inpPass) inpPass.placeholder = 'xxxx xxxx xxxx xxxx';
+        if (badge) badge.textContent = 'Gmail SMTP (500/day Free)';
+      }} else if (prov === 'brevo') {{
+        if (lblUser) lblUser.textContent = 'Account Sender Email';
+        if (lblPass) lblPass.textContent = 'Brevo API Key (xkeysib-...)';
+        if (inpPass) inpPass.placeholder = 'xkeysib-xxxxxxxxxxxxxx';
+        if (badge) badge.textContent = 'Brevo API (300/day Free Forever)';
+      }} else if (prov === 'resend') {{
+        if (lblUser) lblUser.textContent = 'Sender Email';
+        if (lblPass) lblPass.textContent = 'Resend API Key (re_...)';
+        if (inpPass) inpPass.placeholder = 're_xxxxxxxxxxxxxx';
+        if (badge) badge.textContent = 'Resend API (3k/mo Free)';
+      }} else if (prov === 'n8n_webhook') {{
+        if (lblUser) lblUser.textContent = 'Webhook URL';
+        if (lblPass) lblPass.textContent = 'Auth Header / Token (Optional)';
+        if (badge) badge.textContent = 'n8n Self-Hosted Webhook';
+      }}
+    }}
+
+    async function loadMailConfig() {{
+      try {{
+        const res = await fetch('/api/pipeline/mail-config');
+        const data = await res.json();
+        if (data.success && data.config) {{
+          const c = data.config;
+          if (c.provider) document.getElementById('mail-provider-select').value = c.provider;
+          if (c.smtp_user) document.getElementById('mail-user-inp').value = c.smtp_user;
+          if (c.from_name) document.getElementById('mail-fromname-inp').value = c.from_name;
+          if (c.smtp_password) document.getElementById('mail-pass-inp').value = c.smtp_password;
+          if (c.auto_send_qualifying !== undefined) document.getElementById('mail-autosend-cfg').checked = !!c.auto_send_qualifying;
+          onMailProviderChange();
+        }}
+      }} catch (e) {{}}
+    }}
+
+    async function saveMailSettings() {{
+      const provider = document.getElementById('mail-provider-select').value;
+      const smtp_user = document.getElementById('mail-user-inp').value.trim();
+      const pass_val = document.getElementById('mail-pass-inp').value.trim();
+      const from_name = document.getElementById('mail-fromname-inp').value.trim();
+      const auto_send = document.getElementById('mail-autosend-cfg').checked;
+
+      const payload = {{
+        provider: provider,
+        smtp_user: smtp_user,
+        from_email: smtp_user,
+        from_name: from_name,
+        auto_send_qualifying: auto_send
+      }};
+
+      if (provider === 'gmail_smtp') {{
+        if (pass_val && pass_val !== '••••••••') payload.smtp_password = pass_val;
+      }} else if (provider === 'brevo') {{
+        if (pass_val && !pass_val.includes('••')) payload.brevo_api_key = pass_val;
+      }} else if (provider === 'resend') {{
+        if (pass_val && !pass_val.includes('••')) payload.resend_api_key = pass_val;
+      }} else if (provider === 'n8n_webhook') {{
+        payload.webhook_url = smtp_user;
+      }}
+
+      const statusEl = document.getElementById('mail-save-status');
+      try {{
+        const res = await fetch('/api/pipeline/mail-config', {{
+          method: 'POST',
+          headers: {{ 'Content-Type': 'application/json' }},
+          body: JSON.stringify(payload)
+        }});
+        const data = await res.json();
+        if (statusEl) {{
+          statusEl.style.display = 'block';
+          statusEl.textContent = '✅ ' + (data.message || 'Settings saved successfully!');
+          setTimeout(() => {{ statusEl.style.display = 'none'; }}, 3500);
+        }}
+      }} catch (e) {{
+        alert('Failed to save settings: ' + e.message);
+      }}
+    }}
+
     async function runPipelineScan() {{
       const city = document.getElementById('pipeline-city-inp').value.trim() || 'Mumbai';
       const niche = document.getElementById('pipeline-niche-inp').value.trim() || 'Dental Clinic';
       const max_results = parseInt(document.getElementById('pipeline-max-inp').value.trim()) || 20;
       const token = document.getElementById('pipeline-token-inp').value.trim();
+      const auto_send = document.getElementById('pipeline-auto-email').checked;
 
       const btn = document.getElementById('btn-run-pipeline');
       const statusEl = document.getElementById('pipeline-run-status');
@@ -1492,7 +1772,7 @@ class FounderAnalyticsDashboard:
         const res = await fetch('/api/pipeline/run', {{
           method: 'POST',
           headers: {{ 'Content-Type': 'application/json' }},
-          body: JSON.stringify({{ city, niche, max_results, token }})
+          body: JSON.stringify({{ city, niche, max_results, token, auto_send_email: auto_send }})
         }});
         const data = await res.json();
         if (!data.success) {{
@@ -1509,7 +1789,8 @@ class FounderAnalyticsDashboard:
             const sRes = await fetch('/api/pipeline/status');
             const s = await sRes.json();
             if (statusEl) {{
-              statusEl.textContent = '⚙️ [' + s.status + '] Processed: ' + s.processed + '/' + s.total_found + ' | Qualifying: ' + s.qualifying + ' Demos Generated';
+              const emailNotice = auto_send ? ' | ✉️ Auto-Sending Direct Emails' : '';
+              statusEl.textContent = '⚙️ [' + s.status + '] Processed: ' + s.processed + '/' + s.total_found + ' | Qualifying: ' + s.qualifying + ' Demos' + emailNotice;
             }}
             if (!s.is_running) {{
               clearInterval(poll);
