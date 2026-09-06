@@ -582,6 +582,15 @@ def application(environ, start_response):
             with open(contact_path, 'rb') as f:
                 return [f.read()]
 
+    elif path in ['/about', '/about-us']:
+        about_path = os.path.join(WEB_DIR_PATH, 'about.html')
+        if os.path.exists(about_path):
+            status = '200 OK'
+            response_headers = [('Content-Type', 'text/html; charset=utf-8'), ('Cache-Control', 'public, max-age=3600')]
+            start_response(status, response_headers)
+            with open(about_path, 'rb') as f:
+                return [f.read()]
+
     elif path == '/api/analytics/live':
         status = '200 OK'
         response_headers = [('Content-Type', 'application/json; charset=utf-8'), ('Access-Control-Allow-Origin', '*')]

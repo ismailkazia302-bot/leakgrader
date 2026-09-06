@@ -821,6 +821,15 @@ class MastermindRequestHandler(BaseHTTPRequestHandler):
                 self.wfile.write(content)
                 return
 
+        elif path in ["/about", "/about-us"]:
+            about_path = os.path.join(WEB_DIR, "about.html")
+            if os.path.exists(about_path):
+                with open(about_path, "rb") as f:
+                    content = f.read()
+                self._set_headers(200, content_type="text/html; charset=utf-8")
+                self.wfile.write(content)
+                return
+
 
         # Static Web Files
         file_path = path.lstrip("/")
