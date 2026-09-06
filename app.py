@@ -882,6 +882,19 @@ class MastermindRequestHandler(BaseHTTPRequestHandler):
             self.wfile.write(json.dumps({"success": True, "config": cfg}).encode("utf-8"))
             return
 
+        elif path == "/api/pipeline/gmb-config":
+            cfg = PIPELINE_ORCHESTRATOR._load_gmb_config()
+            masked = dict(cfg)
+            if masked.get("google_places_api_key"):
+                k = masked["google_places_api_key"]
+                masked["google_places_api_key"] = k[:6] + "••••••••" + k[-4:] if len(k) > 10 else "••••••••"
+            if masked.get("apify_token"):
+                t = masked["apify_token"]
+                masked["apify_token"] = t[:6] + "••••••••" + t[-4:] if len(t) > 10 else "••••••••"
+            self._set_headers(200)
+            self.wfile.write(json.dumps({"success": True, "config": masked}).encode("utf-8"))
+            return
+
 
 
         # Static Web Files
@@ -1363,6 +1376,20 @@ class MastermindRequestHandler(BaseHTTPRequestHandler):
             res_cfg = PIPELINE_MAIL_DISPATCHER.save_config(data)
             self._set_headers(200)
             self.wfile.write(json.dumps({"success": True, "message": "Mail configuration saved successfully", "config": res_cfg}).encode("utf-8"))
+            return
+
+        # --- SAVE GOOGLE MY BUSINESS / PLACES CONFIGURATION ---
+        elif path == "/api/pipeline/gmb-config":
+            body = self.rfile.read(content_length)
+            data = json.loads(body.decode("utf-8")) if content_length > 0 else {}
+            curr = PIPELINE_ORCHESTRATOR._load_gmb_config()
+            if "••••" in data.get("google_places_api_key", ""):
+                data["google_places_api_key"] = curr.get("google_places_api_key", "")
+            if "••••" in data.get("apify_token", ""):
+                data["apify_token"] = curr.get("apify_token", "")
+            saved = PIPELINE_ORCHESTRATOR.save_gmb_config(data)
+            self._set_headers(200)
+            self.wfile.write(json.dumps({"success": True, "message": "Google My Business configuration saved successfully", "config": saved}).encode("utf-8"))
             return
 
 

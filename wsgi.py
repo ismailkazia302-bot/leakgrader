@@ -583,6 +583,19 @@ def application(environ, start_response):
             start_response(status, response_headers)
             return [json.dumps({"success": True, "message": "Mail configuration saved successfully", "config": res_cfg}).encode('utf-8')]
 
+        # Route: /api/pipeline/gmb-config
+        elif path == '/api/pipeline/gmb-config':
+            curr = PIPELINE_ORCHESTRATOR._load_gmb_config()
+            if '••••' in body_json.get('google_places_api_key', ''):
+                body_json['google_places_api_key'] = curr.get('google_places_api_key', '')
+            if '••••' in body_json.get('apify_token', ''):
+                body_json['apify_token'] = curr.get('apify_token', '')
+            saved = PIPELINE_ORCHESTRATOR.save_gmb_config(body_json)
+            status = '200 OK'
+            response_headers = [('Content-Type', 'application/json; charset=utf-8'), ('Access-Control-Allow-Origin', '*')]
+            start_response(status, response_headers)
+            return [json.dumps({"success": True, "message": "Google My Business configuration saved successfully", "config": saved}).encode('utf-8')]
+
 
 
     # 2. Handle GET endpoints
@@ -684,6 +697,20 @@ def application(environ, start_response):
         response_headers = [('Content-Type', 'application/json; charset=utf-8'), ('Access-Control-Allow-Origin', '*')]
         start_response(status, response_headers)
         return [json.dumps({"success": True, "config": cfg}).encode('utf-8')]
+
+    elif path == '/api/pipeline/gmb-config':
+        cfg = PIPELINE_ORCHESTRATOR._load_gmb_config()
+        masked = dict(cfg)
+        if masked.get('google_places_api_key'):
+            k = masked['google_places_api_key']
+            masked['google_places_api_key'] = k[:6] + '••••••••' + k[-4:] if len(k) > 10 else '••••••••'
+        if masked.get('apify_token'):
+            t = masked['apify_token']
+            masked['apify_token'] = t[:6] + '••••••••' + t[-4:] if len(t) > 10 else '••••••••'
+        status = '200 OK'
+        response_headers = [('Content-Type', 'application/json; charset=utf-8'), ('Access-Control-Allow-Origin', '*')]
+        start_response(status, response_headers)
+        return [json.dumps({"success": True, "config": masked}).encode('utf-8')]
 
 
 

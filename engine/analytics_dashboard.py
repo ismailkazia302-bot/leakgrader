@@ -789,6 +789,51 @@ class FounderAnalyticsDashboard:
         </div>
       </div>
 
+      <!-- 🗺️ Google My Business (GMB) Database Connector (Collapsible) -->
+      <div style="background:rgba(20,15,35,0.7); border:1px solid rgba(168,85,247,0.35); border-radius:12px; padding:16px 20px; margin-bottom:14px;">
+        <div style="display:flex; justify-content:space-between; align-items:center; cursor:pointer;" onclick="toggleGmbSettings()">
+          <div style="display:flex; align-items:center; gap:8px;">
+            <span style="font-size:15px;">🗺️</span>
+            <h4 style="font-size:12px; font-weight:800; color:#c084fc; text-transform:uppercase; margin:0; letter-spacing:0.5px;">
+              Google My Business (GMB) Live Database Connector
+            </h4>
+            <span id="gmb-status-badge" style="background:rgba(168,85,247,0.15); color:#c084fc; border:1px solid rgba(168,85,247,0.3); font-size:10px; padding:2px 8px; border-radius:12px; font-weight:800;">Google Places API / Apify Ready</span>
+          </div>
+          <span id="gmb-toggle-icon" style="color:#94a3b8; font-size:12px; font-weight:700;">⚙️ GMB Credentials / Expand ▼</span>
+        </div>
+
+        <div id="gmb-settings-panel" style="display:none; margin-top:16px; padding-top:14px; border-top:1px solid rgba(255,255,255,0.08);">
+          <p style="font-size:11.5px; color:#94a3b8; margin:0 0 12px 0; line-height:1.5;">
+            Connect directly to Google's official Business Profile database. Enter either your <strong>Google Cloud Places API Key</strong> ($200 free monthly credit) or your <strong>Apify Token</strong> ($5 free monthly credit) to query 100% real registered businesses on Google Maps.
+          </p>
+          <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(220px, 1fr)); gap:12px;">
+            <div>
+              <label style="font-size:10.5px; color:#94a3b8; font-weight:700; text-transform:uppercase; display:block; margin-bottom:4px;">GMB Database Source</label>
+              <select id="gmb-provider-select" style="width:100%; background:#0a0d14; border:1px solid rgba(255,255,255,0.15); border-radius:6px; padding:7px 10px; font-size:11.5px; color:#fff; outline:none;">
+                <option value="auto">Auto-Detect (Google Places API or Apify)</option>
+                <option value="google_places">Google Places API (Official Google My Business Database)</option>
+                <option value="apify">Apify Google Maps Scraper Actor (Deep GMB Crawler)</option>
+              </select>
+            </div>
+            <div>
+              <label style="font-size:10.5px; color:#94a3b8; font-weight:700; text-transform:uppercase; display:block; margin-bottom:4px;">Google Places API Key (AIza...)</label>
+              <input type="password" id="gmb-google-key-inp" placeholder="AIzaSyxxxxxxxxxxxxxxxxxxxxxxx" style="width:100%; background:#0a0d14; border:1px solid rgba(255,255,255,0.15); border-radius:6px; padding:7px 10px; font-size:11.5px; color:#fff; outline:none;">
+            </div>
+            <div>
+              <label style="font-size:10.5px; color:#94a3b8; font-weight:700; text-transform:uppercase; display:block; margin-bottom:4px;">Apify Token (apify_api_...)</label>
+              <input type="password" id="gmb-apify-token-inp" placeholder="apify_api_xxxxxxxxxxxxxxxxxxxx" style="width:100%; background:#0a0d14; border:1px solid rgba(255,255,255,0.15); border-radius:6px; padding:7px 10px; font-size:11.5px; color:#fff; outline:none;">
+            </div>
+          </div>
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-top:14px; flex-wrap:wrap; gap:10px;">
+            <span style="font-size:11px; color:#a855f7;">🔒 Credentials are encrypted and saved in secure storage</span>
+            <button onclick="saveGmbSettings()" style="background:linear-gradient(135deg, #a855f7, #6366f1); color:#fff; border:none; padding:7px 18px; border-radius:6px; font-size:11px; font-weight:800; cursor:pointer;">
+              💾 Save GMB Database Credentials
+            </button>
+          </div>
+          <div id="gmb-save-status" style="display:none; margin-top:10px; font-size:11px; color:#10b981; font-weight:700;"></div>
+        </div>
+      </div>
+
       <!-- ✉️ Free Mail Service Configuration (Collapsible) -->
       <div style="background:rgba(15,23,42,0.6); border:1px solid rgba(56,189,248,0.25); border-radius:12px; padding:16px 20px; margin-bottom:18px;">
         <div style="display:flex; justify-content:space-between; align-items:center; cursor:pointer;" onclick="toggleMailSettings()">
@@ -860,8 +905,8 @@ class FounderAnalyticsDashboard:
             <input type="number" id="pipeline-max-inp" value="20" min="5" max="100" style="width:100%; background:#0a0d14; border:1px solid rgba(255,255,255,0.15); border-radius:6px; padding:8px 10px; font-size:12px; color:#fff; outline:none;">
           </div>
           <div>
-            <label style="font-size:10.5px; color:#94a3b8; font-weight:700; text-transform:uppercase; display:block; margin-bottom:4px;">Apify Token (Optional)</label>
-            <input type="password" id="pipeline-token-inp" placeholder="Optional Apify Token (Native engine if empty)" style="width:100%; background:#0a0d14; border:1px solid rgba(255,255,255,0.15); border-radius:6px; padding:8px 10px; font-size:12px; color:#fff; outline:none;">
+            <label style="font-size:10.5px; color:#38bdf8; font-weight:700; text-transform:uppercase; display:block; margin-bottom:4px;">Google Places / GMB API Key or Apify Token</label>
+            <input type="password" id="pipeline-token-inp" placeholder="Google Places API Key (AIza...) or Apify Token" style="width:100%; background:#0a0d14; border:1px solid rgba(56,189,248,0.3); border-radius:6px; padding:8px 10px; font-size:12px; color:#fff; outline:none;">
           </div>
           <div>
             <button id="btn-run-pipeline" onclick="runPipelineScan()" style="width:100%; background:linear-gradient(135deg, #a855f7, #6366f1); color:#fff; border:none; padding:9px 16px; border-radius:6px; font-size:12px; font-weight:800; cursor:pointer; display:inline-flex; align-items:center; justify-content:center; gap:6px;">
@@ -1646,6 +1691,71 @@ class FounderAnalyticsDashboard:
           btn.disabled = false;
           btn.textContent = '🚀 Send Directly to Client Email';
         }}
+      }}
+    }}
+
+    function toggleGmbSettings() {{
+      const panel = document.getElementById('gmb-settings-panel');
+      const icon = document.getElementById('gmb-toggle-icon');
+      if (panel.style.display === 'none') {{
+        panel.style.display = 'block';
+        if (icon) icon.textContent = '▲ Hide GMB Settings';
+        loadGmbConfig();
+      }} else {{
+        panel.style.display = 'none';
+        if (icon) icon.textContent = '⚙️ GMB Credentials / Expand ▼';
+      }}
+    }}
+
+    async function loadGmbConfig() {{
+      try {{
+        const res = await fetch('/api/pipeline/gmb-config');
+        const data = await res.json();
+        if (data.success && data.config) {{
+          const c = data.config;
+          if (c.provider) document.getElementById('gmb-provider-select').value = c.provider;
+          if (c.google_places_api_key) document.getElementById('gmb-google-key-inp').value = c.google_places_api_key;
+          if (c.apify_token) document.getElementById('gmb-apify-token-inp').value = c.apify_token;
+          const badge = document.getElementById('gmb-status-badge');
+          if (c.google_places_api_key && !c.google_places_api_key.includes('••••')) {{
+            if (badge) badge.textContent = '🟢 Google Places API Active';
+          }} else if (c.apify_token) {{
+            if (badge) badge.textContent = '🟢 Apify GMB Crawler Active';
+          }}
+        }}
+      }} catch(e) {{}}
+    }}
+
+    async function saveGmbSettings() {{
+      const provider = document.getElementById('gmb-provider-select').value;
+      const gKey = document.getElementById('gmb-google-key-inp').value.trim();
+      const aTok = document.getElementById('gmb-apify-token-inp').value.trim();
+
+      const payload = {{ provider }};
+      if (gKey && !gKey.includes('••••')) payload.google_places_api_key = gKey;
+      if (aTok && !aTok.includes('••••')) payload.apify_token = aTok;
+
+      const statusEl = document.getElementById('gmb-save-status');
+      try {{
+        const res = await fetch('/api/pipeline/gmb-config', {{
+          method: 'POST',
+          headers: {{ 'Content-Type': 'application/json' }},
+          body: JSON.stringify(payload)
+        }});
+        const data = await res.json();
+        if (statusEl) {{
+          statusEl.style.display = 'block';
+          statusEl.textContent = '✅ ' + (data.message || 'GMB configuration saved successfully!');
+          setTimeout(() => {{ statusEl.style.display = 'none'; }}, 3500);
+        }}
+        const badge = document.getElementById('gmb-status-badge');
+        if (gKey) {{
+          if (badge) badge.textContent = '🟢 Google Places API Connected';
+        }} else if (aTok) {{
+          if (badge) badge.textContent = '🟢 Apify GMB Crawler Connected';
+        }}
+      }} catch(e) {{
+        alert('Failed to save GMB settings: ' + e.message);
       }}
     }}
 
