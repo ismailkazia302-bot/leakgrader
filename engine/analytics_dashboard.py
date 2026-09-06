@@ -209,7 +209,7 @@ class FounderAnalyticsDashboard:
                   <td style="padding:12px 14px;"><span style="background:rgba(56,189,248,0.12); color:#38bdf8; border:1px solid rgba(56,189,248,0.3); font-size:10.5px; padding:2px 8px; border-radius:12px; font-weight:700;">{m.get('subject', 'General Inquiry')}</span></td>
                   <td style="padding:12px 14px; color:#94a3b8; font-size:11.5px; max-width:300px; white-space:normal; line-height:1.4;">{m.get('message', '')}</td>
                   <td style="padding:12px 14px; text-align:right;"><span style="background:rgba(16,185,129,0.15); color:#10b981; border:1px solid rgba(16,185,129,0.3); font-size:10px; font-weight:800; padding:2px 8px; border-radius:12px;">{m.get('status', 'NEW')}</span></td>
-                </tr>""" for m in contact_messages[:25]
+                </tr>""" for m in contact_messages[::-1][:50]
             ])
 
         # Build Social Rows
