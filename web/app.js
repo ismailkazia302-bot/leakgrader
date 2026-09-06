@@ -1024,23 +1024,56 @@ document.addEventListener('DOMContentLoaded', () => {
   const btnModalSubmit = document.getElementById('btn-modal-contact-submit');
 
   function openContactModal(e) {
-    if (e) e.preventDefault();
-    if (modalStatus) {
-      modalStatus.style.display = 'none';
-      modalStatus.className = '';
+    if (e && e.preventDefault) e.preventDefault();
+    const modal = contactModal || document.getElementById('contact-modal');
+    const status = modalStatus || document.getElementById('modal-contact-status');
+    if (status) {
+      status.style.display = 'none';
+      status.className = '';
     }
-    if (contactModal) contactModal.classList.add('active');
+    if (modal) {
+      modal.classList.add('active');
+      modal.style.display = 'flex';
+    } else {
+      window.location.href = '/contact';
+    }
   }
 
-  function closeContactModal() {
-    if (contactModal) contactModal.classList.remove('active');
+  function closeContactModal(e) {
+    if (e && e.preventDefault) e.preventDefault();
+    const modal = contactModal || document.getElementById('contact-modal');
+    if (modal) {
+      modal.classList.remove('active');
+      modal.style.display = 'none';
+    }
   }
+
+  // Export to window so inline onclicks and external callers work unconditionally
+  window.openContactModal = openContactModal;
+  window.closeContactModal = closeContactModal;
 
   document.querySelectorAll('.btn-open-contact').forEach(btn => {
     btn.addEventListener('click', openContactModal);
   });
   if (btnCloseContact) btnCloseContact.addEventListener('click', closeContactModal);
   if (contactOverlay) contactOverlay.addEventListener('click', closeContactModal);
+
+  // Global delegation for any contact buttons
+  document.addEventListener('click', (e) => {
+    const trigger = e.target.closest('.btn-open-contact, [data-action="contact"]');
+    if (trigger) {
+      e.preventDefault();
+      openContactModal(e);
+    }
+  });
+
+  // Close modals on Escape key
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') {
+      closeContactModal();
+      if (typeof closePricing === 'function') closePricing();
+    }
+  });
 
   if (contactForm) {
     contactForm.addEventListener('submit', async (e) => {
