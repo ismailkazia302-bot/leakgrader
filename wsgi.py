@@ -18,7 +18,7 @@ from app import (
     CONTENT_CREW, AUDIT_ENGINE, SEO_ENGINE, PAYMENT_ENGINE, GROWTH_AGENT, PLANS,
     ANALYTICS_DASHBOARD, WEBSITE_MANAGER, SOCIAL_POSTER, SENTINEL_AGENT,
     TRAFFIC_BLASTER, VIRAL_REEL_STUDIO, COMPETITOR_SPY, SECURITY_HEADERS,
-    CONTACT_ENGINE,
+    CONTACT_ENGINE, PIPELINE_ORCHESTRATOR, STORAGE_DIR,
     WEB_DIR, save_index, save_bookings, save_leads, save_audits, load_all_data,
     start_autonomous_cloud_growth_daemon
 )
@@ -547,6 +547,22 @@ def application(environ, start_response):
             start_response(status, response_headers)
             return [json.dumps(res).encode('utf-8')]
 
+        # Route: /api/pipeline/run
+        elif path in ['/api/pipeline/run', '/api/pipeline/start']:
+            city = body_json.get('city', 'Mumbai').strip()
+            niche = body_json.get('niche', 'Dental Clinic').strip()
+            try:
+                max_results = int(body_json.get('max_results', 20))
+            except Exception:
+                max_results = 20
+            token = body_json.get('token') or body_json.get('apify_token') or ''
+            res = PIPELINE_ORCHESTRATOR.start_pipeline_async(city, niche, max_results, token)
+            status = '200 OK' if res.get('success') else '400 Bad Request'
+            response_headers = [('Content-Type', 'application/json; charset=utf-8'), ('Access-Control-Allow-Origin', '*')]
+            start_response(status, response_headers)
+            return [json.dumps(res).encode('utf-8')]
+
+
     # 2. Handle GET endpoints
     if path in ['/analytics', '/dashboard', '/founder']:
         dashboard_html = ANALYTICS_DASHBOARD.render_html()
@@ -590,6 +606,50 @@ def application(environ, start_response):
             start_response(status, response_headers)
             with open(about_path, 'rb') as f:
                 return [f.read()]
+
+    # Local Business Redesign & Outreach Pipeline Demos
+    elif path.startswith('/preview/'):
+        demo_name = path.replace('/preview/', '').strip()
+        if not demo_name.endswith('.html'):
+            demo_name = f"{demo_name}.html"
+        demo_path = os.path.join(STORAGE_DIR, 'demos', demo_name)
+        if os.path.exists(demo_path) and os.path.isfile(demo_path):
+            status = '200 OK'
+            response_headers = [('Content-Type', 'text/html; charset=utf-8'), ('Cache-Control', 'public, max-age=3600')]
+            start_response(status, response_headers)
+            with open(demo_path, 'rb') as f:
+                return [f.read()]
+        else:
+            status = '404 Not Found'
+            response_headers = [('Content-Type', 'text/html; charset=utf-8')]
+            start_response(status, response_headers)
+            return [b"<!DOCTYPE html><html><body style='background:#0b0f19;color:#fff;font-family:sans-serif;padding:40px;text-align:center;'><h2>Demo Not Found</h2><p style='color:#94a3b8;'>The requested redesign preview does not exist or has expired.</p><a href='/founder' style='color:#38bdf8;'>Back to Founder Command Center &rarr;</a></body></html>"]
+
+    elif path == '/api/pipeline/status':
+        status = '200 OK'
+        response_headers = [('Content-Type', 'application/json; charset=utf-8'), ('Access-Control-Allow-Origin', '*')]
+        start_response(status, response_headers)
+        return [json.dumps(PIPELINE_ORCHESTRATOR.get_status()).encode('utf-8')]
+
+    elif path == '/api/pipeline/ledger':
+        leads = PIPELINE_ORCHESTRATOR.get_ledger()
+        stats = PIPELINE_ORCHESTRATOR.get_stats()
+        status = '200 OK'
+        response_headers = [('Content-Type', 'application/json; charset=utf-8'), ('Access-Control-Allow-Origin', '*')]
+        start_response(status, response_headers)
+        return [json.dumps({"success": True, "leads": leads, "stats": stats, "total": len(leads)}).encode('utf-8')]
+
+    elif path == '/api/pipeline/export-csv':
+        csv_data = PIPELINE_ORCHESTRATOR.export_csv()
+        status = '200 OK'
+        response_headers = [
+            ('Content-Type', 'text/csv; charset=utf-8'),
+            ('Content-Disposition', 'attachment; filename="pipeline_leads_14col.csv"'),
+            ('Access-Control-Allow-Origin', '*')
+        ]
+        start_response(status, response_headers)
+        return [csv_data.encode('utf-8')]
+
 
     elif path == '/api/analytics/live':
         status = '200 OK'

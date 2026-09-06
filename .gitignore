@@ -8,7 +8,10 @@ venv/
 .env
 .DS_Store
 *.log
-storage/
+storage/*
+!storage/contact_messages.json
+!storage/pipeline_leads.json
+!storage/demos/
 storage/uploads/
 cloudflared.exe
 *.pem
@@ -17,3 +20,6 @@ cloudflared.exe
 !config/payment_links.json
 !web/manifest.json
 !storage/contact_messages.json
+!storage/pipeline_leads.json
+!storage/demos/*
+

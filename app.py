@@ -103,6 +103,7 @@ from engine.viral_reel_studio import ViralReelStudioEngine
 VIRAL_REEL_STUDIO = ViralReelStudioEngine(STORAGE_DIR)
 from engine.contact_engine import ContactEngine
 CONTACT_ENGINE = ContactEngine(STORAGE_DIR)
+from engine.pipeline_orchestrator import PIPELINE_ORCHESTRATOR
 
 def save_index():
     try:
@@ -830,6 +831,44 @@ class MastermindRequestHandler(BaseHTTPRequestHandler):
                 self.wfile.write(content)
                 return
 
+        # --- 9. LOCAL BUSINESS REDESIGN & PIPELINE PREVIEWS ---
+        elif path.startswith("/preview/"):
+            demo_name = path.replace("/preview/", "").strip()
+            if not demo_name.endswith(".html"):
+                demo_name = f"{demo_name}.html"
+            demo_path = os.path.join(STORAGE_DIR, "demos", demo_name)
+            if os.path.exists(demo_path) and os.path.isfile(demo_path):
+                with open(demo_path, "rb") as f:
+                    content = f.read()
+                self._set_headers(200, content_type="text/html; charset=utf-8")
+                self.wfile.write(content)
+                return
+            else:
+                self._set_headers(404, content_type="text/html; charset=utf-8")
+                self.wfile.write(b"<!DOCTYPE html><html><body style='background:#0b0f19;color:#fff;font-family:sans-serif;padding:40px;text-align:center;'><h2>Demo Not Found</h2><p style='color:#94a3b8;'>The requested redesign preview does not exist or has expired.</p><a href='/founder' style='color:#38bdf8;'>Back to Founder Command Center &rarr;</a></body></html>")
+                return
+
+        elif path == "/api/pipeline/status":
+            self._set_headers(200)
+            self.wfile.write(json.dumps(PIPELINE_ORCHESTRATOR.get_status()).encode("utf-8"))
+            return
+
+        elif path == "/api/pipeline/ledger":
+            leads = PIPELINE_ORCHESTRATOR.get_ledger()
+            stats = PIPELINE_ORCHESTRATOR.get_stats()
+            self._set_headers(200)
+            self.wfile.write(json.dumps({"success": True, "leads": leads, "stats": stats, "total": len(leads)}).encode("utf-8"))
+            return
+
+        elif path == "/api/pipeline/export-csv":
+            csv_data = PIPELINE_ORCHESTRATOR.export_csv()
+            self.send_response(200)
+            self.send_header("Content-Type", "text/csv; charset=utf-8")
+            self.send_header("Content-Disposition", 'attachment; filename="pipeline_leads_14col.csv"')
+            self.end_headers()
+            self.wfile.write(csv_data.encode("utf-8"))
+            return
+
 
         # Static Web Files
         file_path = path.lstrip("/")
@@ -1254,6 +1293,10 @@ class MastermindRequestHandler(BaseHTTPRequestHandler):
             body = self.rfile.read(content_length)
             data = json.loads(body.decode("utf-8")) if content_length > 0 else {}
             res = VIRAL_REEL_STUDIO.save_credentials(data)
+            self._set_headers(200)
+            self.wfile.write(json.dumps({"success": True, "result": res}).encode("utf-8"))
+            return
+
         elif path in ["/api/contact/submit", "/api/contact/send"]:
             body = self.rfile.read(content_length)
             data = json.loads(body.decode("utf-8")) if content_length > 0 else {}
@@ -1267,6 +1310,24 @@ class MastermindRequestHandler(BaseHTTPRequestHandler):
             self._set_headers(200 if result.get("success") else 400)
             self.wfile.write(json.dumps(result).encode("utf-8"))
             return
+
+        # --- LOCAL BUSINESS OUTREACH PIPELINE SCANNER ---
+        elif path in ["/api/pipeline/run", "/api/pipeline/start"]:
+            body = self.rfile.read(content_length)
+            data = json.loads(body.decode("utf-8")) if content_length > 0 else {}
+            city = data.get("city", "Mumbai").strip()
+            niche = data.get("niche", "Dental Clinic").strip()
+            try:
+                max_results = int(data.get("max_results", 20))
+            except Exception:
+                max_results = 20
+            token = data.get("token") or data.get("apify_token") or ""
+
+            res = PIPELINE_ORCHESTRATOR.start_pipeline_async(city, niche, max_results, token)
+            self._set_headers(200 if res.get("success") else 400)
+            self.wfile.write(json.dumps(res).encode("utf-8"))
+            return
+
 
         else:
             self._set_headers(404)

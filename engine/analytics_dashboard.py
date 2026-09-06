@@ -122,7 +122,24 @@ class FounderAnalyticsDashboard:
 
         avg_da = (sum([b.get("domain_authority", 0) for b in backlinks]) / max(len(backlinks), 1)) if backlinks else 0
 
+        pipeline_leads = self._read_json("pipeline_leads.json", [])
+        no_web_cnt = sum(1 for x in pipeline_leads if x.get("Status") == "No Website")
+        outdated_cnt = sum(1 for x in pipeline_leads if x.get("Status") == "Outdated")
+        demos_cnt = sum(1 for x in pipeline_leads if x.get("demo_id"))
+        high_ticket_cnt = sum(1 for x in pipeline_leads if "1,00,000" in str(x.get("pitch_price", "")))
+        total_val = (no_web_cnt + outdated_cnt) * 75000
+
         return {
+            "pipeline_leads": pipeline_leads,
+            "pipeline_stats": {
+                "total": len(pipeline_leads),
+                "no_website": no_web_cnt,
+                "outdated": outdated_cnt,
+                "qualifying": no_web_cnt + outdated_cnt,
+                "demos": demos_cnt,
+                "high_ticket": high_ticket_cnt,
+                "pipeline_value": f"₹{total_val:,}" if total_val > 0 else "₹0"
+            },
             "total_backlinks": len(backlinks),
             "avg_domain_authority": round(avg_da, 1),
             "total_outbound": len(outreach),
@@ -149,6 +166,80 @@ class FounderAnalyticsDashboard:
     def render_html(self) -> str:
         data = self.get_live_data()
         
+        # Build Local Business Pipeline Rows
+        pipeline_leads = data.get("pipeline_leads", [])
+        pipeline_stats = data.get("pipeline_stats", {})
+        if not pipeline_leads:
+            pipeline_rows = """<tr><td colspan="16" style="padding:24px; text-align:center; color:#64748b;">No local business leads scanned yet. Enter a city and niche above and click "Run Automated Pipeline Scan".</td></tr>"""
+        else:
+            rows_list = []
+            for item in pipeline_leads[::-1][:100]:
+                status = item.get("Status", "Pending")
+                if status == "No Website":
+                    status_badge = '<span style="background:rgba(244,63,94,0.18); color:#f43f5e; border:1px solid rgba(244,63,94,0.4); padding:3px 8px; border-radius:12px; font-weight:800; font-size:10.5px;">No Website</span>'
+                elif status == "Outdated":
+                    status_badge = '<span style="background:rgba(251,191,36,0.18); color:#fbbf24; border:1px solid rgba(251,191,36,0.4); padding:3px 8px; border-radius:12px; font-weight:800; font-size:10.5px;">Outdated Site</span>'
+                else:
+                    status_badge = '<span style="background:rgba(100,116,139,0.18); color:#94a3b8; border:1px solid rgba(100,116,139,0.4); padding:3px 8px; border-radius:12px; font-weight:700; font-size:10.5px;">Skip (Modern)</span>'
+
+                def check_badge(val):
+                    val_str = str(val or "")
+                    if "pass" in val_str.lower():
+                        return f'<span style="color:#10b981; font-weight:700;">Pass</span>'
+                    elif "fail" in val_str.lower():
+                        return f'<span style="color:#f43f5e; font-weight:700;">{val_str}</span>'
+                    elif "n/a" in val_str.lower() or not val_str:
+                        return f'<span style="color:#64748b;">N/A</span>'
+                    return f'<span style="color:#cbd5e1;">{val_str}</span>'
+
+                web_display = f'<a href="{item.get("Website")}" target="_blank" style="color:#38bdf8; text-decoration:none; font-weight:600;">Site ↗</a>' if item.get("Website") else '<span style="color:#f43f5e; font-weight:700; font-size:10.5px;">None</span>'
+
+                demo_id = item.get("demo_id", "")
+                demo_link = f'<a href="/preview/{demo_id}" target="_blank" style="background:#0284c7; color:#fff; text-decoration:none; padding:3px 8px; border-radius:5px; font-size:10.5px; font-weight:800; display:inline-flex; align-items:center; gap:4px;">👁️ Demo ↗</a>' if demo_id else '<span style="color:#64748b;">—</span>'
+
+                wa_url = item.get("pitch_wa", "")
+                wa_btn = f'<a href="{wa_url}" target="_blank" style="background:#10b981; color:#fff; text-decoration:none; padding:3px 8px; border-radius:5px; font-size:10.5px; font-weight:800; display:inline-flex; align-items:center; gap:4px;">💬 WhatsApp</a>' if wa_url else '<span style="color:#64748b;">—</span>'
+
+                price_tag = item.get("pitch_price", "₹50,000")
+                is_1l = "1,00,000" in price_tag
+                price_color = "#a855f7" if is_1l else "#38bdf8"
+                price_badge = f'<span style="color:{price_color}; font-weight:800; font-family:monospace;">{price_tag}</span>'
+
+                biz_name_esc = item.get("Business Name", "").replace("'", "\\'").replace('"', '&quot;')
+                email_body_esc = item.get("pitch_email", "").replace("'", "\\'").replace("\n", "\\n").replace('"', '&quot;')
+
+                email_btn = f'''<button onclick="showLeadPitchModal('{biz_name_esc}', '{price_tag}', '{email_body_esc}', '{wa_url}', '/preview/{demo_id}')" style="background:rgba(255,255,255,0.08); border:1px solid rgba(255,255,255,0.2); color:#fff; padding:3px 8px; border-radius:5px; font-size:10.5px; font-weight:700; cursor:pointer;">✉️ Pitch</button>'''
+
+                phone_val = item.get("Phone", "—")
+                phone_display = f'<a href="tel:{phone_val}" style="color:#94a3b8; text-decoration:none; font-family:monospace; font-size:11px;">{phone_val}</a>' if phone_val and phone_val != "—" else '<span style="color:#64748b;">—</span>'
+
+                row_html = f"""<tr style="border-bottom: 1px solid rgba(255,255,255,0.05);">
+                  <td style="padding:10px 12px; font-weight:800; color:#fff; white-space:nowrap;">{item.get('Business Name', '')}</td>
+                  <td style="padding:10px 12px; white-space:nowrap;">{phone_display}</td>
+                  <td style="padding:10px 12px; color:#94a3b8; font-size:11px; max-width:180px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;" title="{item.get('Address', '')}">{item.get('Address', '—')}</td>
+                  <td style="padding:10px 12px; white-space:nowrap;">{web_display}</td>
+                  <td style="padding:10px 12px; white-space:nowrap;"><span style="background:rgba(255,255,255,0.05); color:#cbd5e1; padding:2px 6px; border-radius:4px; font-size:10.5px;">{item.get('Category', 'Services')}</span></td>
+                  <td style="padding:10px 12px; white-space:nowrap;">{check_badge(item.get('SSL Check'))}</td>
+                  <td style="padding:10px 12px; white-space:nowrap;">{check_badge(item.get('Mobile Check'))}</td>
+                  <td style="padding:10px 12px; white-space:nowrap;">{check_badge(item.get('Design Age Check'))}</td>
+                  <td style="padding:10px 12px; white-space:nowrap; font-size:10.5px;">{check_badge(item.get('Load Time Check'))}</td>
+                  <td style="padding:10px 12px; color:#cbd5e1; font-size:11px; white-space:nowrap;">{item.get('AI Visual Judgment', '—')}</td>
+                  <td style="padding:10px 12px; white-space:nowrap;">{status_badge}</td>
+                  <td style="padding:10px 12px; white-space:nowrap;"><span style="color:#38bdf8; font-weight:700;">{item.get('Redesign Sent', 'No')}</span></td>
+                  <td style="padding:10px 12px; white-space:nowrap; color:#94a3b8;">{item.get('Email Sent', 'No')}</td>
+                  <td style="padding:10px 12px; white-space:nowrap;"><span style="background:rgba(16,185,129,0.1); color:#10b981; padding:2px 6px; border-radius:4px; font-size:10px; font-weight:700;">{item.get('Response', 'Pending')}</span></td>
+                  <td style="padding:10px 12px; white-space:nowrap; text-align:right;">{price_badge}</td>
+                  <td style="padding:10px 12px; white-space:nowrap; text-align:right;">
+                    <div style="display:flex; gap:4px; justify-content:flex-end;">
+                      {demo_link}
+                      {wa_btn}
+                      {email_btn}
+                    </div>
+                  </td>
+                </tr>"""
+                rows_list.append(row_html)
+            pipeline_rows = "".join(rows_list)
+
         # Build Backlinks Rows
         backlinks_feed = data.get("backlinks_feed", [])
         if not backlinks_feed:
@@ -663,6 +754,124 @@ class FounderAnalyticsDashboard:
         </table>
       </div>
     </div>
+
+
+    <!-- 🏢 LOCAL BUSINESS ACQUISITION ENGINE (₹50k - ₹1L AUTOMATED PIPELINE) -->
+    <div class="section-card" style="border:1px solid rgba(168,85,247,0.4); background:linear-gradient(180deg, rgba(20,10,35,0.95) 0%, rgba(10,12,18,0.98) 100%);">
+      <div class="section-header" style="flex-wrap:wrap; gap:12px;">
+        <div>
+          <div style="display:flex; align-items:center; gap:10px;">
+            <span style="background:#a855f7; width:9px; height:9px; border-radius:50%; box-shadow:0 0 10px #a855f7; display:inline-block;"></span>
+            <div class="section-title" style="color:#c084fc; font-size:18px;">🏢 Local Business Acquisition Engine (₹50k – ₹1L Automated Pipeline)</div>
+            <span style="background:rgba(168,85,247,0.15); color:#c084fc; border:1px solid rgba(168,85,247,0.3); font-size:11px; font-weight:800; padding:3px 10px; border-radius:20px;">Hands-Off 5-Stage System</span>
+          </div>
+          <p style="font-size:12px; color:#94a3b8; margin-top:6px;">
+            Fully automated pipeline that scrapes Google Maps for local businesses with no/outdated websites, auto-generates watermarked redesign demos, and prepares cold outreach pitches with ₹50,000–₹1,00,000 pricing.
+          </p>
+        </div>
+        <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
+          <a href="/api/pipeline/export-csv" download style="background:linear-gradient(135deg, #10b981, #059669); color:#fff; text-decoration:none; padding:8px 16px; border-radius:8px; font-size:12px; font-weight:800; display:inline-flex; align-items:center; gap:6px;">
+            📥 Download 14-Col Google Sheets CSV
+          </a>
+        </div>
+      </div>
+
+      <!-- Pipeline Scan Launcher Form -->
+      <div style="background:rgba(0,0,0,0.5); border:1px solid rgba(255,255,255,0.08); border-radius:12px; padding:18px 20px; margin-bottom:20px;">
+        <h4 style="font-size:12px; font-weight:800; color:#fff; text-transform:uppercase; margin:0 0 12px 0; letter-spacing:0.5px;">
+          ⚡ Launch Automated Pipeline Scan (Dynamic City & Niche)
+        </h4>
+        <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(180px, 1fr)); gap:12px; align-items:flex-end;">
+          <div>
+            <label style="font-size:10.5px; color:#94a3b8; font-weight:700; text-transform:uppercase; display:block; margin-bottom:4px;">Target City</label>
+            <input type="text" id="pipeline-city-inp" value="Mumbai" placeholder="e.g. Mumbai, Delhi, Dubai, London..." style="width:100%; background:#0a0d14; border:1px solid rgba(255,255,255,0.15); border-radius:6px; padding:8px 10px; font-size:12px; color:#fff; outline:none;">
+          </div>
+          <div>
+            <label style="font-size:10.5px; color:#94a3b8; font-weight:700; text-transform:uppercase; display:block; margin-bottom:4px;">Target Niche / Category</label>
+            <input type="text" id="pipeline-niche-inp" value="Dental Clinic" placeholder="e.g. Dental Clinic, Real Estate, Salon, Legal..." style="width:100%; background:#0a0d14; border:1px solid rgba(255,255,255,0.15); border-radius:6px; padding:8px 10px; font-size:12px; color:#fff; outline:none;">
+          </div>
+          <div>
+            <label style="font-size:10.5px; color:#94a3b8; font-weight:700; text-transform:uppercase; display:block; margin-bottom:4px;">Max Results</label>
+            <input type="number" id="pipeline-max-inp" value="20" min="5" max="100" style="width:100%; background:#0a0d14; border:1px solid rgba(255,255,255,0.15); border-radius:6px; padding:8px 10px; font-size:12px; color:#fff; outline:none;">
+          </div>
+          <div>
+            <label style="font-size:10.5px; color:#94a3b8; font-weight:700; text-transform:uppercase; display:block; margin-bottom:4px;">Apify Token (Optional)</label>
+            <input type="password" id="pipeline-token-inp" placeholder="Optional Apify Token (Native engine if empty)" style="width:100%; background:#0a0d14; border:1px solid rgba(255,255,255,0.15); border-radius:6px; padding:8px 10px; font-size:12px; color:#fff; outline:none;">
+          </div>
+          <div>
+            <button id="btn-run-pipeline" onclick="runPipelineScan()" style="width:100%; background:linear-gradient(135deg, #a855f7, #6366f1); color:#fff; border:none; padding:9px 16px; border-radius:6px; font-size:12px; font-weight:800; cursor:pointer; display:inline-flex; align-items:center; justify-content:center; gap:6px;">
+              🚀 Run Automated Pipeline Scan
+            </button>
+          </div>
+        </div>
+        <div id="pipeline-run-status" style="display:none; margin-top:12px; padding:8px 14px; border-radius:6px; background:rgba(168,85,247,0.15); border:1px solid rgba(168,85,247,0.3); font-size:11.5px; color:#c084fc; font-weight:700;"></div>
+      </div>
+
+      <!-- Pipeline KPI Metric Strip -->
+      <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(180px, 1fr)); gap:12px; margin-bottom:20px;">
+        <div style="background:rgba(255,255,255,0.02); border:1px solid rgba(255,255,255,0.08); border-radius:10px; padding:14px;">
+          <div style="font-size:10.5px; color:#94a3b8; text-transform:uppercase; font-weight:800;">Master Ledger Total</div>
+          <div style="font-size:24px; font-weight:900; color:#fff; margin:4px 0; font-family:'JetBrains Mono', monospace;">{pipeline_stats.get('total', 0)}</div>
+          <span style="font-size:10.5px; color:#38bdf8;">Unfiltered Scraped Leads</span>
+        </div>
+        <div style="background:rgba(255,255,255,0.02); border:1px solid rgba(244,63,94,0.25); border-radius:10px; padding:14px;">
+          <div style="font-size:10.5px; color:#f43f5e; text-transform:uppercase; font-weight:800;">No Website Found</div>
+          <div style="font-size:24px; font-weight:900; color:#f43f5e; margin:4px 0; font-family:'JetBrains Mono', monospace;">{pipeline_stats.get('no_website', 0)}</div>
+          <span style="font-size:10.5px; color:#f43f5e;">100% Need Website</span>
+        </div>
+        <div style="background:rgba(255,255,255,0.02); border:1px solid rgba(251,191,36,0.25); border-radius:10px; padding:14px;">
+          <div style="font-size:10.5px; color:#fbbf24; text-transform:uppercase; font-weight:800;">Outdated / Failed Speed</div>
+          <div style="font-size:24px; font-weight:900; color:#fbbf24; margin:4px 0; font-family:'JetBrains Mono', monospace;">{pipeline_stats.get('outdated', 0)}</div>
+          <span style="font-size:10.5px; color:#fbbf24;">High Bounce Rate Leads</span>
+        </div>
+        <div style="background:rgba(255,255,255,0.02); border:1px solid rgba(56,189,248,0.25); border-radius:10px; padding:14px;">
+          <div style="font-size:10.5px; color:#38bdf8; text-transform:uppercase; font-weight:800;">Watermarked Demos Ready</div>
+          <div style="font-size:24px; font-weight:900; color:#38bdf8; margin:4px 0; font-family:'JetBrains Mono', monospace;">{pipeline_stats.get('demos', 0)}</div>
+          <span style="font-size:10.5px; color:#38bdf8;">Hosted & Pitch-Ready</span>
+        </div>
+        <div style="background:rgba(255,255,255,0.02); border:1px solid rgba(168,85,247,0.3); border-radius:10px; padding:14px;">
+          <div style="font-size:10.5px; color:#c084fc; text-transform:uppercase; font-weight:800;">Estimated Pipeline Value</div>
+          <div style="font-size:24px; font-weight:900; color:#c084fc; margin:4px 0; font-family:'JetBrains Mono', monospace;">{pipeline_stats.get('pipeline_value', '₹0')}</div>
+          <span style="font-size:10.5px; color:#a855f7;">₹50,000 – ₹1,00,000 / Lead</span>
+        </div>
+      </div>
+
+      <!-- 14-Column Interactive Master Ledger Table -->
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+        <h4 style="font-size:12px; font-weight:800; color:#fff; text-transform:uppercase; margin:0;">
+          📊 14-Column Master Spreadsheet Ledger
+        </h4>
+        <span style="font-size:11px; color:#94a3b8;">Showing latest leads across all scans</span>
+      </div>
+      <div style="overflow-x:auto; max-height:480px; overflow-y:auto; border:1px solid rgba(255,255,255,0.06); border-radius:8px;">
+        <table>
+          <thead style="position:sticky; top:0; background:#0f1219; z-index:2;">
+            <tr>
+              <th>Business Name</th>
+              <th>Phone</th>
+              <th>Address</th>
+              <th>Website</th>
+              <th>Category</th>
+              <th>SSL</th>
+              <th>Mobile</th>
+              <th>Age Check</th>
+              <th>Load Speed</th>
+              <th>AI Score</th>
+              <th>Status</th>
+              <th>Redesign</th>
+              <th>Email</th>
+              <th>Response</th>
+              <th style="text-align:right;">Price</th>
+              <th style="text-align:right;">1-Click Outreach</th>
+            </tr>
+          </thead>
+          <tbody>
+            {pipeline_rows}
+          </tbody>
+        </table>
+      </div>
+    </div>
+
 
     <!-- 📢 Autonomous Social Media Auto-Poster Section -->
     <div class="section-card" style="border: 1px solid rgba(192,132,252,0.35); background: linear-gradient(180deg, rgba(15,23,42,0.95), rgba(10,12,18,0.95));">
@@ -1209,5 +1418,116 @@ class FounderAnalyticsDashboard:
       }}
     }}, 1000);
   </script>
+
+  <!-- Modal for Lead Pitch View -->
+  <div id="pipeline-pitch-modal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.85); backdrop-filter:blur(6px); z-index:9999; align-items:center; justify-content:center; padding:20px;">
+    <div style="background:#0f1219; border:1px solid rgba(168,85,247,0.4); border-radius:16px; max-width:680px; width:100%; padding:24px; box-shadow:0 20px 50px rgba(0,0,0,0.8); max-height:90vh; overflow-y:auto;">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px; border-bottom:1px solid rgba(255,255,255,0.08); padding-bottom:12px;">
+        <div>
+          <h3 id="modal-biz-name" style="font-size:18px; font-weight:900; color:#fff;">Business Name</h3>
+          <span id="modal-biz-price" style="font-size:12px; color:#c084fc; font-weight:800;">Target Pitch: ₹1,00,000</span>
+        </div>
+        <button onclick="closeLeadPitchModal()" style="background:none; border:none; color:#94a3b8; font-size:24px; cursor:pointer; line-height:1;">&times;</button>
+      </div>
+
+      <div style="margin-bottom:16px;">
+        <label style="font-size:11px; color:#94a3b8; font-weight:700; text-transform:uppercase; display:block; margin-bottom:6px;">Personalized High-Ticket Cold Email Copy</label>
+        <textarea id="modal-email-text" readonly style="width:100%; height:260px; background:#08090c; border:1px solid rgba(255,255,255,0.12); border-radius:8px; padding:12px; font-family:'JetBrains Mono', monospace; font-size:11.5px; color:#e2e8f0; line-height:1.5; resize:none;"></textarea>
+      </div>
+
+      <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
+        <div style="display:flex; gap:8px;">
+          <a id="modal-demo-btn" href="#" target="_blank" style="background:#0284c7; color:#fff; text-decoration:none; padding:8px 14px; border-radius:6px; font-size:11px; font-weight:800; display:inline-flex; align-items:center; gap:6px;">
+            👁️ Open Live Demo ↗
+          </a>
+          <a id="modal-wa-btn" href="#" target="_blank" style="background:#10b981; color:#fff; text-decoration:none; padding:8px 14px; border-radius:6px; font-size:11px; font-weight:800; display:inline-flex; align-items:center; gap:6px;">
+            💬 Open WhatsApp ➔
+          </a>
+        </div>
+        <button onclick="copyPitchEmail()" style="background:linear-gradient(135deg, #a855f7, #6366f1); color:#fff; border:none; padding:8px 18px; border-radius:6px; font-size:11px; font-weight:800; cursor:pointer;">
+          📋 Copy Full Pitch Email
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    function showLeadPitchModal(name, price, email, waUrl, demoUrl) {{
+      document.getElementById('modal-biz-name').textContent = name;
+      document.getElementById('modal-biz-price').textContent = 'Target Pitch: ' + price;
+      document.getElementById('modal-email-text').value = email.replace(/\\n/g, '\n');
+      document.getElementById('modal-demo-btn').href = demoUrl;
+      document.getElementById('modal-wa-btn').href = waUrl;
+      document.getElementById('pipeline-pitch-modal').style.display = 'flex';
+    }}
+
+    function closeLeadPitchModal() {{
+      document.getElementById('pipeline-pitch-modal').style.display = 'none';
+    }}
+
+    function copyPitchEmail() {{
+      const text = document.getElementById('modal-email-text').value;
+      navigator.clipboard.writeText(text);
+      alert('📋 Pitch Email copied to clipboard!');
+    }}
+
+    async function runPipelineScan() {{
+      const city = document.getElementById('pipeline-city-inp').value.trim() || 'Mumbai';
+      const niche = document.getElementById('pipeline-niche-inp').value.trim() || 'Dental Clinic';
+      const max_results = parseInt(document.getElementById('pipeline-max-inp').value.trim()) || 20;
+      const token = document.getElementById('pipeline-token-inp').value.trim();
+
+      const btn = document.getElementById('btn-run-pipeline');
+      const statusEl = document.getElementById('pipeline-run-status');
+      if (btn) {{
+        btn.disabled = true;
+        btn.textContent = '⏳ Executing Automated Pipeline...';
+      }}
+      if (statusEl) {{
+        statusEl.style.display = 'block';
+        statusEl.textContent = '🚀 Initializing Stage 1: Google Places Scraper for ' + niche + ' in ' + city + '...';
+      }}
+
+      try {{
+        const res = await fetch('/api/pipeline/run', {{
+          method: 'POST',
+          headers: {{ 'Content-Type': 'application/json' }},
+          body: JSON.stringify({{ city, niche, max_results, token }})
+        }});
+        const data = await res.json();
+        if (!data.success) {{
+          alert('Notice: ' + (data.error || 'Failed to start pipeline'));
+          if (btn) {{
+            btn.disabled = false;
+            btn.textContent = '🚀 Run Automated Pipeline Scan';
+          }}
+          return;
+        }}
+
+        const poll = setInterval(async () => {{
+          try {{
+            const sRes = await fetch('/api/pipeline/status');
+            const s = await sRes.json();
+            if (statusEl) {{
+              statusEl.textContent = '⚙️ [' + s.status + '] Processed: ' + s.processed + '/' + s.total_found + ' | Qualifying: ' + s.qualifying + ' Demos Generated';
+            }}
+            if (!s.is_running) {{
+              clearInterval(poll);
+              if (statusEl) statusEl.textContent = '✅ Pipeline Complete! Reloading ledger...';
+              setTimeout(() => location.reload(), 1200);
+            }}
+          }} catch(e) {{}}
+        }}, 1500);
+
+      }} catch(e) {{
+        alert('Pipeline error: ' + e.message);
+        if (btn) {{
+          btn.disabled = false;
+          btn.textContent = '🚀 Run Automated Pipeline Scan';
+        }}
+      }}
+    }}
+  </script>
+
 </body>
 </html>"""
