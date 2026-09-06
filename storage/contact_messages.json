@@ -1,0 +1,32 @@
+[
+  {
+    "id": "inq_1788653155400",
+    "timestamp": "2026-09-06 03:05:55 UTC",
+    "name": "Founder Test",
+    "email": "founder@example.com",
+    "company": "LeakGrader.com",
+    "subject": "Enterprise AI Closer Setup",
+    "message": "Modal test from verification suite",
+    "status": "UNREAD"
+  },
+  {
+    "id": "inq_1788653065024",
+    "timestamp": "2026-09-06 03:04:25 UTC",
+    "name": "Test User",
+    "email": "test@example.com",
+    "company": "",
+    "subject": "General Inquiry",
+    "message": "Hello world",
+    "status": "UNREAD"
+  },
+  {
+    "id": "inq_1788654055026",
+    "timestamp": "2026-09-06 00:20:55 UTC",
+    "name": "Ismail Test",
+    "email": "ismail@leakgrader.com",
+    "company": "LeakGrader LLC",
+    "subject": "Enterprise AI Closer Setup",
+    "message": "Testing submission live on render",
+    "status": "UNREAD"
+  }
+]

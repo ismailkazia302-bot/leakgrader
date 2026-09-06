@@ -16,3 +16,4 @@ cloudflared.exe
 !render.yaml
 !config/payment_links.json
 !web/manifest.json
+!storage/contact_messages.json
