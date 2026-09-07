@@ -456,6 +456,15 @@ class PipelineOrchestrator:
             self.ledger.save()
         return res
 
+    def update_lead_response(self, lead_id: str, new_status: str) -> dict:
+        """Updates response status for a lead in the master ledger."""
+        for item in self.ledger.leads:
+            if item.get("id") == lead_id:
+                item["Response"] = new_status
+                self.ledger.save()
+                return {"success": True, "lead_id": lead_id, "new_status": new_status}
+        return {"success": False, "error": f"Lead '{lead_id}' not found"}
+
     def get_status(self) -> dict:
         return self.current_job
 

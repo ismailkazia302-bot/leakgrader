@@ -1367,6 +1367,17 @@ class MastermindRequestHandler(BaseHTTPRequestHandler):
             self.wfile.write(json.dumps(res).encode("utf-8"))
             return
 
+        # --- UPDATE LEAD RESPONSE STATUS ---
+        elif path == "/api/pipeline/update-status":
+            body = self.rfile.read(content_length)
+            data = json.loads(body.decode("utf-8")) if content_length > 0 else {}
+            lead_id = data.get("lead_id", "")
+            new_status = data.get("new_status") or data.get("status", "Replied")
+            res = PIPELINE_ORCHESTRATOR.update_lead_response(lead_id, new_status)
+            self._set_headers(200 if res.get("success") else 400)
+            self.wfile.write(json.dumps(res).encode("utf-8"))
+            return
+
         # --- SAVE FREE MAIL SERVICE CONFIGURATION ---
         elif path == "/api/pipeline/mail-config":
             body = self.rfile.read(content_length)

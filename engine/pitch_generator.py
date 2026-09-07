@@ -7,9 +7,26 @@ Stage 5 Engine: Crafts high-converting, personalized cold email copy and
 import urllib.parse
 import re
 
+import json
+import os
+
 class PitchGenerator:
-    def __init__(self, base_url: str = "https://leakgrader.com"):
+    def __init__(self, base_url: str = "https://leakgrader.com", storage_dir: str = None):
         self.base_url = base_url
+        self.storage_dir = storage_dir or os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "storage")
+
+    def _get_founder_whatsapp(self) -> str:
+        cfg_path = os.path.join(self.storage_dir, "mail_config.json")
+        if os.path.exists(cfg_path):
+            try:
+                with open(cfg_path, "r", encoding="utf-8") as f:
+                    cfg = json.load(f)
+                    phone = (cfg.get("whatsapp_phone") or "").strip()
+                    if phone:
+                        return re.sub(r'[^0-9]', '', phone)
+            except Exception:
+                pass
+        return "919876543210"
 
     def generate_pitch(self, business: dict, demo_meta: dict, classification: dict) -> dict:
         """
@@ -68,7 +85,7 @@ Would you be open to a quick 5-minute chat this week to review the demo together
 Best regards,
 
 Growth Engineering Team | LeakGrader
-Direct WhatsApp: https://wa.me/919876543210
+Direct WhatsApp: https://wa.me/{self._get_founder_whatsapp()}
 Website: https://leakgrader.com
 """
 

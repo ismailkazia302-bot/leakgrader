@@ -175,6 +175,15 @@ class FounderAnalyticsDashboard:
             pipeline_rows = """<tr><td colspan="16" style="padding:24px; text-align:center; color:#64748b;">No local business leads scanned yet. Enter a city and niche above and click "Run Automated Pipeline Scan".</td></tr>"""
         else:
             rows_list = []
+            def get_response_badge(lid, status):
+                s = str(status or 'Pending')
+                if s == 'Replied':
+                    return f'<button onclick="toggleLeadResponse(\'{lid}\', \'Booked\', this)" style="background:rgba(56,189,248,0.2); color:#38bdf8; border:1px solid rgba(56,189,248,0.4); padding:3px 8px; border-radius:12px; font-size:10px; font-weight:800; cursor:pointer;" title="Click to mark as Deal Booked">💬 Replied ➔</button>'
+                elif s == 'Booked':
+                    return f'<button onclick="toggleLeadResponse(\'{lid}\', \'Pending\', this)" style="background:rgba(16,185,129,0.25); color:#10b981; border:1px solid rgba(16,185,129,0.5); padding:3px 8px; border-radius:12px; font-size:10px; font-weight:900; cursor:pointer;" title="Click to toggle back">🎉 Booked ₹1L</button>'
+                else:
+                    return f'<button onclick="toggleLeadResponse(\'{lid}\', \'Replied\', this)" style="background:rgba(255,255,255,0.06); color:#94a3b8; border:1px solid rgba(255,255,255,0.15); padding:3px 8px; border-radius:12px; font-size:10px; font-weight:700; cursor:pointer;" title="Click to mark as Replied">Pending</button>'
+
             for item in pipeline_leads[::-1][:100]:
                 status = item.get("Status", "Pending")
                 if status == "No Website":
@@ -239,7 +248,9 @@ class FounderAnalyticsDashboard:
                   <td style="padding:10px 12px; white-space:nowrap;">{status_badge}</td>
                   <td style="padding:10px 12px; white-space:nowrap;"><span style="color:#38bdf8; font-weight:700;">{item.get('Redesign Sent', 'No')}</span></td>
                   <td style="padding:10px 12px; white-space:nowrap; color:#94a3b8;">{item.get('Email Sent', 'No')}</td>
-                  <td style="padding:10px 12px; white-space:nowrap;"><span style="background:rgba(16,185,129,0.1); color:#10b981; padding:2px 6px; border-radius:4px; font-size:10px; font-weight:700;">{item.get('Response', 'Pending')}</span></td>
+                  <td style="padding:10px 12px; white-space:nowrap;">
+                    {get_response_badge(lead_id, item.get('Response', 'Pending'))}
+                  </td>
                   <td style="padding:10px 12px; white-space:nowrap; text-align:right;">{price_badge}</td>
                   <td style="padding:10px 12px; white-space:nowrap; text-align:right;">
                     <div style="display:flex; gap:4px; justify-content:flex-end;">
@@ -869,6 +880,10 @@ class FounderAnalyticsDashboard:
             <div>
               <label style="font-size:10.5px; color:#94a3b8; font-weight:700; text-transform:uppercase; display:block; margin-bottom:4px;">Sender From Name</label>
               <input type="text" id="mail-fromname-inp" value="LeakGrader Growth Team" placeholder="LeakGrader Growth Team" style="width:100%; background:#0a0d14; border:1px solid rgba(255,255,255,0.15); border-radius:6px; padding:7px 10px; font-size:11.5px; color:#fff; outline:none;">
+            </div>
+            <div>
+              <label style="font-size:10.5px; color:#10b981; font-weight:700; text-transform:uppercase; display:block; margin-bottom:4px;">Your WhatsApp (For Direct Client Replies)</label>
+              <input type="text" id="mail-wa-phone-inp" placeholder="e.g. 919876543210" style="width:100%; background:#0a0d14; border:1px solid rgba(16,185,129,0.3); border-radius:6px; padding:7px 10px; font-size:11.5px; color:#fff; outline:none;">
             </div>
           </div>
           <div style="display:flex; justify-content:space-between; align-items:center; margin-top:14px; flex-wrap:wrap; gap:10px;">
@@ -1603,6 +1618,35 @@ class FounderAnalyticsDashboard:
       document.getElementById('pipeline-pitch-modal').style.display = 'flex';
     }}
 
+    async function toggleLeadResponse(leadId, nextStatus, btn) {{
+      if (!leadId) return;
+      const origText = btn.textContent;
+      btn.textContent = '⏳ ...';
+      try {{
+        const res = await fetch('/api/pipeline/update-status', {{
+          method: 'POST',
+          headers: {{ 'Content-Type': 'application/json' }},
+          body: JSON.stringify({{ lead_id: leadId, new_status: nextStatus }})
+        }});
+        const data = await res.json();
+        if (data.success) {{
+          if (nextStatus === 'Replied') {{
+            btn.outerHTML = '<button onclick="toggleLeadResponse(\'' + leadId + '\', \'Booked\', this)" style="background:rgba(56,189,248,0.2); color:#38bdf8; border:1px solid rgba(56,189,248,0.4); padding:3px 8px; border-radius:12px; font-size:10px; font-weight:800; cursor:pointer;" title="Click to mark as Deal Booked">💬 Replied ➔</button>';
+          }} else if (nextStatus === 'Booked') {{
+            btn.outerHTML = '<button onclick="toggleLeadResponse(\'' + leadId + '\', \'Pending\', this)" style="background:rgba(16,185,129,0.25); color:#10b981; border:1px solid rgba(16,185,129,0.5); padding:3px 8px; border-radius:12px; font-size:10px; font-weight:900; cursor:pointer;" title="Click to toggle back">🎉 Booked ₹1L</button>';
+          }} else {{
+            btn.outerHTML = '<button onclick="toggleLeadResponse(\'' + leadId + '\', \'Replied\', this)" style="background:rgba(255,255,255,0.06); color:#94a3b8; border:1px solid rgba(255,255,255,0.15); padding:3px 8px; border-radius:12px; font-size:10px; font-weight:700; cursor:pointer;" title="Click to mark as Replied">Pending</button>';
+          }}
+        }} else {{
+          btn.textContent = origText;
+          alert('Notice: ' + (data.error || 'Failed to update response'));
+        }}
+      }} catch(e) {{
+        btn.textContent = origText;
+        alert('Network error: ' + e.message);
+      }}
+    }}
+
     function closeLeadPitchModal() {{
       document.getElementById('pipeline-pitch-modal').style.display = 'none';
     }}
@@ -1812,6 +1856,7 @@ class FounderAnalyticsDashboard:
           if (c.from_name) document.getElementById('mail-fromname-inp').value = c.from_name;
           if (c.smtp_password) document.getElementById('mail-pass-inp').value = c.smtp_password;
           if (c.auto_send_qualifying !== undefined) document.getElementById('mail-autosend-cfg').checked = !!c.auto_send_qualifying;
+          if (c.whatsapp_phone) document.getElementById('mail-wa-phone-inp').value = c.whatsapp_phone;
           onMailProviderChange();
         }}
       }} catch (e) {{}}

@@ -573,6 +573,16 @@ def application(environ, start_response):
             start_response(status, response_headers)
             return [json.dumps(res).encode('utf-8')]
 
+        # Route: /api/pipeline/update-status
+        elif path == '/api/pipeline/update-status':
+            lead_id = body_json.get('lead_id', '')
+            new_status = body_json.get('new_status') or body_json.get('status', 'Replied')
+            res = PIPELINE_ORCHESTRATOR.update_lead_response(lead_id, new_status)
+            status = '200 OK' if res.get('success') else '400 Bad Request'
+            response_headers = [('Content-Type', 'application/json; charset=utf-8'), ('Access-Control-Allow-Origin', '*')]
+            start_response(status, response_headers)
+            return [json.dumps(res).encode('utf-8')]
+
         # Route: /api/pipeline/mail-config
         elif path == '/api/pipeline/mail-config':
             if body_json.get('smtp_password') == '••••••••':
