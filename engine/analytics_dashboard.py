@@ -879,11 +879,15 @@ class FounderAnalyticsDashboard:
             </div>
             <div>
               <label style="font-size:10.5px; color:#94a3b8; font-weight:700; text-transform:uppercase; display:block; margin-bottom:4px;">Sender From Name</label>
-              <input type="text" id="mail-fromname-inp" value="LeakGrader Growth Team" placeholder="LeakGrader Growth Team" style="width:100%; background:#0a0d14; border:1px solid rgba(255,255,255,0.15); border-radius:6px; padding:7px 10px; font-size:11.5px; color:#fff; outline:none;">
+              <input type="text" id="mail-fromname-inp" value="Growth Executive | LeakGrader" placeholder="Growth Executive | LeakGrader" style="width:100%; background:#0a0d14; border:1px solid rgba(255,255,255,0.15); border-radius:6px; padding:7px 10px; font-size:11.5px; color:#fff; outline:none;">
             </div>
             <div>
-              <label style="font-size:10.5px; color:#10b981; font-weight:700; text-transform:uppercase; display:block; margin-bottom:4px;">Your WhatsApp (For Direct Client Replies)</label>
-              <input type="text" id="mail-wa-phone-inp" placeholder="e.g. 919876543210" style="width:100%; background:#0a0d14; border:1px solid rgba(16,185,129,0.3); border-radius:6px; padding:7px 10px; font-size:11.5px; color:#fff; outline:none;">
+              <label style="font-size:10.5px; color:#10b981; font-weight:700; text-transform:uppercase; display:block; margin-bottom:4px;">🇮🇳 Indian Client WhatsApp</label>
+              <input type="text" id="mail-wa-indian-inp" value="+916363962640" placeholder="+916363962640" style="width:100%; background:#0a0d14; border:1px solid rgba(16,185,129,0.4); border-radius:6px; padding:7px 10px; font-size:11.5px; color:#fff; outline:none;">
+            </div>
+            <div>
+              <label style="font-size:10.5px; color:#38bdf8; font-weight:700; text-transform:uppercase; display:block; margin-bottom:4px;">🌍 Intl Client WhatsApp</label>
+              <input type="text" id="mail-wa-intl-inp" value="+966548905688" placeholder="+966548905688" style="width:100%; background:#0a0d14; border:1px solid rgba(56,189,248,0.4); border-radius:6px; padding:7px 10px; font-size:11.5px; color:#fff; outline:none;">
             </div>
           </div>
           <div style="display:flex; justify-content:space-between; align-items:center; margin-top:14px; flex-wrap:wrap; gap:10px;">
@@ -1856,7 +1860,8 @@ class FounderAnalyticsDashboard:
           if (c.from_name) document.getElementById('mail-fromname-inp').value = c.from_name;
           if (c.smtp_password) document.getElementById('mail-pass-inp').value = c.smtp_password;
           if (c.auto_send_qualifying !== undefined) document.getElementById('mail-autosend-cfg').checked = !!c.auto_send_qualifying;
-          if (c.whatsapp_phone) document.getElementById('mail-wa-phone-inp').value = c.whatsapp_phone;
+          if (c.indian_whatsapp) document.getElementById('mail-wa-indian-inp').value = c.indian_whatsapp;
+          if (c.intl_whatsapp) document.getElementById('mail-wa-intl-inp').value = c.intl_whatsapp;
           onMailProviderChange();
         }}
       }} catch (e) {{}}

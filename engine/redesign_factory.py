@@ -536,6 +536,9 @@ class RedesignFactory:
     </div>
     <div style="display:flex; align-items:center; gap:10px;">
       <span style="font-size:11px; color:#94a3b8;">Full Build Price: <strong style="color:#10b981;">{pitch_price}</strong></span>
+      <a href="https://wa.me/{'916363962640' if any(m in address.lower() for m in ['mumbai','delhi','bangalore','hyderabad','pune','chennai','india']) else '966548905688'}?text=Hi%20Executive%2C%20I%20am%20reviewing%20the%20redesign%20demo%20for%20{re.sub(r'[^a-zA-Z0-9]', '%20', name)}" target="_blank" style="background:#10b981; color:#ffffff; padding:6px 14px; border-radius:6px; font-weight:800; font-size:11px; text-decoration:none; display:inline-flex; align-items:center; gap:5px; margin-right:6px;">
+        <span>💬 WhatsApp Executive ➔</span>
+      </a>
       <a href="https://leakgrader.com/contact?subject=Redesign%20Claim%20for%20{re.sub(r'[^a-zA-Z0-9]', '%20', name)}" target="_blank" class="watermark-claim-btn">
         <span>Claim & Launch This Site ➔</span>
       </a>

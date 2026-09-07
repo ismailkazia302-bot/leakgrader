@@ -6,7 +6,6 @@ Stage 5 Engine: Crafts high-converting, personalized cold email copy and
 
 import urllib.parse
 import re
-
 import json
 import os
 
@@ -15,18 +14,34 @@ class PitchGenerator:
         self.base_url = base_url
         self.storage_dir = storage_dir or os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "storage")
 
-    def _get_founder_whatsapp(self) -> str:
+    def get_assigned_whatsapp(self, business: dict) -> str:
+        """
+        Returns +916363962640 for Indian clients and +966548905688 for international clients.
+        """
+        phone = (business.get("Phone") or business.get("phone") or "").strip()
+        address = (business.get("Address") or business.get("address") or "").strip().lower()
+
+        # Check if Indian client
+        indian_markers = [
+            "+91", "91 ", "mumbai", "delhi", "bangalore", "bengaluru", "hyderabad", 
+            "pune", "chennai", "kolkata", "ahmedabad", "gurgaon", "noida", "jaipur", "india"
+        ]
+        is_indian = phone.startswith("+91") or any(m in address for m in indian_markers)
+
+        # Check config overrides
         cfg_path = os.path.join(self.storage_dir, "mail_config.json")
         if os.path.exists(cfg_path):
             try:
                 with open(cfg_path, "r", encoding="utf-8") as f:
                     cfg = json.load(f)
-                    phone = (cfg.get("whatsapp_phone") or "").strip()
-                    if phone:
-                        return re.sub(r'[^0-9]', '', phone)
+                    if is_indian and cfg.get("indian_whatsapp"):
+                        return re.sub(r'[^0-9]', '', cfg["indian_whatsapp"])
+                    elif not is_indian and cfg.get("intl_whatsapp"):
+                        return re.sub(r'[^0-9]', '', cfg["intl_whatsapp"])
             except Exception:
                 pass
-        return "919876543210"
+
+        return "916363962640" if is_indian else "966548905688"
 
     def generate_pitch(self, business: dict, demo_meta: dict, classification: dict) -> dict:
         """
@@ -37,7 +52,7 @@ class PitchGenerator:
         address = (business.get("Address") or business.get("address") or "").strip()
         category = (business.get("Category") or business.get("category") or "Local Business").strip()
         status = business.get("Status", classification.get("Status", "Outdated"))
-        
+
         # Determine city
         city = "your city"
         if address:
@@ -48,6 +63,9 @@ class PitchGenerator:
         demo_id = demo_meta.get("demo_id", "")
         demo_link = f"{self.base_url}/preview/{demo_id}"
         price = demo_meta.get("pitch_price", "₹50,000")
+
+        # Routing WhatsApp number based on Indian vs International
+        wa_target = self.get_assigned_whatsapp(business)
 
         fail_reasons = classification.get("FailReasons", [])
         if not fail_reasons:
@@ -84,18 +102,16 @@ Would you be open to a quick 5-minute chat this week to review the demo together
 
 Best regards,
 
-Growth Engineering Team | LeakGrader
-Direct WhatsApp: https://wa.me/{self._get_founder_whatsapp()}
+Growth Executive | LeakGrader
+Direct WhatsApp: https://wa.me/{wa_target}
 Website: https://leakgrader.com
 """
 
         # --- WHATSAPP COPY ---
         wa_phone_clean = re.sub(r'[^0-9]', '', phone)
         wa_text = f"Hi {name}! Saw your {category} on Google in {city}. Noticed your site has high mobile dropoff, so our team pre-built a modern 1-page redesign demo for you here: {demo_link} . We can launch this complete setup for {price}. Would you like to review it?"
-        
-        wa_link = f"https://wa.me/{wa_phone_clean}?text={urllib.parse.quote(wa_text)}" if wa_phone_clean else ""
 
-        # Mailto link
+        wa_link = f"https://wa.me/{wa_phone_clean}?text={urllib.parse.quote(wa_text)}" if wa_phone_clean else ""
         mailto_link = f"mailto:?subject={urllib.parse.quote(subject)}&body={urllib.parse.quote(email_body)}"
 
         return {
@@ -105,5 +121,6 @@ Website: https://leakgrader.com
             "whatsapp_link": wa_link,
             "mailto_link": mailto_link,
             "quoted_price": price,
-            "demo_link": demo_link
+            "demo_link": demo_link,
+            "assigned_whatsapp": wa_target
         }

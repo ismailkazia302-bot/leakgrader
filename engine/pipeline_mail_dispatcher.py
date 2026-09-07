@@ -34,11 +34,13 @@ class PipelineMailDispatcher:
             "smtp_user": os.environ.get("SMTP_USER", os.environ.get("GMAIL_USER", "ismailkazia302@gmail.com")),
             "smtp_password": os.environ.get("SMTP_PASSWORD", os.environ.get("GMAIL_APP_PASSWORD", "")),
             "from_email": os.environ.get("FROM_EMAIL", "growth@leakgrader.com"),
-            "from_name": "LeakGrader Growth Team",
+            "from_name": "Growth Executive | LeakGrader",
             "brevo_api_key": os.environ.get("BREVO_API_KEY", ""),
             "resend_api_key": os.environ.get("RESEND_API_KEY", ""),
             "webhook_url": os.environ.get("MAIL_WEBHOOK_URL", "http://localhost:5678/webhook/client-outreach-email"),
-            "auto_send_qualifying": False
+            "auto_send_qualifying": False,
+            "indian_whatsapp": "+916363962640",
+            "intl_whatsapp": "+966548905688"
         }
         if os.path.exists(self.config_file):
             try:
@@ -83,13 +85,13 @@ class PipelineMailDispatcher:
 
         provider = self.config.get("provider", "gmail_smtp")
         from_email = self.config.get("from_email") or self.config.get("smtp_user") or "growth@leakgrader.com"
-        from_name = self.config.get("from_name", "LeakGrader Growth Team")
+        from_name = self.config.get("from_name", "Growth Executive | LeakGrader")
 
         html_content = html_body or f"""<!DOCTYPE html>
 <html>
 <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #1e293b; background: #f8fafc; padding: 24px;">
   <div style="max-width: 600px; margin: 0 auto; background: #ffffff; border: 1px solid #e2e8f0; border-radius: 12px; padding: 28px; box-shadow: 0 4px 12px rgba(0,0,0,0.05);">
-    <div style="font-size: 14px; color: #0284c7; font-weight: 800; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 12px;">LeakGrader • Digital Growth Team</div>
+    <div style="font-size: 14px; color: #0284c7; font-weight: 800; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 12px;">LeakGrader • Growth Executive</div>
     <div style="white-space: pre-line; font-size: 14px; color: #334155; line-height: 1.65;">{text_body}</div>
     <hr style="border: none; border-top: 1px solid #e2e8f0; margin: 24px 0 16px;">
     <div style="font-size: 12px; color: #94a3b8; line-height: 1.5;">
