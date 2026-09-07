@@ -372,16 +372,19 @@ class PipelineOrchestrator:
         prefixes = [
             "Apex", "Prime", "Royal", "Elite", "City", "Metropolitan", "Global", "Sterling",
             "Grand", "Zenith", "Modern", "Care", "First Choice", "Imperial", "Vanguard",
-            "Central", "Signature", "Heritage", "Paramount", "Prestige"
+            "Central", "Signature", "Heritage", "Paramount", "Prestige", "Crown", "Pinnacle",
+            "Nova", "Beacon", "Summit", "Nexus", "Vertex", "Oasis", "Aura", "Horizon",
+            "Pulse", "Crest", "Regal", "Infinity", "Alpha", "Radiant", "Elevate", "Frontier",
+            "Matrix", "Quantum", "Velox", "Titan", "Ascend", "Prism", "Sovereign"
         ]
 
         # Suffix variations
         suffixes = {
-            "dental": ["Dental Clinic", "Dental Care & Implant Centre", "Multispeciality Dental", "Smile Studio"],
-            "real estate": ["Realty & Associates", "Properties Group", "Luxury Living Spaces", "Estates Advisory"],
-            "salon": ["Luxury Hair & Beauty Salon", "Makeover Studio", "Aesthetic Spa & Lounge", "Unisex Salon"],
-            "legal": ["Law Chambers", "Legal Associates & Advocates", "Corporate Legal Counsel", "Litigation Partners"],
-            "default": ["Enterprises", "Services & Co.", "Solutions Group", "Care Centre"]
+            "dental": ["Dental Clinic", "Dental Care & Implant Centre", "Multispeciality Dental", "Smile Studio", "Oral Health Specialists", "Family Dental Practice"],
+            "real estate": ["Realty & Associates", "Properties Group", "Luxury Living Spaces", "Estates Advisory", "Prime Realty Partners", "Commercial Spaces"],
+            "salon": ["Luxury Hair & Beauty Salon", "Makeover Studio", "Aesthetic Spa & Lounge", "Unisex Salon", "Skin & Hair Studio", "Grooming Lounge"],
+            "legal": ["Law Chambers", "Legal Associates & Advocates", "Corporate Legal Counsel", "Litigation Partners", "Advocates & Legal Advisors"],
+            "default": ["Enterprises", "Services & Co.", "Solutions Group", "Care Centre", "Consultancy Group", "Associates"]
         }
 
         key = "default"
@@ -394,14 +397,16 @@ class PipelineOrchestrator:
         localities = [
             f"Downtown, {city_title}", f"Sector 4, {city_title}", f"Main Commercial Road, {city_title}",
             f"Opposite Central Station, {city_title}", f"Near Metro Pillar 140, {city_title}",
-            f"Tech Park Avenue, {city_title}", f"West Extension, {city_title}", f"Ring Road, {city_title}"
+            f"Tech Park Avenue, {city_title}", f"West Extension, {city_title}", f"Ring Road, {city_title}",
+            f"Civil Lines, {city_title}", f"Commercial Zone Phase 2, {city_title}", f"High Street Plaza, {city_title}",
+            f"Market Square, {city_title}", f"Business District, {city_title}", f"Airport Road, {city_title}"
         ]
 
-        count = min(max_results, 35)
+        count = min(max_results, 250)
         for i in range(count):
             pref = prefixes[i % len(prefixes)]
-            suff = suffix_list[i % len(suffix_list)]
-            biz_name = f"{pref} {suff}"
+            suff = suffix_list[(i // len(prefixes)) % len(suffix_list)]
+            biz_name = f"{pref} {suff}" if i < len(prefixes) * len(suffix_list) else f"{pref} {suff} #{i+1}"
             clean_slug = re.sub(r'[^a-zA-Z0-9]', '', biz_name.lower())
 
             # Mix of no website, outdated website, and modern website
