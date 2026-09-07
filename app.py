@@ -1378,6 +1378,16 @@ class MastermindRequestHandler(BaseHTTPRequestHandler):
             self.wfile.write(json.dumps(res).encode("utf-8"))
             return
 
+        # --- TEST LIVE EMAIL TRANSMISSION ---
+        elif path == "/api/pipeline/test-email":
+            body = self.rfile.read(content_length)
+            data = json.loads(body.decode("utf-8")) if content_length > 0 else {}
+            target_email = data.get("email") or PIPELINE_MAIL_DISPATCHER.config.get("smtp_user", "ismailkazia302@gmail.com")
+            res = PIPELINE_MAIL_DISPATCHER.send_test_email(target_email)
+            self._set_headers(200 if res.get("success") else 400)
+            self.wfile.write(json.dumps(res).encode("utf-8"))
+            return
+
         # --- SAVE FREE MAIL SERVICE CONFIGURATION ---
         elif path == "/api/pipeline/mail-config":
             body = self.rfile.read(content_length)

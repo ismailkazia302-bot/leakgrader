@@ -853,7 +853,7 @@ class FounderAnalyticsDashboard:
             <h4 style="font-size:12px; font-weight:800; color:#38bdf8; text-transform:uppercase; margin:0; letter-spacing:0.5px;">
               Free Mail Service Portal (Direct Outreach Delivery)
             </h4>
-            <span id="mail-portal-badge" style="background:rgba(16,185,129,0.15); color:#10b981; border:1px solid rgba(16,185,129,0.3); font-size:10px; padding:2px 8px; border-radius:12px; font-weight:800;">Gmail SMTP (500/day Free)</span>
+            <span id="mail-portal-badge" style="background:rgba(245,158,11,0.18); color:#fbbf24; border:1px solid rgba(245,158,11,0.4); font-size:10px; padding:2px 8px; border-radius:12px; font-weight:800;">⚠️ Password Missing (Queued Locally)</span>
           </div>
           <span id="mail-toggle-icon" style="color:#94a3b8; font-size:12px; font-weight:700;">⚙️ Configure / Expand ▼</span>
         </div>
@@ -895,7 +895,10 @@ class FounderAnalyticsDashboard:
               <input type="checkbox" id="mail-autosend-cfg" style="accent-color:#38bdf8; width:15px; height:15px;">
               Always auto-send emails to qualifying leads during background runs
             </label>
-            <div style="display:flex; gap:8px;">
+            <div style="display:flex; gap:8px; align-items:center;">
+              <button onclick="sendTestEmail()" id="btn-test-mail" style="background:rgba(255,255,255,0.08); border:1px solid rgba(255,255,255,0.25); color:#fff; padding:7px 14px; border-radius:6px; font-size:11px; font-weight:800; cursor:pointer;">
+                🧪 Send Test Email to Verify
+              </button>
               <button onclick="saveMailSettings()" style="background:linear-gradient(135deg, #0284c7, #2563eb); color:#fff; border:none; padding:7px 16px; border-radius:6px; font-size:11px; font-weight:800; cursor:pointer;">
                 💾 Save Mail Settings
               </button>
@@ -1804,6 +1807,39 @@ class FounderAnalyticsDashboard:
         }}
       }} catch(e) {{
         alert('Failed to save GMB settings: ' + e.message);
+      }}
+    }}
+
+    async function sendTestEmail() {{
+      const btn = document.getElementById('btn-test-mail');
+      const email = document.getElementById('mail-user-inp').value.trim();
+      if (!email) {{
+        alert('Please enter your email address first.');
+        return;
+      }}
+      btn.disabled = true;
+      btn.textContent = '⏳ Sending Live Test...';
+      try {{
+        const res = await fetch('/api/pipeline/test-email', {{
+          method: 'POST',
+          headers: {{ 'Content-Type': 'application/json' }},
+          body: JSON.stringify({{ email: email }})
+        }});
+        const data = await res.json();
+        if (data.success) {{
+          if (data.spooled) {{
+            alert('⚠️ ' + data.message + '\n\n(Add your 16-character Google App Password to transmit live over the internet!)');
+          }} else {{
+            alert('🎉 SUCCESS! ' + data.message + '\n\nCheck your inbox (' + email + ') right now!');
+          }}
+        }} else {{
+          alert('❌ Delivery Notice: ' + (data.error || 'Failed to send test email.'));
+        }}
+      }} catch (err) {{
+        alert('Error: ' + err.message);
+      }} finally {{
+        btn.disabled = false;
+        btn.textContent = '🧪 Send Test Email to Verify';
       }}
     }}
 

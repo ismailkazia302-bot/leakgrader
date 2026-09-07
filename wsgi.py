@@ -583,6 +583,15 @@ def application(environ, start_response):
             start_response(status, response_headers)
             return [json.dumps(res).encode('utf-8')]
 
+        # Route: /api/pipeline/test-email
+        elif path == '/api/pipeline/test-email':
+            target_email = body_json.get('email') or PIPELINE_MAIL_DISPATCHER.config.get('smtp_user', 'ismailkazia302@gmail.com')
+            res = PIPELINE_MAIL_DISPATCHER.send_test_email(target_email)
+            status = '200 OK' if res.get('success') else '400 Bad Request'
+            response_headers = [('Content-Type', 'application/json; charset=utf-8'), ('Access-Control-Allow-Origin', '*')]
+            start_response(status, response_headers)
+            return [json.dumps(res).encode('utf-8')]
+
         # Route: /api/pipeline/mail-config
         elif path == '/api/pipeline/mail-config':
             if body_json.get('smtp_password') == '••••••••':

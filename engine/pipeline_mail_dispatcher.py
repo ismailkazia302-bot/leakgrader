@@ -254,6 +254,32 @@ class PipelineMailDispatcher:
             "message": f"Email verified and spooled for {clean_to}. (Configure Gmail App Password or Brevo key in Mail Settings for live transmission)"
         }
 
+    def send_test_email(self, target_email: str) -> dict:
+        """Sends a live test verification email to confirm credentials are live."""
+        subject = "🧪 LeakGrader Live Outreach Gateway Test Verification"
+        body = """Hi Growth Executive,
+
+This is a live test email confirming that your Free Mail Service Gateway is active and successfully transmitting emails over the internet!
+
+Outreach Settings:
+- Sender: {from_name}
+- Provider: {provider}
+- Indian WhatsApp: {ind_wa}
+- Intl WhatsApp: {intl_wa}
+
+Any cold outreach pitches you send to clients from the Founder Dashboard will now be delivered directly to prospective client inboxes.
+
+Best regards,
+LeakGrader Engineering Gateway
+https://leakgrader.com
+""".format(
+            from_name=self.config.get("from_name", "Growth Executive"),
+            provider=self.config.get("provider", "gmail_smtp"),
+            ind_wa=self.config.get("indian_whatsapp", "+916363962640"),
+            intl_wa=self.config.get("intl_whatsapp", "+966548905688")
+        )
+        return self.send_email(to_email=target_email, to_name="Growth Executive", subject=subject, text_body=body)
+
     def send_lead_pitch(self, lead: dict) -> dict:
         """Dispatches the customized pitch email for a specific lead."""
         name = lead.get("Business Name") or lead.get("name") or "Business Owner"
