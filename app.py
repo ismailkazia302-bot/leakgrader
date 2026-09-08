@@ -46,6 +46,17 @@ from engine.analytics_dashboard import FounderAnalyticsDashboard
 from engine.email_vault import EmailVaultEngine
 from engine.master_website_manager import MasterWebsiteManager
 from engine.social_auto_poster import SocialAutoPoster
+from engine.security_guard import (
+    is_lockdown_enabled,
+    require_authenticated_user,
+    require_active_entitlement,
+    require_admin,
+    require_workspace_access,
+    require_resource_ownership,
+    verify_lemonsqueezy_webhook,
+    validate_url_ssrf_safe,
+    get_auth_error_status
+)
 
 # Configuration
 PORT = int(os.environ.get("PORT", 8090))
@@ -413,8 +424,8 @@ class MastermindRequestHandler(BaseHTTPRequestHandler):
         self.send_response(status)
         self.send_header("Content-Type", content_type)
         self.send_header("Access-Control-Allow-Origin", "*")
-        self.send_header("Access-Control-Allow-Methods", "GET, POST, DELETE, OPTIONS")
-        self.send_header("Access-Control-Allow-Headers", "Content-Type")
+        self.send_header("Access-Control-Allow-Methods", "GET, HEAD, POST, PUT, PATCH, DELETE, OPTIONS")
+        self.send_header("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Signature")
         for h, v in SECURITY_HEADERS:
             self.send_header(h, v)
         if extra_headers:
@@ -422,12 +433,70 @@ class MastermindRequestHandler(BaseHTTPRequestHandler):
                 self.send_header(h, v)
         self.end_headers()
 
+    def _check_admin_access(self, is_api=True) -> bool:
+        if is_lockdown_enabled():
+            if is_api:
+                self._set_headers(404, "application/json")
+                self.wfile.write(json.dumps({"error": "not_found"}).encode("utf-8"))
+            else:
+                self._set_headers(404, "text/plain")
+                self.wfile.write(b"404 Not Found")
+            return False
+        is_adm, err = require_admin(self.headers)
+        if not is_adm:
+            if is_api:
+                self._set_headers(403, "application/json")
+                self.wfile.write(json.dumps({"error": "admin_authorization_required", "details": err}).encode("utf-8"))
+            else:
+                self._set_headers(404, "text/plain")
+                self.wfile.write(b"404 Not Found")
+            return False
+        return True
+
     def do_OPTIONS(self):
+        self._set_headers(200)
+
+    def do_PUT(self):
+        self._set_headers(405)
+        self.wfile.write(json.dumps({"error": "Method Not Allowed"}).encode("utf-8"))
+
+    def do_PATCH(self):
+        self._set_headers(405)
+        self.wfile.write(json.dumps({"error": "Method Not Allowed"}).encode("utf-8"))
+
+    def do_HEAD(self):
+        parsed = urlparse(self.path)
+        raw_path = unquote(parsed.path).rstrip('/') or '/'
+        path = raw_path.lower()
+        if path in ["/analytics", "/dashboard", "/founder"]:
+            if not self._check_admin_access(is_api=False):
+                return
+            self._set_headers(200, "text/html; charset=utf-8")
+            return
+        if path.startswith("/api/documents") or path.startswith("/report/dossier/"):
+            self._set_headers(503)
+            return
+        if path.startswith("/api/"):
+            if is_lockdown_enabled():
+                if any(x in path for x in ["/leads", "/content", "/checkout", "/dossier"]):
+                    self._set_headers(503)
+                    return
+                self._set_headers(404)
+                return
+            if any(path == p or path.startswith(p + "/") for p in [
+                "/api/analytics", "/api/seo/recent-activity", "/api/manager",
+                "/api/website-manager", "/api/social", "/api/traffic-blaster",
+                "/api/reels", "/api/pipeline", "/api/subscribers", "/api/contact/list",
+                "/api/booking/list"
+            ]):
+                if not self._check_admin_access(is_api=True):
+                    return
         self._set_headers(200)
 
     def do_GET(self):
         parsed = urlparse(self.path)
-        path = parsed.path
+        raw_path = unquote(parsed.path).rstrip('/') or '/'
+        path = raw_path.lower()
 
         # Record Live Visitor Telemetry
         client_ip = self.headers.get("X-Forwarded-For") or self.headers.get("CF-Connecting-IP") or (self.client_address[0] if hasattr(self, 'client_address') else "127.0.0.1")
@@ -555,6 +624,10 @@ class MastermindRequestHandler(BaseHTTPRequestHandler):
             return
 
         elif path.startswith("/report/dossier/") or path == "/api/audit/dossier":
+            if is_lockdown_enabled():
+                self._set_headers(503, "application/json" if path.startswith("/api/") else "text/plain")
+                self.wfile.write(json.dumps({"error": "feature_temporarily_unavailable"}).encode("utf-8"))
+                return
             query = unquote(parsed.query)
             target = "Apex Enterprise"
             if "company=" in query:
@@ -636,6 +709,8 @@ class MastermindRequestHandler(BaseHTTPRequestHandler):
             return
 
         elif path in ["/analytics", "/dashboard", "/founder"]:
+            if not self._check_admin_access(is_api=False):
+                return
             dashboard_html = ANALYTICS_DASHBOARD.render_html()
             self.send_response(200)
             self.send_header("Content-Type", "text/html; charset=utf-8")
@@ -644,6 +719,8 @@ class MastermindRequestHandler(BaseHTTPRequestHandler):
             return
 
         elif path == "/api/analytics/live":
+            if not self._check_admin_access(is_api=True):
+                return
             self._set_headers(200)
             self.wfile.write(json.dumps(ANALYTICS_DASHBOARD.get_live_data()).encode("utf-8"))
             return
@@ -655,6 +732,8 @@ class MastermindRequestHandler(BaseHTTPRequestHandler):
             return
 
         elif path == "/api/seo/recent-activity":
+            if not self._check_admin_access(is_api=True):
+                return
             from engine.backlink_ledger import BacklinkLedgerEngine
             ledger = BacklinkLedgerEngine(STORAGE_DIR)
             summary = ledger.get_daily_summary()
@@ -674,89 +753,53 @@ class MastermindRequestHandler(BaseHTTPRequestHandler):
             return
 
         elif path in ["/api/manager/status", "/api/website-manager/status"]:
+            if not self._check_admin_access(is_api=True):
+                return
             report = WEBSITE_MANAGER.run_full_management_cycle()
             self._set_headers(200)
             self.wfile.write(json.dumps(report).encode("utf-8"))
             return
 
         elif path == "/api/social/feed":
+            if not self._check_admin_access(is_api=True):
+                return
             feed = SOCIAL_POSTER.get_feed()
             self._set_headers(200)
             self.wfile.write(json.dumps(feed).encode("utf-8"))
             return
 
         elif path == "/api/traffic-blaster/status":
+            if not self._check_admin_access(is_api=True):
+                return
             blaster_data = TRAFFIC_BLASTER.history[-1] if TRAFFIC_BLASTER.history else {}
             self._set_headers(200)
             self.wfile.write(json.dumps({"status": "SUCCESS", "latest_blast": blaster_data, "total_blasts": len(TRAFFIC_BLASTER.history)}).encode("utf-8"))
             return
 
         elif path == "/api/reels/feed":
+            if not self._check_admin_access(is_api=True):
+                return
             self._set_headers(200)
             self.wfile.write(json.dumps(VIRAL_REEL_STUDIO.get_feed()).encode("utf-8"))
             return
 
-        # 2. OmniBrain Document Endpoints
-        elif path == "/api/documents":
-            doc_list = []
-            for doc_id, doc in ALL_DOCUMENTS.items():
-                doc_list.append({
-                    "id": doc_id,
-                    "name": doc["name"],
-                    "chunks": len(doc["chunks"]),
-                    "size": doc.get("size", 0),
-                    "type": doc.get("type", "file")
-                })
-            stats = {
-                "total_docs": len(ALL_DOCUMENTS),
-                "total_chunks": len(ALL_CHUNKS),
-                "total_leads": len(LEADS),
-                "total_bookings": len(BOOKINGS),
-                "total_audits": len(AUDITS)
-            }
-            self._set_headers(200)
-            self.wfile.write(json.dumps({"documents": doc_list, "stats": stats}).encode("utf-8"))
-            return
-
-        elif path.startswith("/api/documents/download/"):
-            doc_id = unquote(path.split("/api/documents/download/")[-1])
-            doc = ALL_DOCUMENTS.get(doc_id)
-            if not doc:
-                self._set_headers(404)
-                self.wfile.write(json.dumps({"success": False, "error": "Document not found"}).encode("utf-8"))
-                return
-
-            file_path = doc.get("file_path")
-            doc_name = doc.get("name", "document.txt")
-            file_bytes = b""
-            if file_path and os.path.isfile(file_path):
-                try:
-                    with open(file_path, "rb") as f:
-                        file_bytes = f.read()
-                except Exception:
-                    file_bytes = b""
-            if not file_bytes:
-                text_content = "\n\n".join([c.get("content", "") for c in doc.get("chunks", [])])
-                file_bytes = text_content.encode("utf-8")
-
-            guessed_type = mimetypes.guess_type(doc_name)[0] or "application/octet-stream"
-            self.send_response(200)
-            self.send_header("Content-Type", guessed_type)
-            self.send_header("Content-Disposition", f'attachment; filename="{doc_name}"')
-            self.send_header("Content-Length", str(len(file_bytes)))
-            for sec_k, sec_v in SECURITY_HEADERS:
-                self.send_header(sec_k, sec_v)
-            self.end_headers()
-            self.wfile.write(file_bytes)
+        # 2. OmniBrain Document Endpoints - CONTAINED (HTTP 503 IN SPRINT 0)
+        elif path == "/api/documents" or path.startswith("/api/documents/"):
+            self._set_headers(503)
+            self.wfile.write(json.dumps({"error": "feature_temporarily_unavailable"}).encode("utf-8"))
             return
 
         # 3. LeadPulse Endpoints
         elif path == "/api/leads/list":
+            if not self._check_admin_access(is_api=True):
+                return
             self._set_headers(200)
             self.wfile.write(json.dumps({"leads": LEADS}).encode("utf-8"))
             return
 
         elif path == "/api/leads/export-csv":
+            if not self._check_admin_access(is_api=True):
+                return
             csv_data = LEAD_AGENT.export_leads_to_csv(LEADS)
             self.send_response(200)
             self.send_header("Content-Type", "text/csv; charset=utf-8")
@@ -767,6 +810,8 @@ class MastermindRequestHandler(BaseHTTPRequestHandler):
 
         # 4. BookFlow Endpoints
         elif path == "/api/booking/list":
+            if not self._check_admin_access(is_api=True):
+                return
             self._set_headers(200)
             self.wfile.write(json.dumps({"bookings": BOOKINGS}).encode("utf-8"))
             return
@@ -785,11 +830,15 @@ class MastermindRequestHandler(BaseHTTPRequestHandler):
 
         # 7. Subscribers & Lead Vault Endpoints
         elif path == "/api/subscribers/list":
+            if not self._check_admin_access(is_api=True):
+                return
             self._set_headers(200)
             self.wfile.write(json.dumps({"subscribers": EMAIL_VAULT.get_all_subscribers()}).encode("utf-8"))
             return
 
         elif path == "/api/subscribers/export-csv":
+            if not self._check_admin_access(is_api=True):
+                return
             csv_data = EMAIL_VAULT.export_csv()
             self.send_response(200)
             self.send_header("Content-Type", "text/csv; charset=utf-8")
@@ -800,12 +849,16 @@ class MastermindRequestHandler(BaseHTTPRequestHandler):
 
         # 8. Inbound Contact Inquiries Endpoints
         elif path == "/api/contact/list":
+            if not self._check_admin_access(is_api=True):
+                return
             self._set_headers(200)
             messages = CONTACT_ENGINE.get_all_messages()
             self.wfile.write(json.dumps({"success": True, "messages": messages, "total": len(messages)}).encode("utf-8"))
             return
 
         elif path == "/api/contact/export-csv":
+            if not self._check_admin_access(is_api=True):
+                return
             csv_data = CONTACT_ENGINE.export_csv()
             self.send_response(200)
             self.send_header("Content-Type", "text/csv; charset=utf-8")
@@ -850,11 +903,15 @@ class MastermindRequestHandler(BaseHTTPRequestHandler):
                 return
 
         elif path == "/api/pipeline/status":
+            if not self._check_admin_access(is_api=True):
+                return
             self._set_headers(200)
             self.wfile.write(json.dumps(PIPELINE_ORCHESTRATOR.get_status()).encode("utf-8"))
             return
 
         elif path == "/api/pipeline/ledger":
+            if not self._check_admin_access(is_api=True):
+                return
             leads = PIPELINE_ORCHESTRATOR.get_ledger()
             stats = PIPELINE_ORCHESTRATOR.get_stats()
             self._set_headers(200)
@@ -862,6 +919,8 @@ class MastermindRequestHandler(BaseHTTPRequestHandler):
             return
 
         elif path == "/api/pipeline/export-csv":
+            if not self._check_admin_access(is_api=True):
+                return
             csv_data = PIPELINE_ORCHESTRATOR.export_csv()
             self.send_response(200)
             self.send_header("Content-Type", "text/csv; charset=utf-8")
@@ -871,6 +930,8 @@ class MastermindRequestHandler(BaseHTTPRequestHandler):
             return
 
         elif path == "/api/pipeline/mail-config":
+            if not self._check_admin_access(is_api=True):
+                return
             cfg = dict(PIPELINE_MAIL_DISPATCHER.config)
             if cfg.get("smtp_password"):
                 cfg["smtp_password"] = "••••••••"
@@ -883,6 +944,8 @@ class MastermindRequestHandler(BaseHTTPRequestHandler):
             return
 
         elif path == "/api/pipeline/gmb-config":
+            if not self._check_admin_access(is_api=True):
+                return
             cfg = PIPELINE_ORCHESTRATOR._load_gmb_config()
             masked = dict(cfg)
             if masked.get("google_places_api_key"):
@@ -897,8 +960,13 @@ class MastermindRequestHandler(BaseHTTPRequestHandler):
 
 
 
-        # Static Web Files
-        file_path = path.lstrip("/")
+        # Static Web Files & Unknown Endpoint Fallback
+        if path.startswith("/api/"):
+            self._set_headers(404, "application/json")
+            self.wfile.write(json.dumps({"error": "Endpoint not found"}).encode("utf-8"))
+            return
+
+        file_path = raw_path.lstrip("/")
         if not file_path or file_path == "":
             file_path = "index.html"
 
@@ -925,11 +993,23 @@ class MastermindRequestHandler(BaseHTTPRequestHandler):
 
     def do_POST(self):
         parsed = urlparse(self.path)
-        path = parsed.path
+        raw_path = unquote(parsed.path).rstrip('/') or '/'
+        path = raw_path.lower()
         content_length = int(self.headers.get("Content-Length", 0))
 
+        # --- LEMON SQUEEZY PAYMENT WEBHOOK (BUG-05) ---
+        if path in ["/api/payment/webhook", "/api/webhook/lemonsqueezy"]:
+            raw_body = self.rfile.read(content_length) if content_length > 0 else b""
+            sig = self.headers.get("X-Signature", "") or self.headers.get("x-signature", "")
+            is_valid, msg, status_code, details = verify_lemonsqueezy_webhook(raw_body, sig)
+            self._set_headers(status_code)
+            resp_payload = {"success": is_valid, "message": msg}
+            resp_payload.update(details)
+            self.wfile.write(json.dumps(resp_payload).encode("utf-8"))
+            return
+
         # --- 1. VIRAL 10-SECOND AUDIT ENGINE ---
-        if path in ["/api/audit/run", "/api/audit/scan"]:
+        elif path in ["/api/audit/run", "/api/audit/scan"]:
             body = self.rfile.read(content_length)
             data = json.loads(body.decode("utf-8")) if content_length > 0 else {}
             company_or_url = data.get("url_or_company") or data.get("domain") or data.get("company", "Apex Global Real Estate")
@@ -937,10 +1017,21 @@ class MastermindRequestHandler(BaseHTTPRequestHandler):
             monthly_visitors = data.get("monthly_visitors")
             avg_deal_value = data.get("avg_deal_value") or data.get("deal_value")
 
+            # SSRF Protection Check
+            if company_or_url:
+                is_safe, safe_target, ssrf_err = validate_url_ssrf_safe(company_or_url)
+                if not is_safe:
+                    self._set_headers(400)
+                    self.wfile.write(json.dumps({"error": "prohibited_target_address", "details": ssrf_err}).encode("utf-8"))
+                    return
+
             audit_result = AUDIT_ENGINE.run_instant_audit(company_or_url, industry, monthly_visitors=monthly_visitors, avg_deal_value=avg_deal_value)
-            global AUDITS
-            AUDITS.append(audit_result)
-            save_audits()
+            
+            # Disable scanner file persistence during lockdown mode
+            if not is_lockdown_enabled():
+                global AUDITS
+                AUDITS.append(audit_result)
+                save_audits()
 
             self._set_headers(200)
             resp_dict = {"success": True, "audit": audit_result}
@@ -965,9 +1056,21 @@ class MastermindRequestHandler(BaseHTTPRequestHandler):
 
         # --- 2. AUTOMATED CHECKOUT GATEWAY ---
         elif path == "/api/checkout/create":
-            body = self.rfile.read(content_length)
-            data = json.loads(body.decode("utf-8"))
+            if is_lockdown_enabled():
+                self._set_headers(503)
+                self.wfile.write(json.dumps({"error": "feature_temporarily_unavailable"}).encode("utf-8"))
+                return
+
+            body = self.rfile.read(content_length) if content_length > 0 else b""
+            try:
+                data = json.loads(body.decode("utf-8")) if body else {}
+            except Exception:
+                data = {}
             plan_key = data.get("plan_key", "micro_audit")
+            if plan_key not in PLANS:
+                self._set_headers(400)
+                self.wfile.write(json.dumps({"error": "invalid_plan_identifier"}).encode("utf-8"))
+                return
             email = data.get("email", "client@company.com")
 
             order = PAYMENT_ENGINE.create_checkout_session(plan_key, customer_email=email)
@@ -989,45 +1092,74 @@ class MastermindRequestHandler(BaseHTTPRequestHandler):
             self.wfile.write(json.dumps(result).encode("utf-8"))
             return
 
-        # --- 3. LEADPULSE AI ENDPOINTS ---
-        elif path == "/api/leads/generate":
-            body = self.rfile.read(content_length)
-            data = json.loads(body.decode("utf-8"))
-            industry = data.get("industry", "Real Estate")
-            location = data.get("location", "Dubai, UAE")
-            service = data.get("service", "24/7 AI Sales Closer")
-            count = int(data.get("count", 5))
+        # --- 3. LEADPULSE AI ENDPOINTS (PAID ENTITLEMENT REQUIRED - BUG-02) ---
+        elif path in ["/api/leads/generate", "/api/leads/clear"]:
+            if is_lockdown_enabled():
+                self._set_headers(503)
+                self.wfile.write(json.dumps({"error": "feature_temporarily_unavailable"}).encode("utf-8"))
+                return
 
-            new_leads = LEAD_AGENT.generate_leads(industry, location, service, count)
-            global LEADS
-            existing_ids = [n.get("id") for n in new_leads]
-            LEADS = new_leads + [x for x in LEADS if x.get("id") not in existing_ids][:30]
-            save_leads()
+            body = self.rfile.read(content_length) if content_length > 0 else b""
+            try:
+                data = json.loads(body.decode("utf-8")) if body else {}
+            except Exception:
+                data = {}
 
-            self._set_headers(200)
-            self.wfile.write(json.dumps({"success": True, "generated_count": len(new_leads), "leads": new_leads}).encode("utf-8"))
-            return
+            # Strict server-side entitlement check (BUG-02)
+            is_auth, user_ctx, err = require_authenticated_user(self.headers, data)
+            if not is_auth:
+                status_code = get_auth_error_status(err)
+                self._set_headers(status_code)
+                self.wfile.write(json.dumps({"error": err, "details": err}).encode("utf-8"))
+                return
 
-        elif path == "/api/leads/clear":
-            LEADS.clear()
-            save_leads()
-            self._set_headers(200)
-            self.wfile.write(json.dumps({"success": True}).encode("utf-8"))
-            return
+            has_ent, ent_err = require_active_entitlement(user_ctx, "b2b_leads")
+            if not has_ent:
+                self._set_headers(403)
+                self.wfile.write(json.dumps({"error": "feature_not_entitled", "details": ent_err}).encode("utf-8"))
+                return
+
+            if path == "/api/leads/generate":
+                industry = data.get("industry", "Real Estate")
+                location = data.get("location", "Dubai, UAE")
+                service = data.get("service", "24/7 AI Sales Closer")
+                count = int(data.get("count", 5))
+
+                new_leads = LEAD_AGENT.generate_leads(industry, location, service, count)
+                global LEADS
+                existing_ids = [n.get("id") for n in new_leads]
+                LEADS = new_leads + [x for x in LEADS if x.get("id") not in existing_ids][:30]
+                save_leads()
+
+                self._set_headers(200)
+                self.wfile.write(json.dumps({"success": True, "generated_count": len(new_leads), "leads": new_leads}).encode("utf-8"))
+                return
+            else:
+                LEADS.clear()
+                save_leads()
+                self._set_headers(200)
+                self.wfile.write(json.dumps({"success": True}).encode("utf-8"))
+                return
 
         elif path in ["/api/manager/solve-all", "/api/website-manager/auto-heal"]:
+            if not self._check_admin_access(is_api=True):
+                return
             report = WEBSITE_MANAGER.run_full_management_cycle()
             self._set_headers(200)
             self.wfile.write(json.dumps({"success": True, "report": report}).encode("utf-8"))
             return
 
         elif path == "/api/social/generate":
+            if not self._check_admin_access(is_api=True):
+                return
             bundle = SOCIAL_POSTER.generate_next_social_post()
             self._set_headers(200)
             self.wfile.write(json.dumps({"success": True, "post": bundle}).encode("utf-8"))
             return
 
         elif path == "/api/social/dispatch":
+            if not self._check_admin_access(is_api=True):
+                return
             content_length = int(self.headers.get("Content-Length", 0))
             post_id = None
             if content_length > 0:
@@ -1042,6 +1174,8 @@ class MastermindRequestHandler(BaseHTTPRequestHandler):
             return
 
         elif path == "/api/social/config":
+            if not self._check_admin_access(is_api=True):
+                return
             content_length = int(self.headers.get("Content-Length", 0))
             webhook_url = ""
             if content_length > 0:
@@ -1072,186 +1206,86 @@ class MastermindRequestHandler(BaseHTTPRequestHandler):
                     pass
             res = BOOKING_AGENT.chat_and_qualify(ctx, hist, msg)
             if res.get('booking_ready') or res.get('extracted_data') or (res.get('is_qualified') and 'book' in msg.lower()):
-                b_info = res.get('extracted_data') or res.get('booking_details') or {}
-                BOOKINGS.append({
-                    "id": f"bk_{len(BOOKINGS)+1}",
-                    "name": b_info.get("name", "High-Intent Inbound Lead"),
-                    "company": b_info.get("company", "Commercial Enterprise"),
-                    "email": b_info.get("email", "client@company.com"),
-                    "phone": b_info.get("phone", "+1 555 019 2834"),
-                    "budget": b_info.get("budget", "$15,000 Deal"),
-                    "deal_value": b_info.get("budget", "$15,000 Deal"),
-                    "time_slot": b_info.get("time_slot", "Tomorrow 3:00 PM UTC"),
-                    "intent": b_info.get("intent", "24/7 AI Closer Demo & Strategy Walkthrough"),
-                    "timestamp": time.strftime("%Y-%m-%d %H:%M:%S")
-                })
-                save_bookings()
-                res['auto_booked'] = True
-                res['confirmed_slot'] = b_info.get("time_slot", "Tomorrow @ 3:00 PM GST")
-                res['time_slot'] = res['confirmed_slot']
+                if is_lockdown_enabled():
+                    res['auto_booked'] = False
+                    res['status'] = "booking_disabled_in_lockdown"
+                else:
+                    b_info = res.get('extracted_data') or res.get('booking_details') or {}
+                    BOOKINGS.append({
+                        "id": f"bk_{len(BOOKINGS)+1}",
+                        "name": b_info.get("name", "High-Intent Inbound Lead"),
+                        "company": b_info.get("company", "Commercial Enterprise"),
+                        "email": b_info.get("email", "client@company.com"),
+                        "phone": b_info.get("phone", "+1 555 019 2834"),
+                        "budget": b_info.get("budget", "$15,000 Deal"),
+                        "deal_value": b_info.get("budget", "$15,000 Deal"),
+                        "time_slot": b_info.get("time_slot", "Tomorrow 3:00 PM UTC"),
+                        "intent": b_info.get("intent", "24/7 AI Closer Demo & Strategy Walkthrough"),
+                        "timestamp": time.strftime("%Y-%m-%d %H:%M:%S")
+                    })
+                    save_bookings()
+                    res['auto_booked'] = True
+                    res['confirmed_slot'] = b_info.get("time_slot", "Tomorrow @ 3:00 PM GST")
+                    res['time_slot'] = res['confirmed_slot']
             self._set_headers(200)
             self.wfile.write(json.dumps(res).encode("utf-8"))
             return
 
-        # --- 4. OMNIBRAIN AI ENDPOINTS ---
-        elif path in ["/api/upload", "/api/documents/upload"]:
-            content_type = self.headers.get("Content-Type", "")
-            ALLOWED_EXTENSIONS = {'.pdf', '.txt', '.csv', '.md', '.json', '.docx'}
-            MAX_FILE_SIZE = 10 * 1024 * 1024 # 10MB
-            upload_dir = os.path.join(STORAGE_DIR, "uploads")
-            os.makedirs(upload_dir, exist_ok=True)
-
-            if "multipart/form-data" in content_type:
-                boundary = content_type.split("boundary=")[-1].encode()
-                body = self.rfile.read(content_length)
-                parts = body.split(b"--" + boundary)
-                uploaded_count = 0
-                new_chunks_count = 0
-
-                for part in parts:
-                    if b'filename="' in part:
-                        headers_raw, file_data = part.split(b"\r\n\r\n", 1)
-                        file_data = file_data.rstrip(b"\r\n")
-                        header_str = headers_raw.decode('latin-1', errors='ignore')
-                        filename_match = [line for line in header_str.split("\r\n") if 'filename="' in line]
-                        if filename_match:
-                            raw_name = filename_match[0].split('filename="')[-1].split('"')[0]
-                            file_name = os.path.basename(raw_name)
-                            ext = os.path.splitext(file_name)[1].lower()
-                            if ext not in ALLOWED_EXTENSIONS:
-                                self._set_headers(400)
-                                self.wfile.write(json.dumps({"success": False, "error": f"File type '{ext}' is not supported. Please upload PDF, TXT, CSV, MD, or JSON."}).encode("utf-8"))
-                                return
-                            if len(file_data) > MAX_FILE_SIZE:
-                                self._set_headers(400)
-                                self.wfile.write(json.dumps({"success": False, "error": "File size exceeds 10MB limit."}).encode("utf-8"))
-                                return
-
-                            if file_name and len(file_data) > 0:
-                                chunks = parse_file(file_name, file_data)
-                                doc_id = f"doc_{int(time.time()*1000)}_{uploaded_count}"
-                                saved_path = os.path.join(upload_dir, f"{doc_id}_{file_name}")
-                                try:
-                                    with open(saved_path, "wb") as f:
-                                        f.write(file_data)
-                                except Exception:
-                                    saved_path = None
-                                ALL_DOCUMENTS[doc_id] = {
-                                    "name": file_name,
-                                    "chunks": chunks,
-                                    "size": len(file_data),
-                                    "type": "file",
-                                    "file_path": saved_path
-                                }
-                                ALL_CHUNKS.extend(chunks)
-                                uploaded_count += 1
-                                new_chunks_count += len(chunks)
-
-                RETRIEVER.index(ALL_CHUNKS)
-                save_index()
-
-                self._set_headers(200)
-                self.wfile.write(json.dumps({
-                    "success": True,
-                    "uploaded_count": uploaded_count,
-                    "new_chunks": new_chunks_count,
-                    "total_chunks": len(ALL_CHUNKS)
-                }).encode("utf-8"))
-                return
-
-        elif path in ["/api/upload-url", "/api/documents/index-url"]:
-            body = self.rfile.read(content_length)
-            data = json.loads(body.decode("utf-8"))
-            url = data.get("url", "").strip()
-            try:
-                text = extract_text_from_url(url)
-                doc_name = url.replace("https://", "").replace("http://", "").split("/")[0] + " (Web)"
-                chunks = chunk_text(text, doc_name=doc_name, page_num=1)
-                doc_id = f"url_{int(time.time()*1000)}"
-                ALL_DOCUMENTS[doc_id] = {
-                    "name": doc_name,
-                    "chunks": chunks,
-                    "size": len(text.encode("utf-8")),
-                    "type": "url"
-                }
-                ALL_CHUNKS.extend(chunks)
-                RETRIEVER.index(ALL_CHUNKS)
-                save_index()
-                self._set_headers(200)
-                self.wfile.write(json.dumps({"success": True, "title": doc_name, "chunks": len(chunks)}).encode("utf-8"))
-            except Exception as e:
-                self._set_headers(500)
-                self.wfile.write(json.dumps({"error": str(e)}).encode("utf-8"))
-            return
-
-        elif path in ["/api/query", "/api/documents/ask", "/api/omnibrain/query"]:
-            body = self.rfile.read(content_length)
-            data = json.loads(body.decode("utf-8"))
-            query = data.get("query", "").strip() or data.get("question", "").strip()
-            top_chunks = RETRIEVER.search(query, top_k=5)
-            if top_chunks:
-                result = INTELLIGENCE.query_with_citations(query, top_chunks)
-            else:
-                result = {"answer": "No relevant documents found in knowledge base.", "citations": []}
-            self._set_headers(200)
-            self.wfile.write(json.dumps(result).encode("utf-8"))
-            return
-
-        elif path in ["/api/summary", "/api/documents/summary"]:
-            summary = INTELLIGENCE.generate_executive_summary(ALL_CHUNKS)
-            self._set_headers(200)
-            self.wfile.write(json.dumps({"result": summary}).encode("utf-8"))
-            return
-
-        elif path in ["/api/risk-audit", "/api/documents/risk-audit"]:
-            audit = INTELLIGENCE.generate_risk_audit(ALL_CHUNKS)
-            self._set_headers(200)
-            self.wfile.write(json.dumps({"result": audit}).encode("utf-8"))
-            return
-
-        elif path in ["/api/extract-tables", "/api/documents/extract-tables"]:
-            tables = INTELLIGENCE.extract_structured_data(ALL_CHUNKS)
-            self._set_headers(200)
-            self.wfile.write(json.dumps({"result": tables}).encode("utf-8"))
-            return
-
-        elif path in ["/api/clear", "/api/documents/clear"]:
-            ALL_DOCUMENTS.clear()
-            ALL_CHUNKS.clear()
-            RETRIEVER.index([])
-            save_index()
-            self._set_headers(200)
-            self.wfile.write(json.dumps({"success": True}).encode("utf-8"))
-            return
-
-        elif path == "/api/documents/delete":
-            body = self.rfile.read(content_length) if content_length > 0 else b""
-            payload = json.loads(body.decode("utf-8")) if body else {}
-            doc_id = payload.get("doc_id") or payload.get("id")
-            if doc_id and doc_id in ALL_DOCUMENTS:
-                doc_name = ALL_DOCUMENTS[doc_id]["name"]
-                del ALL_DOCUMENTS[doc_id]
-                ALL_CHUNKS[:] = [c for c in ALL_CHUNKS if c.get("doc_name") != doc_name]
-                RETRIEVER.index(ALL_CHUNKS)
-                save_index()
-                self._set_headers(200)
-                self.wfile.write(json.dumps({"success": True, "deleted_id": doc_id}).encode("utf-8"))
-                return
-            self._set_headers(404)
-            self.wfile.write(json.dumps({"success": False, "error": "Document not found"}).encode("utf-8"))
+        # --- 4. OMNIBRAIN AI ENDPOINTS - CONTAINED (HTTP 503 IN SPRINT 0) ---
+        elif path in [
+            "/api/upload", "/api/documents/upload",
+            "/api/upload-url", "/api/documents/index-url",
+            "/api/query", "/api/documents/ask", "/api/omnibrain/query",
+            "/api/summary", "/api/documents/summary",
+            "/api/risk-audit", "/api/documents/risk-audit",
+            "/api/extract-tables", "/api/documents/extract-tables",
+            "/api/clear", "/api/documents/clear",
+            "/api/documents/delete"
+        ] or path.startswith("/api/documents/"):
+            self._set_headers(503)
+            self.wfile.write(json.dumps({"error": "feature_temporarily_unavailable"}).encode("utf-8"))
             return
 
         elif path == "/api/booking/clear":
+            if is_lockdown_enabled():
+                self._set_headers(503)
+                self.wfile.write(json.dumps({"error": "feature_temporarily_unavailable"}).encode("utf-8"))
+                return
+            if not self._check_admin_access(is_api=True):
+                return
             BOOKINGS.clear()
             save_bookings()
             self._set_headers(200)
             self.wfile.write(json.dumps({"success": True}).encode("utf-8"))
             return
 
-        # --- 6. CONTENTCREW AI ENDPOINTS ---
+        # --- 6. CONTENTCREW AI ENDPOINTS (PAID ENTITLEMENT REQUIRED - BUG-02) ---
         elif path in ["/api/content-crew/run", "/api/content/generate-article", "/api/content/generate"]:
-            body = self.rfile.read(content_length)
-            data = json.loads(body.decode("utf-8")) if content_length > 0 else {}
+            if is_lockdown_enabled():
+                self._set_headers(503)
+                self.wfile.write(json.dumps({"error": "feature_temporarily_unavailable"}).encode("utf-8"))
+                return
+
+            body = self.rfile.read(content_length) if content_length > 0 else b""
+            try:
+                data = json.loads(body.decode("utf-8")) if body else {}
+            except Exception:
+                data = {}
+
+            # Strict server-side entitlement check (BUG-02)
+            is_auth, user_ctx, err = require_authenticated_user(self.headers, data)
+            if not is_auth:
+                status_code = get_auth_error_status(err)
+                self._set_headers(status_code)
+                self.wfile.write(json.dumps({"error": err, "details": err}).encode("utf-8"))
+                return
+
+            has_ent, ent_err = require_active_entitlement(user_ctx, "seo_articles")
+            if not has_ent:
+                self._set_headers(403)
+                self.wfile.write(json.dumps({"error": "feature_not_entitled", "details": ent_err}).encode("utf-8"))
+                return
+
             topic = data.get("topic", "Why B2B Companies Lose 42% After-Hours Inbound Leads")
             audience = data.get("audience", "Founders, CTOs, and Business Leaders")
             tone = data.get("tone", "Authoritative & Results-Driven")
@@ -1274,12 +1308,16 @@ class MastermindRequestHandler(BaseHTTPRequestHandler):
             return
 
         elif path == "/api/growth/indexnow-ping":
+            if not self._check_admin_access(is_api=True):
+                return
             result = GROWTH_AGENT.submit_to_indexnow()
             self._set_headers(200)
             self.wfile.write(json.dumps({"success": True, "result": result}).encode("utf-8"))
             return
 
         elif path in ["/api/seo/trigger-sprint", "/api/growth/run-cycle"]:
+            if not self._check_admin_access(is_api=True):
+                return
             result = GROWTH_AGENT.run_full_seo_cycle()
             from engine.backlink_ledger import BacklinkLedgerEngine
             ledger = BacklinkLedgerEngine(STORAGE_DIR)
@@ -1290,6 +1328,8 @@ class MastermindRequestHandler(BaseHTTPRequestHandler):
             return
 
         elif path == "/api/growth/generate-campaign":
+            if not self._check_admin_access(is_api=True):
+                return
             body = self.rfile.read(content_length)
             data = json.loads(body.decode("utf-8")) if content_length > 0 else {}
             comp = data.get("company_name", "Stripe")
@@ -1302,12 +1342,16 @@ class MastermindRequestHandler(BaseHTTPRequestHandler):
             return
 
         elif path == "/api/reels/generate":
+            if not self._check_admin_access(is_api=True):
+                return
             reel = VIRAL_REEL_STUDIO.generate_reel()
             self._set_headers(200)
             self.wfile.write(json.dumps({"status": "SUCCESS", "reel": reel}).encode("utf-8"))
             return
 
         elif path == "/api/reels/dispatch":
+            if not self._check_admin_access(is_api=True):
+                return
             body = self.rfile.read(content_length)
             data = json.loads(body.decode("utf-8")) if content_length > 0 else {}
             reel_id = data.get("reel_id", "")
@@ -1317,6 +1361,8 @@ class MastermindRequestHandler(BaseHTTPRequestHandler):
             return
 
         elif path == "/api/reels/credentials":
+            if not self._check_admin_access(is_api=True):
+                return
             body = self.rfile.read(content_length)
             data = json.loads(body.decode("utf-8")) if content_length > 0 else {}
             res = VIRAL_REEL_STUDIO.save_credentials(data)
@@ -1340,6 +1386,8 @@ class MastermindRequestHandler(BaseHTTPRequestHandler):
 
         # --- LOCAL BUSINESS OUTREACH PIPELINE SCANNER ---
         elif path in ["/api/pipeline/run", "/api/pipeline/start"]:
+            if not self._check_admin_access(is_api=True):
+                return
             body = self.rfile.read(content_length)
             data = json.loads(body.decode("utf-8")) if content_length > 0 else {}
             city = data.get("city", "Mumbai").strip()
@@ -1358,6 +1406,8 @@ class MastermindRequestHandler(BaseHTTPRequestHandler):
 
         # --- DIRECT EMAIL DISPATCH TO CLIENT ---
         elif path in ["/api/pipeline/send-email", "/api/pipeline/send-mail"]:
+            if not self._check_admin_access(is_api=True):
+                return
             body = self.rfile.read(content_length)
             data = json.loads(body.decode("utf-8")) if content_length > 0 else {}
             lead_id = data.get("lead_id", "")
@@ -1369,6 +1419,8 @@ class MastermindRequestHandler(BaseHTTPRequestHandler):
 
         # --- UPDATE LEAD RESPONSE STATUS ---
         elif path == "/api/pipeline/update-status":
+            if not self._check_admin_access(is_api=True):
+                return
             body = self.rfile.read(content_length)
             data = json.loads(body.decode("utf-8")) if content_length > 0 else {}
             lead_id = data.get("lead_id", "")
@@ -1380,6 +1432,8 @@ class MastermindRequestHandler(BaseHTTPRequestHandler):
 
         # --- TEST LIVE EMAIL TRANSMISSION ---
         elif path == "/api/pipeline/test-email":
+            if not self._check_admin_access(is_api=True):
+                return
             body = self.rfile.read(content_length)
             data = json.loads(body.decode("utf-8")) if content_length > 0 else {}
             target_email = data.get("email") or PIPELINE_MAIL_DISPATCHER.config.get("smtp_user", "ismailkazia302@gmail.com")
@@ -1390,6 +1444,8 @@ class MastermindRequestHandler(BaseHTTPRequestHandler):
 
         # --- SAVE FREE MAIL SERVICE CONFIGURATION ---
         elif path == "/api/pipeline/mail-config":
+            if not self._check_admin_access(is_api=True):
+                return
             body = self.rfile.read(content_length)
             data = json.loads(body.decode("utf-8")) if content_length > 0 else {}
             if data.get("smtp_password") == "••••••••":
@@ -1401,6 +1457,8 @@ class MastermindRequestHandler(BaseHTTPRequestHandler):
 
         # --- SAVE GOOGLE MY BUSINESS / PLACES CONFIGURATION ---
         elif path == "/api/pipeline/gmb-config":
+            if not self._check_admin_access(is_api=True):
+                return
             body = self.rfile.read(content_length)
             data = json.loads(body.decode("utf-8")) if content_length > 0 else {}
             curr = PIPELINE_ORCHESTRATOR._load_gmb_config()
@@ -1413,8 +1471,6 @@ class MastermindRequestHandler(BaseHTTPRequestHandler):
             self.wfile.write(json.dumps({"success": True, "message": "Google My Business configuration saved successfully", "config": saved}).encode("utf-8"))
             return
 
-
-
         else:
             self._set_headers(404)
             self.wfile.write(json.dumps({"error": "Endpoint not found"}).encode("utf-8"))
@@ -1423,22 +1479,13 @@ class MastermindRequestHandler(BaseHTTPRequestHandler):
         parsed = urlparse(self.path)
         path = parsed.path
 
-        if path.startswith("/api/documents/"):
-            doc_id = unquote(path.split("/api/documents/")[-1])
-            if doc_id in ALL_DOCUMENTS:
-                doc_name = ALL_DOCUMENTS[doc_id]["name"]
-                del ALL_DOCUMENTS[doc_id]
-                global ALL_CHUNKS
-                ALL_CHUNKS = [c for c in ALL_CHUNKS if c.get("doc_name") != doc_name]
-                RETRIEVER.index(ALL_CHUNKS)
-                save_index()
-                self._set_headers(200)
-                self.wfile.write(json.dumps({"success": True}).encode("utf-8"))
-                return
-            else:
-                self._set_headers(404)
-                self.wfile.write(json.dumps({"error": "Document not found"}).encode("utf-8"))
-                return
+        if path.startswith("/api/documents"):
+            self._set_headers(503)
+            self.wfile.write(json.dumps({"error": "feature_temporarily_unavailable"}).encode("utf-8"))
+            return
+
+        self._set_headers(404)
+        self.wfile.write(json.dumps({"error": "Endpoint not found"}).encode("utf-8"))
 
 
 import threading
