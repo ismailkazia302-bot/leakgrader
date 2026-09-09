@@ -9,6 +9,7 @@ import time
 import json
 import io
 import mimetypes
+import re
 from urllib.parse import parse_qs, unquote
 
 # Import the core application engines
@@ -34,11 +35,28 @@ WEB_DIR_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "web")
 load_all_data()
 
 # Run database migrations idempotently on startup (PostgreSQL / SQLite)
+print("DB migration: starting", flush=True)
 try:
     from db.migrate import run_migrations
-    run_migrations()
+    from db.connection import get_db_cursor, is_sqlite
+    mig_success = run_migrations()
+    if mig_success:
+        with get_db_cursor() as cur:
+            if is_sqlite():
+                cur.execute("SELECT count(*) as count FROM sqlite_master WHERE type='table';")
+            else:
+                cur.execute("SELECT count(*) as count FROM information_schema.tables WHERE table_schema='public';")
+            row = cur.fetchone()
+            count = row["count"] if row else 0
+        print("DB: connected", flush=True)
+        print(f"DB migration: complete, {count} tables", flush=True)
+    else:
+        print("DB: unavailable (degraded mode)", flush=True)
+        print("DB migration: FAILED (execution error)", flush=True)
 except Exception as e:
-    print(f"[WSGI Startup] DB Migration Notice: {e}")
+    print("DB: unavailable (degraded mode)", flush=True)
+    clean_err = re.sub(r"://[^@]+@", "://***:***@", str(e))
+    print(f"DB migration: FAILED {clean_err}", flush=True)
 
 # Start 24/7 Cloud Autonomous SEO & Growth Daemon
 try:
@@ -1009,6 +1027,35 @@ def application(environ, start_response):
         ]
         start_response(status, response_headers)
         return [csv_data.encode('utf-8')]
+
+    elif path in ['/health', '/health.html']:
+        from db.connection import get_db_cursor, is_sqlite
+        db_status = "unavailable"
+        table_count = 0
+        try:
+            with get_db_cursor() as cur:
+                if is_sqlite():
+                    cur.execute("SELECT count(*) as count FROM sqlite_master WHERE type='table';")
+                else:
+                    cur.execute("SELECT count(*) as count FROM information_schema.tables WHERE table_schema='public';")
+                row = cur.fetchone()
+                table_count = int(row["count"]) if row else 0
+                db_status = "connected"
+        except Exception:
+            db_status = "unavailable"
+
+        health = {
+            "status": "healthy",
+            "service": "LeakGrader Global AI Platform",
+            "database": {
+                "status": db_status,
+                "tables": table_count
+            }
+        }
+        status = '200 OK'
+        response_headers = [('Content-Type', 'application/json; charset=utf-8'), ('Access-Control-Allow-Origin', '*')]
+        start_response(status, response_headers)
+        return [json.dumps(health).encode('utf-8')]
 
     elif path in ['/api/sentinel/status', '/api/system/health']:
         health = SENTINEL_AGENT.get_health_status() if hasattr(SENTINEL_AGENT, 'get_health_status') else {"status": "healthy", "uptime": "99.99%"}

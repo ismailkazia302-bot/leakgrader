@@ -510,9 +510,32 @@ class MastermindRequestHandler(BaseHTTPRequestHandler):
                 pass
 
         if path == "/health":
+            db_status = "unavailable"
+            table_count = 0
+            try:
+                from db.connection import get_db_cursor, is_sqlite
+                with get_db_cursor() as cur:
+                    if is_sqlite():
+                        cur.execute("SELECT count(*) as count FROM sqlite_master WHERE type='table';")
+                    else:
+                        cur.execute("SELECT count(*) as count FROM information_schema.tables WHERE table_schema='public';")
+                    row = cur.fetchone()
+                    table_count = int(row["count"]) if row else 0
+                    db_status = "connected"
+            except Exception:
+                db_status = "unavailable"
+
             self._set_headers(200)
-            self.wfile.write(json.dumps({"status": "healthy", "service": "Mastermind Global AI Platform (All 7 Engines Online)"}).encode("utf-8"))
+            self.wfile.write(json.dumps({
+                "status": "healthy",
+                "service": "Mastermind Global AI Platform (All 7 Engines Online)",
+                "database": {
+                    "status": db_status,
+                    "tables": table_count
+                }
+            }).encode("utf-8"))
             return
+
 
         elif path == "/favicon.ico":
             fav_path = os.path.join(WEB_DIR, "favicon.ico")
@@ -1493,20 +1516,51 @@ import threading
 _CLOUD_DAEMON_STARTED = False
 _CLOUD_DAEMON_LOCK = threading.Lock()
 
+
+def is_background_daemon_enabled() -> tuple:
+    """
+    Checks if the background SEO growth daemon is allowed to run.
+    Task 2 Rules:
+    1. The daemon starts ONLY when ENABLE_BACKGROUND_DAEMON=true (default: false).
+    2. It must NOT start during SECURITY_LOCKDOWN_MODE=enabled or LOCKDOWN_PHASE=full, even if flag is true.
+    """
+    flag = os.environ.get("ENABLE_BACKGROUND_DAEMON", "false").strip().lower()
+    if flag not in ("true", "1", "yes", "enabled"):
+        return False, "flag off"
+
+    # Gated by lockdown mode: never starts if lockdown is enabled OR lockdown phase is full
+    phase = os.environ.get("LOCKDOWN_PHASE", "").strip().lower()
+    if phase == "full":
+        return False, "lockdown phase full active"
+
+    try:
+        from engine.security_guard import is_lockdown_enabled
+        if is_lockdown_enabled():
+            return False, "security lockdown mode active"
+    except Exception:
+        if os.environ.get("SECURITY_LOCKDOWN_MODE", "").lower() == "enabled":
+            return False, "security lockdown mode active"
+
+    return True, "enabled"
+
+
 def start_autonomous_cloud_growth_daemon():
     """
-    Runs 24/7/365 in Render Cloud in the background even when the laptop is off!
-    Every 15 minutes:
-    - Pings IndexNow & Search Engines
-    - Logs fresh unique high-DA backlink target in BacklinkLedger
-    - Runs full autonomous on-page & off-page SEO cycles
-    - Checks Sentinel Watchdog
+    Runs in background ONLY when ENABLE_BACKGROUND_DAEMON=true and lockdown is inactive.
     """
     global _CLOUD_DAEMON_STARTED
     with _CLOUD_DAEMON_LOCK:
         if _CLOUD_DAEMON_STARTED:
             return
+
+        enabled, reason = is_background_daemon_enabled()
+        if not enabled:
+            print(f"Background SEO daemon: DISABLED ({reason})", flush=True)
+            return
+
         _CLOUD_DAEMON_STARTED = True
+        print("Background SEO daemon: ENABLED", flush=True)
+
 
     def daemon_loop():
         time.sleep(5)  # Quick first run on startup

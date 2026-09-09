@@ -332,6 +332,26 @@ def run_sprint1_suite():
         except Exception as e:
             record("AUTH-ME-01", "GET /api/auth/me returns user info", False, str(e))
 
+        # Test /health returns database status and table count without credentials
+        req_health = urllib.request.Request(f"{base_http}/health", headers={"User-Agent": "Test"})
+        try:
+            with urllib.request.urlopen(req_health, timeout=5) as resp:
+                health_body = resp.read().decode("utf-8")
+                health_data = json.loads(health_body)
+                db_info = health_data.get("database", {})
+                db_ok = (
+                    resp.status == 200
+                    and "status" in db_info
+                    and db_info.get("status") in ["connected", "unavailable"]
+                    and "tables" in db_info
+                    and isinstance(db_info.get("tables"), int)
+                    and "postgres" not in health_body.lower()
+                    and "password" not in health_body.lower()
+                )
+                record("HEALTH-DB-01", "GET /health returns safe database status and table count", db_ok, f"Status: {db_info.get('status')}, Tables: {db_info.get('tables')}")
+        except Exception as e:
+            record("HEALTH-DB-01", "GET /health returns safe database status", False, str(e))
+
     finally:
         server_proc.terminate()
         server_proc.wait()
@@ -409,6 +429,74 @@ def run_sprint1_suite():
     # Access is now restored because count (25) < limit (100)
     allowed_restored, _, _ = security_guard.check_db_entitlement(ws_id, "audit", increment_usage=True)
     record("ENT-05", "Usage access restored following plan upgrade", allowed_restored)
+
+    # --------------------------------------------------------------------------
+    # 14. SEO Background Daemon Controls & Migration Logging
+    # --------------------------------------------------------------------------
+    print("\n--- 14. SEO Background Daemon Controls & Migration Logging ---")
+    from app import is_background_daemon_enabled
+
+    orig_flag = os.environ.get("ENABLE_BACKGROUND_DAEMON")
+    orig_mode = os.environ.get("SECURITY_LOCKDOWN_MODE")
+    orig_phase = os.environ.get("LOCKDOWN_PHASE")
+    orig_env = os.environ.get("ENVIRONMENT")
+    try:
+        # Test DAEMON-01: Disabled by default (flag unset)
+        os.environ.pop("ENABLE_BACKGROUND_DAEMON", None)
+        enabled, reason = is_background_daemon_enabled()
+        record("DAEMON-01", "SEO daemon disabled by default (flag unset)", not enabled and "flag" in reason)
+
+        # Test DAEMON-02: Disabled when ENABLE_BACKGROUND_DAEMON=false
+        os.environ["ENABLE_BACKGROUND_DAEMON"] = "false"
+        enabled, reason = is_background_daemon_enabled()
+        record("DAEMON-02", "SEO daemon disabled when ENABLE_BACKGROUND_DAEMON=false", not enabled and "flag" in reason)
+
+        # Test DAEMON-03: Blocked during lockdown even if flag=true
+        os.environ["ENABLE_BACKGROUND_DAEMON"] = "true"
+        os.environ["SECURITY_LOCKDOWN_MODE"] = "enabled"
+        os.environ["LOCKDOWN_PHASE"] = "full"
+        enabled, reason = is_background_daemon_enabled()
+        record("DAEMON-03", "SEO daemon blocked during full lockdown even when flag=true", not enabled and "lockdown" in reason)
+
+        # Test DAEMON-04: Enabled only when flag=true and no lockdown
+        os.environ["ENVIRONMENT"] = "test"
+        os.environ["SECURITY_LOCKDOWN_MODE"] = "disabled"
+        os.environ["LOCKDOWN_PHASE"] = "disabled"
+        enabled, reason = is_background_daemon_enabled()
+        record("DAEMON-04", "SEO daemon allowed when ENABLE_BACKGROUND_DAEMON=true and lockdown disabled", enabled and reason == "enabled", f"enabled: {enabled}, reason: {reason}")
+    finally:
+        if orig_flag is not None:
+            os.environ["ENABLE_BACKGROUND_DAEMON"] = orig_flag
+        else:
+            os.environ.pop("ENABLE_BACKGROUND_DAEMON", None)
+        if orig_mode is not None:
+            os.environ["SECURITY_LOCKDOWN_MODE"] = orig_mode
+        else:
+            os.environ.pop("SECURITY_LOCKDOWN_MODE", None)
+        if orig_phase is not None:
+            os.environ["LOCKDOWN_PHASE"] = orig_phase
+        else:
+            os.environ.pop("LOCKDOWN_PHASE", None)
+        if orig_env is not None:
+            os.environ["ENVIRONMENT"] = orig_env
+        else:
+            os.environ.pop("ENVIRONMENT", None)
+
+    # Test MIG-LOG-01: WSGI startup outputs standardized safe DB migration logs
+    mig_test_proc = subprocess.run(
+        [sys.executable, "-c", "import wsgi"],
+        capture_output=True,
+        text=True,
+        env={**os.environ, "SECURITY_LOCKDOWN_MODE": "enabled", "LOCKDOWN_PHASE": "full"}
+    )
+    wsgi_stdout = mig_test_proc.stdout + mig_test_proc.stderr
+    has_starting = "DB migration: starting" in wsgi_stdout
+    has_status = ("DB: connected" in wsgi_stdout or "DB: unavailable" in wsgi_stdout)
+    has_complete_or_failed = ("DB migration: complete" in wsgi_stdout or "DB migration: FAILED" in wsgi_stdout)
+    has_no_secrets = "postgres://" not in wsgi_stdout and "password" not in wsgi_stdout.lower()
+    record("MIG-LOG-01", "WSGI startup outputs standardized safe DB migration logs",
+           has_starting and has_status and has_complete_or_failed and has_no_secrets,
+           "Migration logs verified with zero secret exposure")
 
     # --------------------------------------------------------------------------
     # Summary
