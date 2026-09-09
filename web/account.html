@@ -2,7 +2,9 @@
 <html lang="en" class="dark">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="theme-color" content="#06080e">
+  <meta name="description" content="Manage your LeakGrader account settings and security credentials.">
   <title>Account Settings — LeakGrader</title>
   <link rel="icon" type="image/x-icon" href="/favicon.ico">
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -20,7 +22,15 @@
       --danger: #ef4444;
       --success: #10b981;
     }
-    * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Plus Jakarta Sans', sans-serif; }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Plus Jakarta Sans', sans-serif; }
+    html, body {
+      max-width: 100%;
+      overflow-x: hidden;
+    }
+    img, svg {
+      max-width: 100%;
+      height: auto;
+    }
     body { background: var(--bg); color: var(--text); min-height: 100vh; display: flex; flex-direction: column; }
     header {
       background: var(--card);
@@ -29,6 +39,7 @@
       display: flex;
       justify-content: space-between;
       align-items: center;
+      gap: 12px;
     }
     .brand { display: flex; align-items: center; gap: 12px; text-decoration: none; color: var(--text); }
     .brand-icon { width: 36px; height: 36px; border-radius: 8px; background: linear-gradient(135deg, #0284c7, #38bdf8); display: flex; align-items: center; justify-content: center; font-size: 18px; font-weight: 800; color: #fff; }
@@ -44,6 +55,10 @@
       background: rgba(255, 255, 255, 0.04);
       color: var(--text);
       transition: all 0.2s;
+      min-height: 38px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
     }
     .btn-sm:hover { background: rgba(255, 255, 255, 0.08); border-color: var(--primary); }
     main { max-width: 800px; width: 100%; margin: 36px auto; padding: 0 24px; flex: 1; }
@@ -64,18 +79,20 @@
       background: rgba(255, 255, 255, 0.03);
       border: 1px solid var(--border);
       color: var(--text);
-      font-size: 14px;
+      font-size: 16px !important; /* 16px prevents iOS auto-zoom */
+      min-height: 44px;
       outline: none;
     }
     .form-control:focus { border-color: var(--primary); }
     .btn {
-      padding: 11px 20px;
+      padding: 12px 20px;
       border-radius: 8px;
       background: var(--primary);
       color: #06080e;
       border: none;
       font-weight: 700;
-      font-size: 14px;
+      font-size: 15px;
+      min-height: 44px;
       cursor: pointer;
       transition: background 0.2s;
     }
@@ -86,6 +103,17 @@
     .alert-success { background: rgba(16, 185, 129, 0.1); border: 1px solid rgba(16, 185, 129, 0.2); color: var(--success); }
     .info-grid { display: grid; grid-template-columns: 140px 1fr; row-gap: 12px; font-size: 14px; }
     .info-label { color: var(--text-muted); font-weight: 600; }
+
+    @media (max-width: 768px) {
+      header { padding: 14px 16px; }
+      main { margin: 20px auto; padding: 0 16px; }
+      .card { padding: 20px 16px; }
+      .info-grid { grid-template-columns: 1fr; row-gap: 6px; }
+      .info-label { margin-top: 10px; font-size: 12px; }
+      .info-label:first-child { margin-top: 0; }
+      .btn { width: 100%; min-height: 48px; font-size: 16px; }
+      .btn-sm { min-height: 44px; padding: 8px 12px; }
+    }
   </style>
 </head>
 <body>
