@@ -12,6 +12,7 @@ import urllib.error
 import re
 import json
 import time
+from engine.security_guard import validate_url_ssrf_safe
 
 class RealtimeWebsiteEnricher:
     def __init__(self, timeout: int = 5):
@@ -21,8 +22,22 @@ class RealtimeWebsiteEnricher:
         """
         Inspects live website HTML in the background with strict timeout.
         Returns live tech-stack findings and conversion bottleneck forensics.
+        Strictly prevents SSRF by validating target against private/internal ranges first.
         """
         target = domain_or_url.strip()
+        # Plain company name without domain extension: skip network call safely
+        if "://" not in target and ("." not in target or " " in target):
+            return {
+                "target_url": target,
+                "detected_title": domain_or_url,
+                "tech_stack": ["Modern Web Architecture", "Enterprise CDN"],
+                "has_whatsapp_closer": False,
+                "has_live_chat": False,
+                "form_friction_fields": 5,
+                "inspected_at": time.strftime("%Y-%m-%d %H:%M:%S UTC"),
+                "ssrf_blocked": False
+            }
+
         if not target.startswith("http"):
             target = f"https://{target}"
 
@@ -32,9 +47,24 @@ class RealtimeWebsiteEnricher:
         form_fields_count = 5
         clean_title = domain_or_url
 
+        # Pre-flight SSRF Validation Guard
+        is_safe, safe_target, ssrf_err = validate_url_ssrf_safe(target)
+        if not is_safe:
+            return {
+                "target_url": target,
+                "detected_title": clean_title,
+                "tech_stack": ["Standard Web Architecture"],
+                "has_whatsapp_closer": False,
+                "has_live_chat": False,
+                "form_friction_fields": 5,
+                "inspected_at": time.strftime("%Y-%m-%d %H:%M:%S UTC"),
+                "ssrf_blocked": True,
+                "ssrf_reason": ssrf_err
+            }
+
         try:
             req = urllib.request.Request(
-                target,
+                safe_target,
                 headers={"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"}
             )
             with urllib.request.urlopen(req, timeout=self.timeout) as resp:
