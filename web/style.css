@@ -37,7 +37,7 @@
   --font-mono: 'JetBrains Mono', monospace;
 }
 
-* {
+*, *::before, *::after {
   margin: 0;
   padding: 0;
   box-sizing: border-box;
@@ -45,13 +45,19 @@
 
 html, body {
   width: 100%;
-  height: 100%;
+  max-width: 100%;
+  min-height: 100%;
   overflow-x: hidden;
   background-color: var(--bg-linear);
   color: var(--text-pure);
   font-family: var(--font-sans);
-  font-size: 13px;
+  font-size: 14px;
   -webkit-font-smoothing: antialiased;
+}
+
+img, svg {
+  max-width: 100%;
+  height: auto;
 }
 
 body {
@@ -1687,26 +1693,27 @@ body {
   }
 
   .hero-title-3d {
-    font-size: 32px;
+    font-size: clamp(24px, 6vw, 40px);
     line-height: 1.15;
     letter-spacing: -0.03em;
   }
 
   .hero-desc-3d {
-    font-size: 13px;
+    font-size: 14px;
     line-height: 1.5;
   }
 
   .audit-input-bar-3d {
     flex-direction: column;
     border-radius: 12px;
-    padding: 10px;
-    gap: 8px;
+    padding: 12px;
+    gap: 10px;
   }
 
   .audit-input-bar-3d input {
     width: 100%;
-    font-size: 13px;
+    font-size: 16px; /* 16px prevents iOS auto-zoom */
+    min-height: 44px;
     text-align: center;
   }
 
@@ -1714,8 +1721,25 @@ body {
 
   .btn-3d-glow {
     width: 100%;
+    min-height: 48px;
+    font-size: 16px;
     justify-content: center;
-    padding: 10px;
+    padding: 12px;
+  }
+
+  .chip-sample {
+    min-height: 40px !important;
+    padding: 8px 14px !important;
+    font-size: 12px !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+  }
+
+  .metric-preset-chip {
+    min-height: 36px !important;
+    padding: 6px 12px !important;
+    font-size: 12px !important;
   }
 
   .hero-showcase-grid {
@@ -1849,6 +1873,57 @@ body {
     flex-direction: column;
     text-align: center;
     gap: 10px;
+  }
+
+  /* Mobile Forms & Touch Targets (FIX-05, FIX-07, FIX-08, FIX-09, FIX-14) */
+  form {
+    width: 100%;
+  }
+
+  input, textarea, select {
+    width: 100%;
+    min-height: 44px;
+    font-size: 16px !important; /* Prevents iOS Safari auto-zoom on focus */
+  }
+
+  label {
+    display: block;
+    margin-bottom: 6px;
+  }
+
+  .table-container, .table-scroll-wrapper {
+    width: 100%;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .btn-open-contact {
+    min-height: 38px !important;
+    padding: 8px 12px !important;
+  }
+
+  .email-capture-form {
+    flex-direction: column;
+    align-items: stretch;
+    width: 100%;
+  }
+
+  .email-capture-input {
+    min-width: 100% !important;
+    width: 100% !important;
+    min-height: 44px;
+    font-size: 16px !important;
+  }
+
+  .btn-email-submit {
+    width: 100% !important;
+    min-height: 48px;
+    font-size: 15px;
+    justify-content: center;
+  }
+
+  .linear-footer {
+    padding: 24px 16px 80px !important;
   }
 }
 

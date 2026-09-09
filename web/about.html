@@ -3,6 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="theme-color" content="#06080e">
   <title>About Us — Autonomous Revenue Leak Intelligence & 24/7 AI Closer | LeakGrader</title>
   <meta name="description" content="Learn about LeakGrader, the autonomous AI platform that audits website revenue leaks in 10 seconds and deploys 24/7 conversational sales closers to turn visitor traffic into closed revenue.">
   <link rel="canonical" href="https://leakgrader.com/about">
@@ -16,7 +17,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@500;700;800&display=swap" rel="stylesheet">
-  <script src="https://unpkg.com/lucide@latest"></script>
+  <script defer src="https://unpkg.com/lucide@latest"></script>
 
   <!-- Structured Data Schema for Google -->
   <script type="application/ld+json">
@@ -390,10 +391,60 @@
       color: #fff;
     }
 
+    .mobile-nav-toggle {
+      display: none;
+      background: rgba(255, 255, 255, 0.06);
+      border: 1px solid var(--border);
+      color: #fff;
+      padding: 8px 10px;
+      border-radius: 8px;
+      cursor: pointer;
+      align-items: center;
+      justify-content: center;
+      min-width: 44px;
+      min-height: 44px;
+    }
+    .mobile-drawer {
+      display: none;
+      flex-direction: column;
+      gap: 8px;
+      background: rgba(8, 11, 20, 0.98);
+      border: 1px solid var(--border-glow);
+      border-radius: 12px;
+      padding: 16px;
+      margin: 12px 0 20px;
+      width: 100%;
+    }
+    .mobile-drawer.open {
+      display: flex;
+    }
+    .mobile-drawer .nav-link {
+      padding: 10px 14px;
+      border-radius: 8px;
+      min-height: 44px;
+      display: flex;
+      align-items: center;
+      font-size: 14px;
+      font-weight: 600;
+    }
+    .mobile-drawer .nav-link:hover, .mobile-drawer .nav-link.active {
+      background: rgba(56, 189, 248, 0.1);
+      color: #fff;
+    }
+
     @media (max-width: 768px) {
+      .container { padding: 0 16px; }
       .nav-links { display: none; }
-      .story-card { padding: 26px 20px; }
-      .cta-banner { padding: 36px 18px; }
+      .mobile-nav-toggle { display: flex; }
+      .story-card { padding: 24px 16px; }
+      .cta-banner { padding: 32px 16px; }
+      .btn-cta-nav { display: none; }
+      .footer-inner { flex-direction: column; align-items: flex-start; gap: 14px; }
+      .footer-links { flex-wrap: wrap; gap: 14px; }
+      .footer-links a { min-height: 44px; display: inline-flex; align-items: center; }
+      .cta-btns { flex-direction: column; width: 100%; }
+      .btn-primary-glow, .btn-secondary-dark { width: 100%; min-height: 48px; justify-content: center; }
+      h1 { font-size: clamp(24px, 6vw, 36px); }
     }
   </style>
 </head>
@@ -430,8 +481,25 @@
           <i data-lucide="radar" style="width:14px; height:14px;"></i>
           <span>Run Live Audit</span>
         </a>
+        <button class="mobile-nav-toggle" id="about-nav-toggle" aria-label="Toggle navigation menu">
+          <i data-lucide="menu" style="width:20px; height:20px;"></i>
+        </button>
       </div>
     </header>
+
+    <!-- MOBILE NAVIGATION DRAWER -->
+    <nav class="mobile-drawer" id="about-mobile-drawer" aria-label="Mobile Navigation">
+      <a href="/" class="nav-link">Home</a>
+      <a href="/#agent-audit" class="nav-link">Free Audit</a>
+      <a href="/about" class="nav-link active" style="color:var(--cyan);">About Us</a>
+      <a href="/#pricing-modal" class="nav-link">Pricing</a>
+      <a href="/contact" class="nav-link">Contact</a>
+      <a href="/login.html" class="nav-link">Log In</a>
+      <a href="/signup.html" class="nav-link" style="color:var(--cyan);">Sign Up</a>
+      <a href="/#agent-audit" class="btn-primary-glow" style="width:100%; justify-content:center; min-height:44px; margin-top:6px;">
+        <i data-lucide="radar" style="width:16px; height:16px;"></i> Run Live Audit
+      </a>
+    </nav>
 
     <!-- HERO -->
     <section class="hero">
@@ -601,6 +669,10 @@
 
   <script>
     if (window.lucide) lucide.createIcons();
+    document.getElementById('about-nav-toggle')?.addEventListener('click', function() {
+      const drawer = document.getElementById('about-mobile-drawer');
+      if (drawer) drawer.classList.toggle('open');
+    });
   </script>
 </body>
 </html>

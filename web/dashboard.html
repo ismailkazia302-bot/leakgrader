@@ -2,7 +2,9 @@
 <html lang="en" class="dark">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="theme-color" content="#06080e">
+  <meta name="description" content="Manage your LeakGrader workspace, view recent revenue leak audits, and monitor your monthly scan quotas.">
   <title>User Dashboard — LeakGrader</title>
   <link rel="icon" type="image/x-icon" href="/favicon.ico">
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -21,7 +23,15 @@
       --success: #10b981;
       --indigo: #6366f1;
     }
-    * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Plus Jakarta Sans', sans-serif; }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Plus Jakarta Sans', sans-serif; }
+    html, body {
+      max-width: 100%;
+      overflow-x: hidden;
+    }
+    img, svg {
+      max-width: 100%;
+      height: auto;
+    }
     body { background: var(--bg); color: var(--text); min-height: 100vh; display: flex; flex-direction: column; }
     header {
       background: var(--card);
@@ -30,6 +40,7 @@
       display: flex;
       justify-content: space-between;
       align-items: center;
+      gap: 12px;
     }
     .brand { display: flex; align-items: center; gap: 12px; text-decoration: none; color: var(--text); }
     .brand-icon { width: 36px; height: 36px; border-radius: 8px; background: linear-gradient(135deg, #0284c7, #38bdf8); display: flex; align-items: center; justify-content: center; font-size: 18px; font-weight: 800; color: #fff; }
@@ -46,6 +57,10 @@
       background: rgba(255, 255, 255, 0.04);
       color: var(--text);
       transition: all 0.2s;
+      min-height: 38px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
     }
     .btn-sm:hover { background: rgba(255, 255, 255, 0.08); border-color: var(--primary); }
     .btn-primary-sm { background: var(--primary); color: #06080e; border: none; }
@@ -98,12 +113,54 @@
       border-radius: 12px;
       overflow: hidden;
     }
-    table { width: 100%; border-collapse: collapse; text-align: left; }
+    .table-scroll-wrapper {
+      width: 100%;
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+    }
+    table { width: 100%; min-width: 560px; border-collapse: collapse; text-align: left; }
     th { padding: 14px 20px; font-size: 12px; text-transform: uppercase; color: var(--text-muted); font-weight: 600; border-bottom: 1px solid var(--border); background: rgba(255, 255, 255, 0.02); }
     td { padding: 16px 20px; font-size: 14px; border-bottom: 1px solid var(--border); }
     tr:last-child td { border-bottom: none; }
     .domain-cell { font-weight: 600; color: #fff; font-family: 'JetBrains Mono', monospace; }
     .empty-state { text-align: center; padding: 48px 24px; color: var(--text-muted); font-size: 14px; }
+
+    @media (max-width: 768px) {
+      header {
+        padding: 14px 16px;
+        flex-wrap: wrap;
+      }
+      .nav-actions {
+        gap: 8px;
+      }
+      .btn-sm {
+        min-height: 44px;
+        padding: 8px 12px;
+      }
+      main {
+        margin: 20px auto;
+        padding: 0 16px;
+      }
+      .welcome-card {
+        padding: 20px 16px;
+        flex-direction: column;
+        align-items: flex-start;
+      }
+      .welcome-card > div:last-child {
+        width: 100%;
+      }
+      .welcome-card > div:last-child a {
+        flex: 1;
+        text-align: center;
+      }
+      .grid-stats {
+        grid-template-columns: 1fr;
+        gap: 16px;
+      }
+      .stat-card {
+        padding: 20px 16px;
+      }
+    }
   </style>
 </head>
 <body>
@@ -153,22 +210,24 @@
     </div>
 
     <div class="audits-table-card">
-      <table id="auditsTable">
-        <thead>
-          <tr>
-            <th>Domain Target</th>
-            <th>Leak Score</th>
-            <th>Status</th>
-            <th>Date</th>
-            <th>Action</th>
-          </tr>
-        </thead>
-        <tbody id="auditsBody">
-          <tr>
-            <td colspan="5" class="empty-state">Loading your recent audits...</td>
-          </tr>
-        </tbody>
-      </table>
+      <div class="table-scroll-wrapper">
+        <table id="auditsTable">
+          <thead>
+            <tr>
+              <th>Domain Target</th>
+              <th>Leak Score</th>
+              <th>Status</th>
+              <th>Date</th>
+              <th>Action</th>
+            </tr>
+          </thead>
+          <tbody id="auditsBody">
+            <tr>
+              <td colspan="5" class="empty-state">Loading your recent audits...</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
     </div>
   </main>
 
