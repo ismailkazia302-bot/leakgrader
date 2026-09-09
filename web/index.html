@@ -238,6 +238,24 @@
             <i data-lucide="mail" class="icon-xs"></i>
             <span>Contact</span>
           </button>
+
+          <!-- Auth Navigation (Dynamic) -->
+          <div id="auth-nav-anon" style="display:inline-flex; align-items:center; gap:8px;">
+            <a href="/login.html" style="color:#e2e8f0; text-decoration:none; font-size:12.5px; font-weight:600; padding:6px 12px; border-radius:6px; border:1px solid rgba(255,255,255,0.12); background:rgba(255,255,255,0.04);">Log In</a>
+            <a href="/signup.html" class="desktop-only-inline" style="color:#06080e; text-decoration:none; font-size:12.5px; font-weight:700; padding:6px 12px; border-radius:6px; background:#38bdf8;">Sign Up</a>
+          </div>
+          <div id="auth-nav-user" style="display:none; align-items:center; gap:8px;">
+            <a href="/dashboard.html" style="color:#38bdf8; text-decoration:none; font-size:12.5px; font-weight:700; padding:6px 12px; border-radius:6px; border:1px solid rgba(56,189,248,0.3); background:rgba(56,189,248,0.08);">Dashboard</a>
+            <button id="nav-logout-btn" style="background:none; border:none; color:#94a3b8; font-size:12px; cursor:pointer; padding:6px 8px;" onclick="fetch('/api/auth/logout',{method:'POST'}).then(()=>{window.location.reload();});">Logout</button>
+          </div>
+          <script>
+            fetch('/api/auth/me').then(r => r.ok ? r.json() : null).then(d => {
+              if (d && d.user) {
+                document.getElementById('auth-nav-anon').style.display = 'none';
+                document.getElementById('auth-nav-user').style.display = 'inline-flex';
+              }
+            }).catch(()=>{});
+          </script>
         </div>
       </header>
 

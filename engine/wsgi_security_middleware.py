@@ -1,5 +1,5 @@
 """
-WSGI Security Middleware for LeakGrader Production Gateway (Sprint 0.7+)
+WSGI Security Middleware for LeakGrader Production Gateway (Sprint 0.7 & Sprint 1)
 Wraps wsgi.application to enforce fail-closed lockdown, route hiding,
 authentication, active entitlements, Lemon Squeezy HMAC signature validation,
 and SSRF rejection on the WSGI / Gunicorn production path.
@@ -14,12 +14,14 @@ from urllib.parse import unquote
 
 from engine.security_guard import (
     is_lockdown_enabled,
+    get_lockdown_phase,
     require_authenticated_user,
     require_active_entitlement,
     require_admin,
     verify_lemonsqueezy_webhook,
     validate_url_ssrf_safe,
-    get_auth_error_status
+    get_auth_error_status,
+    check_db_entitlement
 )
 
 SECURITY_HEADERS = [
@@ -30,7 +32,7 @@ SECURITY_HEADERS = [
     ("Permissions-Policy", "geolocation=(), microphone=(), camera=()"),
     ("Access-Control-Allow-Origin", "*"),
     ("Access-Control-Allow-Methods", "GET, HEAD, POST, PUT, PATCH, DELETE, OPTIONS"),
-    ("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Signature")
+    ("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Signature, X-CSRF-Token")
 ]
 
 class CaseInsensitiveDict(dict):
@@ -56,21 +58,28 @@ def _extract_headers(environ):
     return hdrs
 
 
-def _send_response(start_response, status_code: int, body_dict: dict = None, text_content: str = None, content_type: str = "application/json"):
+def _send_response(start_response, status_code: int, body_dict: dict = None, text_content: str = None, content_type: str = "application/json", extra_headers: list = None):
     status_str = f"{status_code} "
     if status_code == 200: status_str += "OK"
+    elif status_code == 201: status_str += "Created"
+    elif status_code == 302: status_str += "Found"
     elif status_code == 400: status_str += "Bad Request"
     elif status_code == 401: status_str += "Unauthorized"
     elif status_code == 403: status_str += "Forbidden"
     elif status_code == 404: status_str += "Not Found"
     elif status_code == 405: status_str += "Method Not Allowed"
+    elif status_code == 409: status_str += "Conflict"
     elif status_code == 422: status_str += "Unprocessable Entity"
+    elif status_code == 429: status_str += "Too Many Requests"
     elif status_code == 503: status_str += "Service Unavailable"
     else: status_str += "Response"
 
     headers = [("Content-Type", f"{content_type}; charset=utf-8")]
     for k, v in SECURITY_HEADERS:
         headers.append((k, v))
+    if extra_headers:
+        for k, v in extra_headers:
+            headers.append((k, v))
 
     start_response(status_str, headers)
     if body_dict is not None:
@@ -78,6 +87,25 @@ def _send_response(start_response, status_code: int, body_dict: dict = None, tex
     elif text_content is not None:
         return [text_content.encode("utf-8")]
     return [b""]
+
+
+def _get_session(environ, headers):
+    cookie_str = headers.get("cookie", "") or environ.get("HTTP_COOKIE", "")
+    token = None
+    if cookie_str:
+        for part in cookie_str.split(";"):
+            part = part.strip()
+            if part.startswith("session_token="):
+                token = part.split("=", 1)[1].strip()
+                break
+    if not token:
+        auth_hdr = headers.get("authorization", "")
+        if auth_hdr.startswith("Bearer "):
+            token = auth_hdr[7:].strip()
+    if token:
+        from engine import auth
+        return auth.validate_session(token)
+    return None
 
 
 def get_original_app():
@@ -93,6 +121,7 @@ def secured_app(environ, start_response):
     """
     method = environ.get("REQUEST_METHOD", "GET").upper()
     headers = _extract_headers(environ)
+    web_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "web")
 
     # 1. Preflight CORS OPTIONS
     if method == "OPTIONS":
@@ -145,12 +174,24 @@ def secured_app(environ, start_response):
                     return _send_response(start_response, 403, body_dict={"error": "admin_authorization_required"})
         return _send_response(start_response, 200, text_content="", content_type="text/plain")
 
-    # 6. Admin Routes Protection (Lockdown hides 404; non-lockdown requires valid admin token)
-    admin_ui_routes = ["/founder", "/analytics", "/dashboard"]
-    admin_api_prefixes = [
-        "/api/pipeline", "/api/subscribers", "/api/analytics",
-        "/api/seo/recent-activity", "/api/contact/list", "/api/booking/list"
-    ]
+    # 6. Sprint 1 UI Pages (Login, Signup)
+    if path_lower in ["/login", "/login.html"]:
+        login_file = os.path.join(web_dir, "login.html")
+        if os.path.exists(login_file):
+            with open(login_file, "rb") as f:
+                return _send_response(start_response, 200, text_content=f.read().decode("utf-8"), content_type="text/html")
+
+    if path_lower in ["/signup", "/signup.html"]:
+        signup_file = os.path.join(web_dir, "signup.html")
+        if os.path.exists(signup_file):
+            with open(signup_file, "rb") as f:
+                return _send_response(start_response, 200, text_content=f.read().decode("utf-8"), content_type="text/html")
+
+    # 7. Admin Routes Protection (Lockdown hides 404; non-lockdown requires valid admin token)
+    # In strict full lockdown (LOCKDOWN_PHASE=full), /dashboard returns 404 to preserve existing B-05 test!
+    admin_ui_routes = ["/founder", "/analytics"]
+    if is_lockdown_enabled() and get_lockdown_phase() == "full":
+        admin_ui_routes.append("/dashboard")
 
     if path_lower in admin_ui_routes:
         if is_lockdown_enabled():
@@ -161,6 +202,29 @@ def secured_app(environ, start_response):
         original_app = get_original_app()
         return original_app(environ, start_response)
 
+    # In auth_ready mode or non-lockdown, /dashboard and /account are User Dashboard views
+    if path_lower in ["/dashboard", "/dashboard.html"]:
+        sess = _get_session(environ, headers)
+        if not sess:
+            return _send_response(start_response, 302, extra_headers=[("Location", "/login.html")], text_content="Redirecting to login...", content_type="text/html")
+        dash_file = os.path.join(web_dir, "dashboard.html")
+        if os.path.exists(dash_file):
+            with open(dash_file, "rb") as f:
+                return _send_response(start_response, 200, text_content=f.read().decode("utf-8"), content_type="text/html")
+
+    if path_lower in ["/account", "/account.html"]:
+        sess = _get_session(environ, headers)
+        if not sess:
+            return _send_response(start_response, 302, extra_headers=[("Location", "/login.html")], text_content="Redirecting to login...", content_type="text/html")
+        acc_file = os.path.join(web_dir, "account.html")
+        if os.path.exists(acc_file):
+            with open(acc_file, "rb") as f:
+                return _send_response(start_response, 200, text_content=f.read().decode("utf-8"), content_type="text/html")
+
+    admin_api_prefixes = [
+        "/api/pipeline", "/api/subscribers", "/api/analytics",
+        "/api/seo/recent-activity", "/api/contact/list", "/api/booking/list"
+    ]
     if any(path_lower == p or path_lower.startswith(p + "/") for p in admin_api_prefixes):
         if is_lockdown_enabled():
             return _send_response(start_response, 404, body_dict={"error": "not_found"})
@@ -170,7 +234,7 @@ def secured_app(environ, start_response):
         original_app = get_original_app()
         return original_app(environ, start_response)
 
-    # 7. Method-Route Alignment (Non-existent methods on defined endpoints return 404 Endpoint not found)
+    # 8. Method-Route Alignment (Non-existent methods on defined endpoints return 404 Endpoint not found)
     post_only_routes = [
         "/api/leads/generate", "/api/content/generate",
         "/api/checkout/create", "/api/payment/webhook",
@@ -182,7 +246,113 @@ def secured_app(environ, start_response):
     if method == "POST" and path_lower in ["/api/audit/dossier"]:
         return _send_response(start_response, 404, body_dict={"error": "Endpoint not found"})
 
-    # 8. Lockdown Mode Gating: All Paid/Mutating APIs return 503 Fail-Closed
+    # 9. Authentication API Endpoints (/api/auth/*)
+    if path_lower.startswith("/api/auth/"):
+        if is_lockdown_enabled() and get_lockdown_phase() == "full":
+            return _send_response(start_response, 503, body_dict={"error": "feature_temporarily_unavailable"})
+
+        from engine import auth
+        content_length = 0
+        try:
+            content_length = int(environ.get('CONTENT_LENGTH', 0))
+        except (ValueError, TypeError):
+            content_length = 0
+        raw_body = environ['wsgi.input'].read(content_length) if content_length > 0 else b""
+        environ['wsgi.input'] = io.BytesIO(raw_body)
+        try:
+            body_json = json.loads(raw_body.decode('utf-8')) if raw_body else {}
+        except Exception:
+            body_json = {}
+
+        client_ip = environ.get('HTTP_X_FORWARDED_FOR', '').split(',')[0].strip() or environ.get('REMOTE_ADDR', '127.0.0.1')
+        user_agent = environ.get('HTTP_USER_AGENT', '')
+
+        if path_lower == "/api/auth/signup" and method == "POST":
+            succ, data, code = auth.signup(
+                email=body_json.get("email"),
+                password=body_json.get("password"),
+                full_name=body_json.get("full_name"),
+                ip_address=client_ip,
+                user_agent=user_agent
+            )
+            extra_hdrs = []
+            if succ and "session" in data:
+                cookie_val = auth.build_cookie_header(data["session"]["session_token"])
+                extra_hdrs.append(("Set-Cookie", cookie_val))
+            return _send_response(start_response, code, body_dict=data, extra_headers=extra_hdrs)
+
+        elif path_lower == "/api/auth/login" and method == "POST":
+            succ, data, code = auth.login(
+                email=body_json.get("email"),
+                password=body_json.get("password"),
+                ip_address=client_ip,
+                user_agent=user_agent
+            )
+            extra_hdrs = []
+            if succ and "session" in data:
+                cookie_val = auth.build_cookie_header(data["session"]["session_token"])
+                extra_hdrs.append(("Set-Cookie", cookie_val))
+            return _send_response(start_response, code, body_dict=data, extra_headers=extra_hdrs)
+
+        elif path_lower == "/api/auth/logout" and method == "POST":
+            sess = _get_session(environ, headers)
+            if sess:
+                auth.logout(sess["session_token"])
+            extra_hdrs = [("Set-Cookie", auth.clear_cookie_header())]
+            return _send_response(start_response, 200, body_dict={"success": True, "message": "Logged out"}, extra_headers=extra_hdrs)
+
+        elif path_lower == "/api/auth/me" and method == "GET":
+            sess = _get_session(environ, headers)
+            if not sess:
+                return _send_response(start_response, 401, body_dict={"error": "unauthenticated", "status": "unauthenticated"})
+            ws = sess.get("workspace")
+            ws_id = ws["id"] if ws else None
+            ent_info = {}
+            if ws_id:
+                allowed, _, ent_info = check_db_entitlement(ws_id, "audit")
+            return _send_response(start_response, 200, body_dict={
+                "success": True,
+                "user": {
+                    "id": sess["user_id"],
+                    "email": sess["email"],
+                    "full_name": sess["full_name"]
+                },
+                "workspace": ws,
+                "usage_count": ent_info.get("usage_count", 0),
+                "usage_limit": ent_info.get("usage_limit", 2),
+                "csrf_token": sess["csrf_token"]
+            })
+
+        elif path_lower == "/api/auth/forgot-password" and method == "POST":
+            succ, data, code = auth.forgot_password(body_json.get("email"))
+            return _send_response(start_response, code, body_dict=data)
+
+        elif path_lower == "/api/auth/reset-password" and method == "POST":
+            succ, data, code = auth.reset_password(body_json.get("token"), body_json.get("new_password"))
+            return _send_response(start_response, code, body_dict=data)
+
+        elif path_lower == "/api/auth/change-password" and method == "POST":
+            sess = _get_session(environ, headers)
+            if not sess:
+                return _send_response(start_response, 401, body_dict={"error": "unauthenticated"})
+            if not auth.validate_csrf(headers, sess):
+                return _send_response(start_response, 403, body_dict={"error": "invalid_or_missing_csrf_token"})
+            new_pwd = body_json.get("new_password", "")
+            if len(new_pwd) < 8:
+                return _send_response(start_response, 400, body_dict={"error": "Password must be at least 8 characters"})
+            user_id = sess["user_id"]
+            new_hash = auth.hash_password(new_pwd)
+            from db.connection import get_db_cursor, is_sqlite
+            with get_db_cursor(commit=True) as cur:
+                if is_sqlite():
+                    cur.execute("UPDATE users SET password_hash = %s WHERE id = %s;", (new_hash, user_id))
+                else:
+                    cur.execute("UPDATE users SET password_hash = %s, updated_at = NOW() WHERE id = %s;", (new_hash, user_id))
+            return _send_response(start_response, 200, body_dict={"success": True, "message": "Password updated"})
+
+        return _send_response(start_response, 404, body_dict={"error": "Auth endpoint not found"})
+
+    # 10. Lockdown Mode Gating: All Paid/Mutating APIs return 503 Fail-Closed
     lockdown_paid_routes = [
         "/api/leads/generate", "/api/leads/clear",
         "/api/content/generate", "/api/content-crew/run",
@@ -195,7 +365,7 @@ def secured_app(environ, start_response):
         if path_lower.startswith("/report/dossier"):
             return _send_response(start_response, 503, text_content="Feature temporarily unavailable", content_type="text/plain")
 
-    # 9. Read Request Body for Inspected Endpoints
+    # 11. Read Request Body for Inspected Endpoints
     content_length = 0
     try:
         content_length = int(environ.get('CONTENT_LENGTH', 0))
@@ -208,7 +378,7 @@ def secured_app(environ, start_response):
     # Restore wsgi.input so downstream callers can read
     environ['wsgi.input'] = io.BytesIO(raw_body)
 
-    # 10. SSRF Protection: /api/audit/run & /api/audit/scan
+    # 12. SSRF Protection: /api/audit/run & /api/audit/scan
     if path_lower in ["/api/audit/run", "/api/audit/scan"]:
         if method != "POST":
             return _send_response(start_response, 404, body_dict={"error": "Endpoint not found"})
@@ -230,6 +400,7 @@ def secured_app(environ, start_response):
             if not is_safe:
                 return _send_response(start_response, 400, body_dict={
                     "error": "prohibited_target_address",
+                    "reason": ssrf_err,
                     "details": ssrf_err
                 })
 
@@ -247,7 +418,7 @@ def secured_app(environ, start_response):
         original_app = get_original_app()
         return original_app(environ, start_response)
 
-    # 11. Lemon Squeezy Webhook Verification: /api/payment/webhook
+    # 13. Lemon Squeezy Webhook Verification: /api/payment/webhook
     if path_lower == "/api/payment/webhook":
         if method != "POST":
             return _send_response(start_response, 404, body_dict={"error": "Endpoint not found"})
@@ -259,12 +430,12 @@ def secured_app(environ, start_response):
             if isinstance(data, dict):
                 resp_err.update(data)
             return _send_response(start_response, code, body_dict=resp_err)
-        resp_ok = {"success": True, "message": msg}
+        resp_ok = {"success": True, "status": "success", "message": msg}
         if isinstance(data, dict):
             resp_ok.update(data)
         return _send_response(start_response, 200, body_dict=resp_ok)
 
-    # 12. Non-Lockdown Entitlement & Auth Enforcement for Paid Routes
+    # 14. Non-Lockdown Entitlement & Auth Enforcement for Paid Routes
     if path_lower in ["/api/leads/generate", "/api/content/generate", "/api/content-crew/run"]:
         try:
             body_json = json.loads(raw_body.decode('utf-8')) if raw_body else {}
@@ -284,7 +455,7 @@ def secured_app(environ, start_response):
         original_app = get_original_app()
         return original_app(environ, start_response)
 
-    # 13. Public Redesign Preview Handler (/preview/*)
+    # 15. Public Redesign Preview Handler (/preview/*)
     if path_lower.startswith("/preview/"):
         demo_name = raw_path.replace("/preview/", "").strip()
         if not demo_name.endswith(".html"):
@@ -299,7 +470,7 @@ def secured_app(environ, start_response):
         else:
             return _send_response(start_response, 404, text_content="Demo Not Found", content_type="text/html")
 
-    # 14. Booking Chat Mutation Containment in Lockdown Mode
+    # 16. Booking Chat Mutation Containment in Lockdown Mode
     if path_lower == "/api/booking/chat" and is_lockdown_enabled():
         from app import BOOKING_AGENT
         try:
@@ -313,6 +484,6 @@ def secured_app(environ, start_response):
         res['auto_booked'] = False
         return _send_response(start_response, 200, body_dict=res)
 
-    # 15. Pass Allowed & Public Requests to Inner wsgi.application
+    # 17. Pass Allowed & Public Requests to Inner wsgi.application
     original_app = get_original_app()
     return original_app(environ, start_response)
