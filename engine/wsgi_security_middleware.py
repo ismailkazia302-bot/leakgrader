@@ -324,8 +324,9 @@ def secured_app(environ, start_response):
             })
 
         elif path_lower == "/api/auth/forgot-password" and method == "POST":
-            succ, data, code = auth.forgot_password(body_json.get("email"))
+            succ, data, code = auth.forgot_password(body_json.get("email"), ip_address=client_ip)
             return _send_response(start_response, code, body_dict=data)
+
 
         elif path_lower == "/api/auth/reset-password" and method == "POST":
             succ, data, code = auth.reset_password(body_json.get("token"), body_json.get("new_password"))

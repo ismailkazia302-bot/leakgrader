@@ -23,12 +23,70 @@ logger = logging.getLogger("leakgrader.auth")
 EMAIL_REGEX = re.compile(r"^[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+$")
 
 # In-memory rate limiting for login: email -> [timestamps]
+# NOTE (Sprint 2): This in-memory rate limiting is per-worker only and not shared across
+# multiple Gunicorn workers. An attacker could theoretically distribute attempts across
+# workers. In Sprint 2, this must be migrated to a centralized database table or Redis.
+# For current single-worker or low-worker deployments, it functions correctly per-worker.
 _RATE_LIMIT_LOCK = threading.Lock()
 _LOGIN_ATTEMPTS = {}
+
+# In-memory rate limiting for forgot-password: email -> [timestamps], ip -> [timestamps]
+# NOTE (Sprint 2): This in-memory rate limiting is per-worker only and not shared across
+# multiple Gunicorn workers. In Sprint 2, this must be migrated to a centralized database table or Redis.
+_FORGOT_RATE_LIMIT_LOCK = threading.Lock()
+_FORGOT_ATTEMPTS_EMAIL = {}
+_FORGOT_ATTEMPTS_IP = {}
+FORGOT_PASSWORD_EMAIL_LIMIT = 3
+FORGOT_PASSWORD_IP_LIMIT = 5
+FORGOT_PASSWORD_WINDOW_SECONDS = 15 * 60  # 15 minutes
+
+
+def _check_and_record_forgot_rate_limit(email: str, ip_address: str = None) -> bool:
+    """
+    Checks and records attempt for forgot-password.
+    Returns True if allowed, False if rate limit is exceeded.
+    Enforces limits per-email (3 per 15 min) and per-IP (5 per 15 min).
+    """
+    now = time.time()
+    window = FORGOT_PASSWORD_WINDOW_SECONDS
+    email_key = (email or "").strip().lower()
+    ip_key = (ip_address or "").strip()
+
+    with _FORGOT_RATE_LIMIT_LOCK:
+        # Check email limit
+        if email_key:
+            email_attempts = [t for t in _FORGOT_ATTEMPTS_EMAIL.get(email_key, []) if now - t < window]
+            _FORGOT_ATTEMPTS_EMAIL[email_key] = email_attempts
+            if len(email_attempts) >= FORGOT_PASSWORD_EMAIL_LIMIT:
+                return False
+
+        # Check IP limit
+        if ip_key:
+            ip_attempts = [t for t in _FORGOT_ATTEMPTS_IP.get(ip_key, []) if now - t < window]
+            _FORGOT_ATTEMPTS_IP[ip_key] = ip_attempts
+            if len(ip_attempts) >= FORGOT_PASSWORD_IP_LIMIT:
+                return False
+
+        # If within limits, record current timestamp
+        if email_key:
+            _FORGOT_ATTEMPTS_EMAIL[email_key].append(now)
+        if ip_key:
+            _FORGOT_ATTEMPTS_IP[ip_key].append(now)
+
+        return True
+
+
+def clear_forgot_rate_limits():
+    """Helper function to clear forgot password rate limit tracking (useful in tests)."""
+    with _FORGOT_RATE_LIMIT_LOCK:
+        _FORGOT_ATTEMPTS_EMAIL.clear()
+        _FORGOT_ATTEMPTS_IP.clear()
+
 
 # Password reset tokens: token -> {"email": email, "expires_at": timestamp, "user_id": user_id}
 _RESET_TOKENS_LOCK = threading.Lock()
 _RESET_TOKENS = {}
+
 
 
 def hash_password(password: str) -> str:
@@ -344,18 +402,34 @@ def logout(session_token: str) -> bool:
         return False
 
 
-def forgot_password(email: str) -> tuple:
-    """Generates a 1-hour secure reset token. Returns (success, dict, status_code)"""
+def forgot_password(email: str, ip_address: str = None) -> tuple:
+    """
+    Generates a 1-hour secure reset token. Returns (success, dict, status_code).
+    In production:
+      - Returns generic {"message": "If an account exists, a reset link has been sent."}
+      - Token is never returned in response and never logged
+    In 'test' or 'local' environment:
+      - 'reset_token_test' is included in response for automated testing
+    Rate-limited per email and per IP; returns identical generic response if rate limited.
+    """
     email = (email or "").strip().lower()
     if not email:
         return False, {"error": "Email is required"}, 400
 
+    env = os.environ.get("ENVIRONMENT", "production").strip().lower()
+    is_test_or_local = env in ("local", "test")
+
+    # Generic response identical whether or not email exists to prevent enumeration
+    resp = {"message": "If an account exists, a reset link has been sent."}
+
+    # Enforce rate limiting per email and per IP
+    # Return same generic response regardless of rate-limit state
+    if not _check_and_record_forgot_rate_limit(email, ip_address):
+        return True, resp, 200
+
     with get_db_cursor() as cur:
         cur.execute("SELECT id FROM users WHERE LOWER(email) = %s;", (email,))
         user = cur.fetchone()
-
-    # Always return success message to prevent user enumeration
-    resp = {"success": True, "message": "If an account exists with that email, password reset instructions have been sent."}
 
     if user:
         token = secrets.token_urlsafe(32)
@@ -366,10 +440,13 @@ def forgot_password(email: str) -> tuple:
                 "email": email,
                 "expires_at": expiry
             }
-        logger.info(f"[TEST_ONLY] Generated password reset token for {email}: {token}")
-        resp["reset_token_test"] = token
+        # Only log and expose token when in local or test environment
+        if is_test_or_local:
+            logger.info(f"[TEST_ONLY] Generated password reset token for {email}: {token}")
+            resp["reset_token_test"] = token
 
     return True, resp, 200
+
 
 
 def reset_password(token: str, new_password: str) -> tuple:

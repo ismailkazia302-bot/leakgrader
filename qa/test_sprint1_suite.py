@@ -170,12 +170,32 @@ def run_sprint1_suite():
     record("CSRF-03", "Missing X-CSRF-Token header rejected", not csrf_missing)
 
     # --------------------------------------------------------------------------
-    # 7. Password reset flow
+    # 7. Password reset flow & Security hardening (AUTH-SEC-17 & Rate Limiting)
     # --------------------------------------------------------------------------
-    print("\n--- 7. Password Reset Flow ---")
+    print("\n--- 7. Password Reset Flow & Security Hardening ---")
+    auth.clear_forgot_rate_limits()
+
+    # 7.1 Production Environment Verification (AUTH-SEC-17)
+    orig_env = os.environ.get("ENVIRONMENT")
+    os.environ["ENVIRONMENT"] = "production"
+
+    # In production: no reset token returned for existing email
+    f_prod_succ, f_prod_data, f_prod_code = auth.forgot_password(signup_email)
+    record("RESET-PROD-01", "Production forgot-password omits reset token", 
+           f_prod_succ and "reset_token_test" not in f_prod_data and f_prod_code == 200)
+
+    # In production: identical generic response for non-existent email
+    _, f_nonexist_data, _ = auth.forgot_password("nonexistent_user_999@company.com")
+    expected_generic_msg = {"message": "If an account exists, a reset link has been sent."}
+    record("RESET-PROD-02", "Production forgot-password identical for existing & non-existing emails",
+           f_prod_data == expected_generic_msg and f_nonexist_data == expected_generic_msg)
+
+    # 7.2 Test Environment Verification
+    os.environ["ENVIRONMENT"] = "test"
+    auth.clear_forgot_rate_limits()
     f_succ, f_data, f_code = auth.forgot_password(signup_email)
     reset_token = f_data.get("reset_token_test")
-    record("RESET-01", "Forgot password issues reset token", f_succ and bool(reset_token))
+    record("RESET-01", "Test environment forgot-password issues reset token", f_succ and bool(reset_token))
 
     # Invalid reset token
     bad_succ, _, bad_code = auth.reset_password("invalid_token_999", "BrandNewPassword123!")
@@ -186,12 +206,55 @@ def run_sprint1_suite():
     r_succ, _, r_code = auth.reset_password(reset_token, new_pwd)
     record("RESET-03", "Valid reset token updates password -> 200", r_succ and r_code == 200)
 
+    # Single-use: reusing same token fails
+    reused_succ, _, reused_code = auth.reset_password(reset_token, "AnotherPassword123!")
+    record("RESET-SINGLE-USE", "Reset token is single-use and cannot be reused -> 400", (not reused_succ) and reused_code == 400)
+
+    # Expired token: simulate expired token in _RESET_TOKENS
+    expired_token = secrets.token_urlsafe(32)
+    with auth._RESET_TOKENS_LOCK:
+        auth._RESET_TOKENS[expired_token] = {
+            "user_id": "test-user-id",
+            "email": signup_email,
+            "expires_at": time.time() - 100  # Expired in past
+        }
+    exp_succ, _, exp_code = auth.reset_password(expired_token, "AnotherPassword123!")
+    record("RESET-EXPIRED", "Expired reset token rejected -> 400", (not exp_succ) and exp_code == 400)
+
     # Active session invalidated by reset
     record("RESET-04", "Password reset invalidates active sessions", auth.validate_session(active_token) is None)
 
     # Login with new password succeeds
     login_new_succ, _, _ = auth.login(signup_email, new_pwd)
     record("RESET-05", "Login succeeds with newly set password", login_new_succ)
+
+    # 7.3 Forgot-Password Rate Limiting Verification
+    auth.clear_forgot_rate_limits()
+    rate_test_email = f"forgot_rate_{rand_suffix}@company.com"
+    # Threshold is 3 attempts per email
+    for _ in range(3):
+        auth.forgot_password(rate_test_email, ip_address="198.51.100.1")
+    # 4th attempt exceeds email limit: returns same generic response, but no token generated
+    f_rate_succ, f_rate_data, f_rate_code = auth.forgot_password(rate_test_email, ip_address="198.51.100.1")
+    record("RESET-RATE-01", "Forgot-password rate limiting triggers after threshold (email limit)",
+           f_rate_succ and f_rate_code == 200 and "reset_token_test" not in f_rate_data and f_rate_data == expected_generic_msg)
+
+    # IP rate limit: threshold is 5 attempts per IP
+    auth.clear_forgot_rate_limits()
+    test_ip = "203.0.113.42"
+    for i in range(5):
+        auth.forgot_password(f"user_{i}_{rand_suffix}@company.com", ip_address=test_ip)
+    # 6th attempt from same IP exceeds IP limit
+    f_ip_succ, f_ip_data, f_ip_code = auth.forgot_password(f"user_6_{rand_suffix}@company.com", ip_address=test_ip)
+    record("RESET-RATE-02", "Forgot-password rate limiting triggers after threshold (IP limit)",
+           f_ip_succ and f_ip_code == 200 and "reset_token_test" not in f_ip_data and f_ip_data == expected_generic_msg)
+
+    # Restore environment
+    if orig_env is not None:
+        os.environ["ENVIRONMENT"] = orig_env
+    else:
+        os.environ.pop("ENVIRONMENT", None)
+
 
     # --------------------------------------------------------------------------
     # 8 & 9. Dashboard HTTP access (Authenticated vs Unauthenticated)
