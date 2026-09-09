@@ -1112,8 +1112,8 @@ def application(environ, start_response):
     start_response(status, response_headers)
     return [b'404 Not Found']
 
-# Gunicorn WSGI Entry Point Alias
-app = application
+from engine.wsgi_security_middleware import secured_app
+app = secured_app
 
 if __name__ == '__main__':
     from wsgiref.simple_server import make_server

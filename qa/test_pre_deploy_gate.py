@@ -119,9 +119,15 @@ class TestServerSubprocess:
             except Exception:
                 pass
 
-        app_script = os.path.join(BASE_DIR, "app.py")
+        # Production WSGI server command (Gunicorn if available, fallback to wsgiref make_server)
+        if shutil.which("gunicorn"):
+            cmd = ["gunicorn", "wsgi:app", "--bind", f"0.0.0.0:{self.port}", "--workers", "1", "--timeout", "30"]
+        else:
+            server_code = f"from wsgi import app; from wsgiref.simple_server import make_server; make_server('', {self.port}, app).serve_forever()"
+            cmd = [sys.executable, "-c", server_code]
+
         self.process = subprocess.Popen(
-            [sys.executable, app_script],
+            cmd,
             cwd=BASE_DIR,
             env=self.env,
             stdout=subprocess.DEVNULL,
@@ -328,6 +334,27 @@ def run_lockdown_test_suite(server: TestServerSubprocess):
     for tid, mth, path, exp, desc in public_endpoints:
         st, _, _ = run_http_request(base_url, mth, path)
         record_test(tid, "PUBLIC_UX", f"{mth} {path} -> {exp} ({desc})", st == exp, st, exp, "")
+
+    print("\n--- PHASE 8: WSGI SECURITY MIDDLEWARE TARGET VERIFICATION ---")
+    # MW-01: Verify /founder returns 404 through WSGI path
+    st_mw01, _, _ = run_http_request(base_url, "GET", "/founder")
+    record_test("MW-01", "WSGI_MIDDLEWARE", "Verify /founder returns 404 through WSGI path", st_mw01 == 404, st_mw01, 404, "")
+
+    # MW-02: Verify /api/leads/generate returns 503 through WSGI path
+    st_mw02, js_mw02, _ = run_http_request(base_url, "POST", "/api/leads/generate", body={"industry": "SaaS"})
+    record_test("MW-02", "WSGI_MIDDLEWARE", "Verify /api/leads/generate returns 503 through WSGI path", st_mw02 == 503, st_mw02, 503, str(js_mw02))
+
+    # MW-03: Verify /api/audit/run rejects SSRF through WSGI path
+    st_mw03, js_mw03, _ = run_http_request(base_url, "POST", "/api/audit/run", body={"target": "http://127.0.0.1:8090/founder"})
+    record_test("MW-03", "WSGI_MIDDLEWARE", "Verify /api/audit/run rejects SSRF through WSGI path", st_mw03 == 400, st_mw03, 400, str(js_mw03))
+
+    # MW-04: Verify /api/documents/clear returns 503 through WSGI path
+    st_mw04, js_mw04, _ = run_http_request(base_url, "POST", "/api/documents/clear", body={})
+    record_test("MW-04", "WSGI_MIDDLEWARE", "Verify /api/documents/clear returns 503 through WSGI path", st_mw04 == 503, st_mw04, 503, str(js_mw04))
+
+    # MW-05: Verify public pages return 200 through WSGI path
+    st_mw05, _, _ = run_http_request(base_url, "GET", "/")
+    record_test("MW-05", "WSGI_MIDDLEWARE", "Verify public pages return 200 through WSGI path", st_mw05 == 200, st_mw05, 200, "")
 
 
 def run_lifecycle_and_webhook_suite(server: TestServerSubprocess):
