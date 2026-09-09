@@ -33,6 +33,13 @@ WEB_DIR_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "web")
 # Load existing index & storage data on startup
 load_all_data()
 
+# Run database migrations idempotently on startup (PostgreSQL / SQLite)
+try:
+    from db.migrate import run_migrations
+    run_migrations()
+except Exception as e:
+    print(f"[WSGI Startup] DB Migration Notice: {e}")
+
 # Start 24/7 Cloud Autonomous SEO & Growth Daemon
 try:
     start_autonomous_cloud_growth_daemon()
