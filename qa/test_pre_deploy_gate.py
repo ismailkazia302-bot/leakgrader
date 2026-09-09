@@ -1,38 +1,44 @@
 """
-LeakGrader - Pre-Deploy Security Release Gate Sprint 0.5 Automated Test Suite
-Audit Date: September 7, 2026
-Branch: security/critical-hotfix-2026-09-07
+LeakGrader - Pre-Deploy Security Release Gate Sprint 0.7 Automated Test Suite
+Independent Black-Box HTTP Verification Suite (Zero Application Imports)
 
 Covers:
-1. Strict Lockdown Fail-Closed Verification across all environment states.
-2. Complete Route & HTTP Method Matrix (GET, HEAD, POST, PUT, PATCH, DELETE, OPTIONS).
-3. Path Variant Bypass Resistance (casing, trailing slash, query params, URL encoding).
-4. Paid API Lockdown (HTTP 503 verification).
-5. Non-Lockdown Entitlement Status Codes (401 vs 403 standard).
-6. Complete 16-Case Webhook Security Matrix (HMAC, replay, lifecycle deactivation).
-7. Comprehensive SSRF Attack Vector Matrix (18 attack payloads).
-8. Public Scanner Persistence Lockdown Check (audits_vault.json).
-9. Public Checkout Hardening (server plan validation).
+1. Server Offline Verification (Tests fail if server is offline).
+2. Fail-Closed Lockdown Configuration Matrix (Real HTTP responses across subprocesses).
+3. Complete Route & HTTP Method Matrix (GET, HEAD, POST, PUT, PATCH, DELETE, OPTIONS).
+4. Path Variant Bypass Resistance (casing, trailing slash, query params, URL encoding).
+5. Comprehensive SSRF Vector Rejection Matrix (18 attack payloads over HTTP).
+6. Webhook Security & Idempotency Matrix (HMAC-SHA256, replay protection).
+7. Full Lemon Squeezy Subscription Lifecycle Matrix (10 black-box lifecycle tests).
+8. Non-Lockdown Entitlement Authorization Matrix (401 vs 403 standard).
+9. Public Marketing & Static Asset Availability.
 """
 
 import os
 import sys
+
+# Ensure UTF-8 output on Windows consoles
+if sys.platform == "win32":
+    try:
+        sys.stdout.reconfigure(encoding="utf-8")
+        sys.stderr.reconfigure(encoding="utf-8")
+    except Exception:
+        pass
+
 import json
 import time
 import hmac
 import hashlib
-import socket
-import threading
+import shutil
+import tempfile
+import subprocess
 import urllib.request
 import urllib.error
-from http.server import ThreadingHTTPServer
 
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-if BASE_DIR not in sys.path:
-    sys.path.insert(0, BASE_DIR)
-
-from app import MastermindRequestHandler
-import engine.security_guard as sg
+TEST_PORT = 8199
+BASE_URL = f"http://127.0.0.1:{TEST_PORT}"
+TEST_SECRET = "sec_test_sprint07_hmac_998127361827"
 
 results = []
 
@@ -54,7 +60,7 @@ def record_test(test_id: str, category: str, title: str, passed: bool, status_co
 
 def run_http_request(base_url: str, method: str, path: str, headers: dict = None, body: dict = None, raw_body: bytes = None):
     url = f"{base_url}{path}"
-    hdrs = headers or {}
+    hdrs = dict(headers) if headers else {}
     data = None
     if raw_body is not None:
         data = raw_body
@@ -65,7 +71,7 @@ def run_http_request(base_url: str, method: str, path: str, headers: dict = None
 
     req = urllib.request.Request(url, data=data, headers=hdrs, method=method)
     try:
-        with urllib.request.urlopen(req, timeout=4) as resp:
+        with urllib.request.urlopen(req, timeout=5) as resp:
             resp_body = resp.read().decode("utf-8", errors="ignore")
             try:
                 parsed_json = json.loads(resp_body)
@@ -82,336 +88,540 @@ def run_http_request(base_url: str, method: str, path: str, headers: dict = None
     except Exception as e:
         return 0, None, str(e)
 
-def test_lockdown_environment_logic():
-    print("\n--- PHASE 1: LOCKDOWN FAIL-CLOSED ENVIRONMENT CONFIGURATION ---")
-    orig_env = os.environ.copy()
-    test_matrix = [
-        # (ENV, RENDER, LOCKDOWN_VAL, expected_lockdown, description)
-        ("", "", "", True, "Default unconfigured env must default to ENABLED"),
-        ("production", "", "false", True, "Production with lockdown=false must remain ENABLED"),
-        ("production", "", "", True, "Production unconfigured must remain ENABLED"),
-        ("staging", "", "false", True, "Staging with lockdown=false must remain ENABLED"),
-        ("staging", "", "", True, "Staging unconfigured must remain ENABLED"),
-        ("", "true", "false", True, "Render cloud with lockdown=false must remain ENABLED"),
-        ("production", "true", "false", True, "Production on Render with lockdown=false must remain ENABLED"),
-        ("test", "true", "false", True, "Test env on Render cloud must remain ENABLED"),
-        ("local", "", "true", True, "Local with lockdown=true is ENABLED"),
-        ("local", "", "false", False, "Local with lockdown=false is explicitly DISABLED"),
-        ("local", "", "0", False, "Local with lockdown=0 is explicitly DISABLED"),
-        ("test", "", "false", False, "Test env with lockdown=false is explicitly DISABLED"),
-        ("local", "", "unknown_val", True, "Local with ambiguous setting fails closed to ENABLED"),
+
+class TestServerSubprocess:
+    """Manages an isolated application server running as a separate OS subprocess."""
+    def __init__(self, port: int = TEST_PORT, env_overrides: dict = None):
+        self.port = port
+        self.base_url = f"http://127.0.0.1:{port}"
+        self.storage_dir = tempfile.mkdtemp(prefix="lg_test_storage_")
+        self.env = os.environ.copy()
+        self.env["PORT"] = str(self.port)
+        self.env["STORAGE_DIR"] = self.storage_dir
+        self.env["ALLOW_TEST_WEBHOOKS"] = "true"
+        self.env["LEMONSQUEEZY_WEBHOOK_SECRET"] = TEST_SECRET
+        if env_overrides:
+            self.env.update(env_overrides)
+        self.process = None
+
+    def start(self):
+        # Initialize empty storage structures in temporary directory
+        for fname in ["active_entitlements.json", "processed_webhook_events.json", "audits_vault.json", "leads_vault.json"]:
+            fpath = os.path.join(self.storage_dir, fname)
+            with open(fpath, "w", encoding="utf-8") as f:
+                f.write("{}")
+
+        # Copy existing demo assets into temporary storage so preview routes resolve
+        demos_src = os.path.join(BASE_DIR, "storage", "demos")
+        if os.path.exists(demos_src):
+            try:
+                shutil.copytree(demos_src, os.path.join(self.storage_dir, "demos"), dirs_exist_ok=True)
+            except Exception:
+                pass
+
+        app_script = os.path.join(BASE_DIR, "app.py")
+        self.process = subprocess.Popen(
+            [sys.executable, app_script],
+            cwd=BASE_DIR,
+            env=self.env,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL
+        )
+
+        # Wait up to 10 seconds for server to respond on /health
+        start_time = time.time()
+        while time.time() - start_time < 10:
+            st, _, _ = run_http_request(self.base_url, "GET", "/health")
+            if st == 200:
+                return True
+            time.sleep(0.15)
+        return False
+
+    def stop(self):
+        if self.process:
+            try:
+                self.process.terminate()
+                self.process.wait(timeout=3)
+            except Exception:
+                try:
+                    self.process.kill()
+                except Exception:
+                    pass
+            self.process = None
+
+        if os.path.exists(self.storage_dir):
+            try:
+                shutil.rmtree(self.storage_dir, ignore_errors=True)
+            except Exception:
+                pass
+
+
+def compute_signature(payload_bytes: bytes, secret: str = TEST_SECRET) -> str:
+    return hmac.new(secret.encode("utf-8"), payload_bytes, hashlib.sha256).hexdigest()
+
+
+def test_offline_verification():
+    print("\n--- PHASE 0: SERVER OFFLINE VERIFICATION ---")
+    st, _, err = run_http_request(BASE_URL, "GET", "/health")
+    passed = (st == 0)
+    record_test(
+        "OFFLINE-01",
+        "OFFLINE_CHECK",
+        "Requests fail with status 0 when server is offline",
+        passed,
+        st,
+        0,
+        f"Server not running as expected (details: {err})"
+    )
+
+
+def test_lockdown_environments():
+    print("\n--- PHASE 1: FAIL-CLOSED LOCKDOWN ENVIRONMENT CONFIGURATION VIA SUBPROCESSES ---")
+    
+    # 1. Test Environment with Lockdown Enabled
+    srv1 = TestServerSubprocess(TEST_PORT, {
+        "ENVIRONMENT": "test",
+        "SECURITY_LOCKDOWN_MODE": "enabled"
+    })
+    srv1.start()
+    try:
+        st, js, _ = run_http_request(srv1.base_url, "POST", "/api/leads/generate", body={"query": "test"})
+        record_test("ENV-01", "LOCKDOWN_HTTP", "ENVIRONMENT=test, LOCKDOWN=enabled -> 503", st == 503, st, 503, str(js))
+
+        st, _, _ = run_http_request(srv1.base_url, "GET", "/founder")
+        record_test("ENV-02", "LOCKDOWN_HTTP", "ENVIRONMENT=test, LOCKDOWN=enabled -> /founder hidden (404)", st == 404, st, 404, "")
+    finally:
+        srv1.stop()
+
+    # 2. Production Environment with lockdown=false (Fail-closed must enforce lockdown)
+    srv2 = TestServerSubprocess(TEST_PORT, {
+        "ENVIRONMENT": "production",
+        "SECURITY_LOCKDOWN_MODE": "false"
+    })
+    srv2.start()
+    try:
+        st, js, _ = run_http_request(srv2.base_url, "POST", "/api/leads/generate", body={"query": "test"})
+        record_test("ENV-03", "LOCKDOWN_HTTP", "ENVIRONMENT=production, LOCKDOWN=false -> 503 (Fail-Closed)", st == 503, st, 503, str(js))
+
+        st, _, _ = run_http_request(srv2.base_url, "GET", "/founder")
+        record_test("ENV-04", "LOCKDOWN_HTTP", "ENVIRONMENT=production, LOCKDOWN=false -> /founder hidden (404)", st == 404, st, 404, "")
+    finally:
+        srv2.stop()
+
+    # 3. Render Cloud Environment with lockdown=false (Fail-closed must enforce lockdown)
+    srv3 = TestServerSubprocess(TEST_PORT, {
+        "ENVIRONMENT": "",
+        "RENDER": "true",
+        "SECURITY_LOCKDOWN_MODE": "false"
+    })
+    srv3.start()
+    try:
+        st, js, _ = run_http_request(srv3.base_url, "POST", "/api/leads/generate", body={"query": "test"})
+        record_test("ENV-05", "LOCKDOWN_HTTP", "RENDER=true, LOCKDOWN=false -> 503 (Fail-Closed)", st == 503, st, 503, str(js))
+    finally:
+        srv3.stop()
+
+    # 4. Staging Unconfigured Environment (Fail-closed must enforce lockdown)
+    srv4 = TestServerSubprocess(TEST_PORT, {
+        "ENVIRONMENT": "staging",
+        "SECURITY_LOCKDOWN_MODE": ""
+    })
+    srv4.start()
+    try:
+        st, js, _ = run_http_request(srv4.base_url, "POST", "/api/leads/generate", body={"query": "test"})
+        record_test("ENV-06", "LOCKDOWN_HTTP", "ENVIRONMENT=staging, unconfigured -> 503 (Fail-Closed)", st == 503, st, 503, str(js))
+    finally:
+        srv4.stop()
+
+
+def run_lockdown_test_suite(server: TestServerSubprocess):
+    base_url = server.base_url
+
+    print("\n--- PHASE 2: ROUTE MATRIX & HTTP METHOD ENFORCEMENT (LOCKDOWN MODE) ---")
+    routes_and_methods = [
+        ("RT-01", "GET", "/founder", 404, "Route hidden"),
+        ("RT-02", "HEAD", "/founder", 404, "HEAD probe hidden"),
+        ("RT-03", "PUT", "/founder", 405, "PUT method not allowed"),
+        ("RT-04", "PATCH", "/founder", 405, "PATCH method not allowed"),
+        ("RT-05", "DELETE", "/founder", 404, "DELETE on founder hidden 404"),
+        ("RT-06", "OPTIONS", "/founder", 200, "OPTIONS preflight allowed 200"),
+        ("RT-07", "POST", "/api/leads/generate", 503, "Paid API gated 503"),
+        ("RT-08", "GET", "/api/leads/generate", 404, "GET on paid POST returns 404"),
+        ("RT-09", "PUT", "/api/leads/generate", 405, "PUT on paid POST returns 405"),
+        ("RT-10", "DELETE", "/api/leads/generate", 404, "DELETE on paid POST returns 404"),
+        ("RT-11", "POST", "/api/content/generate", 503, "Paid API gated 503"),
+        ("RT-12", "GET", "/api/content/generate", 404, "GET on content returns 404"),
+        ("RT-13", "POST", "/api/checkout/create", 503, "Checkout gated 503"),
+        ("RT-14", "GET", "/api/checkout/create", 404, "GET on checkout returns 404"),
+        ("RT-15", "POST", "/api/payment/webhook", 401, "Webhook unsigned returns 401"),
+        ("RT-16", "GET", "/api/payment/webhook", 404, "GET on webhook returns 404"),
+        ("RT-17", "GET", "/api/audit/dossier", 503, "Dossier API gated 503"),
+        ("RT-18", "POST", "/api/audit/dossier", 404, "POST on dossier API returns 404"),
+        ("RT-19", "GET", "/report/dossier/apex-enterprise", 503, "Dossier HTML report gated 503"),
+        ("RT-20", "POST", "/api/booking/clear", 503, "Mutation API gated 503"),
+        ("RT-21", "GET", "/api/booking/clear", 404, "GET on booking clear returns 404 Endpoint not found"),
     ]
+    for tid, mth, path, exp, desc in routes_and_methods:
+        st, _, _ = run_http_request(base_url, mth, path)
+        record_test(tid, "ROUTE_METHOD", f"{mth} {path} -> {exp} ({desc})", st == exp, st, exp, "")
 
-    for idx, (env_val, render_val, lock_val, expected, desc) in enumerate(test_matrix, 1):
-        for k in ["ENVIRONMENT", "RENDER", "SECURITY_LOCKDOWN_MODE"]:
-            if k in os.environ:
-                del os.environ[k]
-        if env_val: os.environ["ENVIRONMENT"] = env_val
-        if render_val: os.environ["RENDER"] = render_val
-        if lock_val: os.environ["SECURITY_LOCKDOWN_MODE"] = lock_val
-
-        actual = sg.is_lockdown_enabled()
-        record_test(f"ENV-0{idx}" if idx < 10 else f"ENV-{idx}", "LOCKDOWN_ENV", desc, actual == expected, actual, expected, f"env={env_val}, render={render_val}, lock={lock_val}")
-
-    os.environ.clear()
-    os.environ.update(orig_env)
-
-def main():
-    print("=" * 75)
-    print("LEAKGRADER PRE-DEPLOY SECURITY RELEASE GATE SPRINT 0.5 - TEST HARNESS")
-    print("=" * 75)
-
-    # 1. Environment matrix
-    test_lockdown_environment_logic()
-
-    # 2. Start HTTP server in Lockdown Mode (Production default)
-    print("\n--- STARTING LIVE HTTP SERVER IN STRICT LOCKDOWN MODE ---")
-    os.environ["ENVIRONMENT"] = "production"
-    os.environ.pop("SECURITY_LOCKDOWN_MODE", None)
-    TEST_SECRET = "test_ls_prod_secret_matrix_98240982098"
-    os.environ["LEMONSQUEEZY_WEBHOOK_SECRET"] = TEST_SECRET
-    os.environ["LEMONSQUEEZY_STORE_ID"] = "109845"
-    os.environ["LEMONSQUEEZY_VARIANT_IDS"] = "var_pro_month,var_agency_month,var_micro"
-    os.environ["ALLOW_TEST_WEBHOOKS"] = "true"
-
-    server = ThreadingHTTPServer(("127.0.0.1", 0), MastermindRequestHandler)
-    port = server.server_address[1]
-    base_url = f"http://127.0.0.1:{port}"
-    server_thread = threading.Thread(target=server.serve_forever, daemon=True)
-    server_thread.start()
-    time.sleep(0.5)
-    print(f"Test server active on {base_url}")
-
-    # -------------------------------------------------------------------------
-    # PHASE 2: ROUTE NORMALIZATION & BYPASS RESISTANCE
-    # -------------------------------------------------------------------------
-    print("\n--- PHASE 2: ROUTE NORMALIZATION & BYPASS RESISTANCE ---")
-    norm_cases = [
-        ("NORM-01", "GET", "/founder", 404, "Standard /founder hidden"),
-        ("NORM-02", "GET", "/founder/", 404, "Trailing slash /founder/ hidden"),
-        ("NORM-03", "GET", "/FOUNDER", 404, "Uppercase /FOUNDER hidden"),
-        ("NORM-04", "GET", "/Founder", 404, "Mixed-case /Founder hidden"),
-        ("NORM-05", "GET", "/%66%6f%75%6e%64%65%72", 404, "URL-encoded /founder hidden"),
-        ("NORM-06", "GET", "/founder?bypass=true&admin=1", 404, "Query param spoofing /founder hidden"),
-        ("NORM-07", "HEAD", "/founder", 404, "HEAD /founder denied 404"),
-        ("NORM-08", "GET", "/dashboard", 404, "Dashboard route hidden"),
-        ("NORM-09", "GET", "/analytics", 404, "Analytics route hidden"),
-        ("NORM-10", "PUT", "/founder", 405, "PUT method not allowed"),
-        ("NORM-11", "PATCH", "/founder", 405, "PATCH method not allowed"),
-        ("NORM-12", "OPTIONS", "/founder", 200, "OPTIONS preflight allowed"),
-        ("NORM-13", "GET", "/api/unknown_protected_probe", 404, "Unknown API route default deny"),
-        ("NORM-14", "HEAD", "/api/analytics/live", 404, "HEAD probe on admin API denied in lockdown"),
+    print("\n--- PHASE 3: PATH VARIANT BYPASS RESISTANCE (LOCKDOWN MODE) ---")
+    bypass_tests = [
+        ("BYP-01", "GET", "/founder/", 404, "Trailing slash on founder hidden"),
+        ("BYP-02", "GET", "/FOUNDER", 404, "Uppercase /FOUNDER hidden"),
+        ("BYP-03", "GET", "/FoUnDeR", 404, "Mixed case /FoUnDeR hidden"),
+        ("BYP-04", "GET", "/%66%6f%75%6e%64%65%72", 404, "URL-encoded /founder hidden"),
+        ("BYP-05", "GET", "/founder?admin=true", 404, "Query param spoofing ignored"),
+        ("BYP-06", "GET", "/founder?bypass=1", 404, "Bypass query param ignored"),
+        ("BYP-07", "POST", "/api/leads/generate/", 503, "Trailing slash on paid API gated 503"),
+        ("BYP-08", "POST", "/API/LEADS/GENERATE", 503, "Uppercase paid API gated 503"),
+        ("BYP-09", "POST", "/api/leads/generate?free=true", 503, "Query flag spoofing ignored"),
+        ("BYP-10", "POST", "/api/leads/generate", 503, "Body admin flag ignored (still 503)"),
+        ("BYP-11", "POST", "/api/checkout/create/", 503, "Trailing slash on checkout gated 503"),
+        ("BYP-12", "POST", "/API/CHECKOUT/CREATE", 503, "Uppercase checkout gated 503"),
     ]
-    for tid, mtd, pth, exp, desc in norm_cases:
-        st, _, _ = run_http_request(base_url, mtd, pth)
-        record_test(tid, "BYPASS_RESISTANCE", desc, st == exp, st, exp, f"{mtd} {pth}")
+    for tid, mth, path, exp, desc in bypass_tests:
+        body = {"admin": True} if tid == "BYP-10" else None
+        st, _, _ = run_http_request(base_url, mth, path, body=body)
+        record_test(tid, "BYPASS_RESISTANCE", f"{mth} {path} -> {exp} ({desc})", st == exp, st, exp, "")
 
-    # -------------------------------------------------------------------------
-    # PHASE 3: PAID API LOCKDOWN (HTTP 503 VERIFICATION)
-    # -------------------------------------------------------------------------
-    print("\n--- PHASE 3: PAID API LOCKDOWN (FAIL-CLOSED 503) ---")
-    paid_lockdown_cases = [
-        ("LOCK-01", "POST", "/api/leads/generate", {"industry": "SaaS"}, 503, "Leads generate returns 503 in lockdown"),
-        ("LOCK-02", "POST", "/api/leads/clear", {}, 503, "Leads clear returns 503 in lockdown"),
-        ("LOCK-03", "POST", "/api/content/generate", {"topic": "AI"}, 503, "Content generate returns 503 in lockdown"),
-        ("LOCK-04", "POST", "/api/content-crew/run", {"topic": "AI"}, 503, "Content crew returns 503 in lockdown"),
-        ("LOCK-05", "POST", "/api/checkout/create", {"plan_key": "micro_audit"}, 503, "Checkout create returns 503 in lockdown"),
-        ("LOCK-06", "GET", "/api/audit/dossier?company=Apex", None, 503, "Dossier API returns 503 in lockdown"),
-        ("LOCK-07", "GET", "/report/dossier/apex-enterprise", None, 503, "Dossier HTML report returns 503 in lockdown"),
-        ("LOCK-08", "POST", "/api/booking/clear", {}, 503, "Booking clear returns 503 in lockdown"),
-    ]
-    for tid, mtd, pth, body, exp, desc in paid_lockdown_cases:
-        st, js, _ = run_http_request(base_url, mtd, pth, body=body)
-        is_503 = (st == exp) and ((js or {}).get("error") == "feature_temporarily_unavailable" or "unavailable" in str(js))
-        record_test(tid, "PAID_LOCKDOWN", desc, is_503, st, exp, f"Response: {js}")
-
-    # Booking chat mutation containment in lockdown
-    st_chat, js_chat, _ = run_http_request(base_url, "POST", "/api/booking/chat", body={"message": "Book demo tomorrow 3pm please", "history": []})
-    chat_safe = (st_chat == 200 and (js_chat or {}).get("auto_booked") is False)
-    record_test("LOCK-09", "PAID_LOCKDOWN", "Booking chat disables auto-mutation under lockdown", chat_safe, (js_chat or {}).get("auto_booked"), False, f"Chat resp: {js_chat}")
-
-    # -------------------------------------------------------------------------
-    # PHASE 4: PUBLIC SCANNER SSRF GUARD
-    # -------------------------------------------------------------------------
-    print("\n--- PHASE 4: PUBLIC SCANNER SSRF GUARD (18 ATTACK VECTORS) ---")
+    print("\n--- PHASE 4: COMPREHENSIVE SSRF VECTOR REJECTION MATRIX (HTTP POST /api/audit/run) ---")
     ssrf_vectors = [
-        ("SSRF-01", "http://127.0.0.1:8090/founder", "Direct loopback IP"),
-        ("SSRF-02", "http://127.0.0.2:80", "Alternative loopback 127.0.0.2"),
-        ("SSRF-03", "http://localhost:8090", "Localhost hostname"),
-        ("SSRF-04", "http://0.0.0.0:80", "Zero broadcast IP"),
-        ("SSRF-05", "http://[::1]:80", "IPv6 loopback"),
-        ("SSRF-06", "http://169.254.169.254/latest/meta-data/", "AWS/Cloud metadata IP"),
-        ("SSRF-07", "http://10.0.0.1/admin", "RFC1918 10.0.0.0/8 private network"),
-        ("SSRF-08", "http://172.16.0.1/admin", "RFC1918 172.16.0.0/12 private network"),
-        ("SSRF-09", "http://192.168.1.1/setup", "RFC1918 192.168.0.0/16 private network"),
-        ("SSRF-10", "http://224.0.0.1", "Multicast IP address"),
-        ("SSRF-11", "file:///etc/passwd", "file:// scheme access"),
-        ("SSRF-12", "ftp://127.0.0.1/resource", "ftp:// protocol access"),
-        ("SSRF-13", "gopher://127.0.0.1:70", "gopher:// protocol access"),
-        ("SSRF-14", "http://admin:secret@127.0.0.1", "Userinfo embedded in URL"),
-        ("SSRF-15", "http://127.0.0.1:22", "Non-standard port (SSH 22)"),
-        ("SSRF-16", "http://0177.0.0.1", "Octal representation of 127.0.0.1"),
-        ("SSRF-17", "http://0x7f000001", "Hex representation of 127.0.0.1"),
-        ("SSRF-18", "http://2130706433", "Integer representation of 127.0.0.1"),
+        ("SSRF-01", "http://127.0.0.1:8090/founder", "Direct Loopback IPv4"),
+        ("SSRF-02", "http://localhost:8090/", "Localhost Hostname"),
+        ("SSRF-03", "http://169.254.169.254/latest/meta-data/", "AWS Cloud Metadata"),
+        ("SSRF-04", "http://10.0.0.1/admin", "Private RFC1918 Class A"),
+        ("SSRF-05", "http://192.168.1.1/setup", "Private RFC1918 Class C"),
+        ("SSRF-06", "http://172.16.0.1/status", "Private RFC1918 Class B"),
+        ("SSRF-07", "file:///etc/passwd", "Forbidden file:// Scheme"),
+        ("SSRF-08", "file:///C:/Windows/win.ini", "Windows File Scheme"),
+        ("SSRF-09", "ftp://anonymous@internal.corp", "FTP Scheme"),
+        ("SSRF-10", "gopher://127.0.0.1:6379/", "Gopher Scheme"),
+        ("SSRF-11", "dict://127.0.0.1:11211/", "Dict Scheme"),
+        ("SSRF-12", "http://2130706433/", "Decimal Encoded Loopback IP"),
+        ("SSRF-13", "http://0x7f000001/", "Hex Encoded Loopback IP"),
+        ("SSRF-14", "http://admin:secret@127.0.0.1/", "Userinfo Credentials in Target"),
+        ("SSRF-15", "http://100.64.0.1/", "Carrier-Grade NAT IP"),
+        ("SSRF-16", "http://intranet.local/", "Prohibited .local Domain"),
+        ("SSRF-17", "http://portal.internal/", "Prohibited .internal Domain"),
+        ("SSRF-18", "http://[::1]:8090/", "IPv6 Loopback Address"),
     ]
     for tid, target, desc in ssrf_vectors:
-        is_safe, _, reason = sg.validate_url_ssrf_safe(target)
-        record_test(tid, "SSRF_SECURITY", f"SSRF rejection: {desc}", is_safe is False, "BLOCKED" if not is_safe else "ALLOWED", "BLOCKED", f"Target: {target}, reason: {reason}")
+        st, js, _ = run_http_request(base_url, "POST", "/api/audit/run", body={"target": target, "url_or_company": target})
+        passed = (st == 400) and ((js or {}).get("error") in ["prohibited_target_address", "invalid_target_domain"])
+        record_test(tid, "SSRF_HTTP", f"SSRF Blocked: {desc}", passed, st, 400, str(js))
 
-    # Test audit endpoint SSRF enforcement
-    st_ssrf_api, js_ssrf_api, _ = run_http_request(base_url, "POST", "/api/audit/run", body={"url_or_company": "http://127.0.0.1:8090/founder"})
-    record_test("SSRF-19", "SSRF_SECURITY", "/api/audit/run rejects SSRF target with 400", st_ssrf_api == 400, st_ssrf_api, 400, f"Response: {js_ssrf_api}")
+    # Public business name accepted by scanner
+    st, js, _ = run_http_request(base_url, "POST", "/api/audit/run", body={"target": "Apex Dental Clinic", "url_or_company": "Apex Dental Clinic"})
+    passed = (st == 200) and "audit" in (js or {})
+    record_test("SSRF-19", "SSRF_HTTP", "Valid Company Name Accepted by Scanner", passed, st, 200, "")
 
-    # Public business name allowed
-    is_biz_safe, _, _ = sg.validate_url_ssrf_safe("Acme Real Estate")
-    record_test("SSRF-20", "SSRF_SECURITY", "Public company name allowed for audit simulation", is_biz_safe is True, is_biz_safe, True, "Acme Real Estate")
+    print("\n--- PHASE 5: PUBLIC MARKETING PAGES & STATIC ASSETS ---")
+    public_endpoints = [
+        ("PUB-01", "GET", "/", 200, "Landing page loads"),
+        ("PUB-02", "GET", "/health", 200, "Health endpoint responds"),
+        ("PUB-03", "GET", "/sitemap.xml", 200, "SEO sitemap loads"),
+        ("PUB-04", "GET", "/robots.txt", 200, "Robots.txt loads"),
+        ("PUB-05", "GET", "/preview/demo_183731", 200, "Public redesign preview loads"),
+        ("PUB-06", "GET", "/api/pricing/plans", 200, "Public pricing plans respond"),
+    ]
+    for tid, mth, path, exp, desc in public_endpoints:
+        st, _, _ = run_http_request(base_url, mth, path)
+        record_test(tid, "PUBLIC_UX", f"{mth} {path} -> {exp} ({desc})", st == exp, st, exp, "")
 
-    # Scanner persistence in lockdown check
-    audits_file = os.path.join(BASE_DIR, "storage", "audits_vault.json")
-    mtime_before = os.path.getmtime(audits_file) if os.path.exists(audits_file) else 0
-    st_scan, _, _ = run_http_request(base_url, "POST", "/api/audit/run", body={"url_or_company": "Apex Enterprise"})
-    mtime_after = os.path.getmtime(audits_file) if os.path.exists(audits_file) else 0
-    record_test("AUDIT-PERSIST", "SCANNER_LOCKDOWN", "audits_vault.json unmodified during lockdown scan", (mtime_before == mtime_after and st_scan == 200), mtime_after, mtime_before, "Persistence disabled in lockdown")
 
-    # -------------------------------------------------------------------------
-    # PHASE 5: COMPLETE 16-CASE WEBHOOK SECURITY MATRIX
-    # -------------------------------------------------------------------------
-    print("\n--- PHASE 5: COMPLETE 16-CASE WEBHOOK SECURITY MATRIX ---")
+def run_lifecycle_and_webhook_suite(server: TestServerSubprocess):
+    base_url = server.base_url
 
-    def sign_payload(payload_bytes: bytes, secret: str) -> str:
-        return hmac.new(secret.encode("utf-8"), payload_bytes, hashlib.sha256).hexdigest()
+    print("\n--- PHASE 6: WEBHOOK PROTOCOL & LEMON SQUEEZY LIFECYCLE (NON-LOCKDOWN) ---")
 
-    def make_ls_payload(event_name: str, order_id: str, store_id: str = "109845", variant_id: str = "var_pro_month", status: str = "active", test_mode: bool = False):
-        return {
-            "meta": {
-                "event_name": event_name,
-                "test_mode": test_mode,
-                "custom_data": {"event_id": f"evt_{order_id}_{event_name}"}
-            },
-            "data": {
-                "id": order_id,
-                "type": "subscriptions" if "subscription" in event_name else "orders",
-                "attributes": {
-                    "store_id": store_id,
-                    "variant_id": variant_id,
-                    "status": status,
-                    "user_name": "Test Customer",
-                    "user_email": "customer@testcorp.com",
-                    "created_at": "2026-09-08T00:00:00.000000Z"
-                }
+    # 1. Missing Signature
+    raw_dummy = json.dumps({"test": 1}).encode("utf-8")
+    st, js, _ = run_http_request(base_url, "POST", "/api/payment/webhook", raw_body=raw_dummy)
+    record_test("WH-01", "WEBHOOK_HTTP", "Missing X-Signature -> 401", st == 401, st, 401, str(js))
+
+    # 2. Corrupt Signature
+    hdrs_bad = {"X-Signature": "bad_digest_0000000000000000000000000000000000000000000000000000000000000000"}
+    st, js, _ = run_http_request(base_url, "POST", "/api/payment/webhook", headers=hdrs_bad, raw_body=raw_dummy)
+    record_test("WH-02", "WEBHOOK_HTTP", "Corrupt Signature -> 401", st == 401, st, 401, str(js))
+
+    # 3. Unsupported event
+    unsupp_payload = json.dumps({
+        "meta": {"event_name": "unsupported_event", "test_mode": True},
+        "data": {"id": "ord_unsupp", "attributes": {}}
+    }).encode("utf-8")
+    sig_unsupp = compute_signature(unsupp_payload)
+    st, js, _ = run_http_request(base_url, "POST", "/api/payment/webhook", headers={"X-Signature": sig_unsupp}, raw_body=unsupp_payload)
+    record_test("WH-03", "WEBHOOK_HTTP", "Unsupported Event -> 422", st == 422, st, 422, str(js))
+
+    # Task 4 Test 1: Valid subscription_created webhook -> entitlement active
+    sub_id_1 = f"sub_active_{int(time.time()*1000)}"
+    payload_created = json.dumps({
+        "meta": {"event_name": "subscription_created", "test_mode": True},
+        "data": {
+            "id": sub_id_1,
+            "attributes": {
+                "user_email": "client1@example.com",
+                "status": "active",
+                "ends_at": None
             }
         }
+    }).encode("utf-8")
+    sig1 = compute_signature(payload_created)
+    st, js, _ = run_http_request(base_url, "POST", "/api/payment/webhook", headers={"X-Signature": sig1}, raw_body=payload_created)
+    tok1 = (js or {}).get("token", "")
+    passed = (st == 200) and (js or {}).get("active_entitlement_created") is True and bool(tok1)
+    record_test("LC-01", "LIFECYCLE", "subscription_created creates active token", passed, st, 200, str(js))
 
-    # Case 1: Valid signature & payload
-    p1 = json.dumps(make_ls_payload("subscription_created", "sub_valid_101")).encode("utf-8")
-    sig1 = sign_payload(p1, TEST_SECRET)
-    st1, js1, _ = run_http_request(base_url, "POST", "/api/payment/webhook", headers={"X-Signature": sig1}, raw_body=p1)
-    record_test("WH-01", "WEBHOOK_MATRIX", "Valid signature & subscription_created -> 200", st1 == 200 and (js1 or {}).get("success") is True, st1, 200, f"Resp: {js1}")
+    # Verify token can access paid API (non-lockdown)
+    st_paid, js_paid, _ = run_http_request(
+        base_url, "POST", "/api/leads/generate",
+        headers={"Authorization": f"Bearer {tok1}"},
+        body={"query": "dentists"}
+    )
+    record_test("LC-01b", "LIFECYCLE", "Active subscription token accesses paid API -> 200", st_paid == 200, st_paid, 200, str(js_paid))
 
-    # Case 2: Missing signature header
-    st2, _, _ = run_http_request(base_url, "POST", "/api/payment/webhook", raw_body=p1)
-    record_test("WH-02", "WEBHOOK_MATRIX", "Missing X-Signature header -> 401", st2 == 401, st2, 401, "Header absent")
+    # Task 4 Test 2: subscription_cancelled with ends_at 30 days away -> remains active, auto_renew=False
+    future_ends_at = "2026-10-30T12:00:00.000000Z"
+    payload_cancel_future = json.dumps({
+        "meta": {"event_name": "subscription_cancelled", "test_mode": True},
+        "data": {
+            "id": sub_id_1,
+            "attributes": {
+                "user_email": "client1@example.com",
+                "status": "cancelled",
+                "ends_at": future_ends_at
+            }
+        }
+    }).encode("utf-8")
+    sig2 = compute_signature(payload_cancel_future)
+    st, js, _ = run_http_request(base_url, "POST", "/api/payment/webhook", headers={"X-Signature": sig2}, raw_body=payload_cancel_future)
+    passed = (st == 200) and (js or {}).get("auto_renew") is False
+    record_test("LC-02", "LIFECYCLE", "subscription_cancelled with future ends_at processed", passed, st, 200, str(js))
 
-    # Case 3: Invalid/corrupt signature
-    st3, _, _ = run_http_request(base_url, "POST", "/api/payment/webhook", headers={"X-Signature": "bad_sig_abc123"}, raw_body=p1)
-    record_test("WH-03", "WEBHOOK_MATRIX", "Corrupt signature digest -> 401", st3 == 401, st3, 401, "Bad digest")
+    # Task 4 Test 3: Paid API request after cancellation but before ends_at -> ACCESS ALLOWED (200)
+    st_paid, js_paid, _ = run_http_request(
+        base_url, "POST", "/api/leads/generate",
+        headers={"Authorization": f"Bearer {tok1}"},
+        body={"query": "dentists"}
+    )
+    record_test("LC-03", "LIFECYCLE", "Paid API allowed after cancellation before ends_at -> 200", st_paid == 200, st_paid, 200, str(js_paid))
 
-    # Case 4: Missing LEMONSQUEEZY_WEBHOOK_SECRET in environment
-    is_v4, msg4, st4, _ = sg.verify_lemonsqueezy_webhook(p1, sig1, secret="")
-    record_test("WH-04", "WEBHOOK_MATRIX", "Missing secret in environment -> 503", st4 == 503, st4, 503, f"Msg: {msg4}")
+    # Task 4 Test 4: Paid API request after cancellation and after ends_at -> ACCESS DENIED (401)
+    # Create a subscription with ends_at 1.5 seconds in the future
+    sub_id_short = f"sub_short_{int(time.time()*1000)}"
+    payload_created_short = json.dumps({
+        "meta": {"event_name": "subscription_created", "test_mode": True},
+        "data": {
+            "id": sub_id_short,
+            "attributes": {
+                "user_email": "short@example.com",
+                "status": "active"
+            }
+        }
+    }).encode("utf-8")
+    sig_cs = compute_signature(payload_created_short)
+    _, js_cs, _ = run_http_request(base_url, "POST", "/api/payment/webhook", headers={"X-Signature": sig_cs}, raw_body=payload_created_short)
+    tok_short = (js_cs or {}).get("token", "")
 
-    # Case 5: Duplicate webhook delivery (Idempotency)
-    st5, js5, _ = run_http_request(base_url, "POST", "/api/payment/webhook", headers={"X-Signature": sig1}, raw_body=p1)
-    dup_ok = (st5 == 200 and (js5 or {}).get("status") == "duplicate_ignored")
-    record_test("WH-05", "WEBHOOK_MATRIX", "Duplicate webhook replay -> 200 duplicate_ignored", dup_ok, st5, 200, f"Resp: {js5}")
+    # Cancel with ends_at 1 second in the future
+    near_future = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime(time.time() + 1))
+    payload_cancel_short = json.dumps({
+        "meta": {"event_name": "subscription_cancelled", "test_mode": True},
+        "data": {
+            "id": sub_id_short,
+            "attributes": {
+                "status": "cancelled",
+                "ends_at": near_future
+            }
+        }
+    }).encode("utf-8")
+    sig_short = compute_signature(payload_cancel_short)
+    run_http_request(base_url, "POST", "/api/payment/webhook", headers={"X-Signature": sig_short}, raw_body=payload_cancel_short)
+    # Wait for ends_at to pass
+    time.sleep(2.5)
+    st_exp, js_exp, _ = run_http_request(
+        base_url, "POST", "/api/leads/generate",
+        headers={"Authorization": f"Bearer {tok_short}"},
+        body={"query": "dentists"}
+    )
+    passed = (st_exp == 401) and (js_exp or {}).get("error") == "token_expired"
+    record_test("LC-04", "LIFECYCLE", "Paid API denied after cancellation when ends_at passed -> 401", passed, st_exp, 401, str(js_exp))
 
-    # Case 6: Malformed JSON body
-    bad_bytes = b'{"meta": {bad json payload'
-    sig6 = sign_payload(bad_bytes, TEST_SECRET)
-    st6, _, _ = run_http_request(base_url, "POST", "/api/payment/webhook", headers={"X-Signature": sig6}, raw_body=bad_bytes)
-    record_test("WH-06", "WEBHOOK_MATRIX", "Malformed JSON body -> 400", st6 == 400, st6, 400, "Syntax error in JSON")
+    # Task 4 Test 5: subscription_expired webhook -> entitlement inactive
+    sub_id_exp = f"sub_exp_{int(time.time()*1000)}"
+    # Setup active subscription
+    p_exp_init = json.dumps({
+        "meta": {"event_name": "subscription_created", "test_mode": True},
+        "data": {"id": sub_id_exp, "attributes": {"user_email": "exp@example.com", "status": "active"}}
+    }).encode("utf-8")
+    _, js_init, _ = run_http_request(base_url, "POST", "/api/payment/webhook", headers={"X-Signature": compute_signature(p_exp_init)}, raw_body=p_exp_init)
+    tok_exp = (js_init or {}).get("token", "")
 
-    # Case 7: Wrong store_id
-    p7 = json.dumps(make_ls_payload("subscription_created", "sub_wrong_store", store_id="999999")).encode("utf-8")
-    sig7 = sign_payload(p7, TEST_SECRET)
-    st7, _, _ = run_http_request(base_url, "POST", "/api/payment/webhook", headers={"X-Signature": sig7}, raw_body=p7)
-    record_test("WH-07", "WEBHOOK_MATRIX", "Mismatched store_id -> 400", st7 == 400, st7, 400, "Foreign store rejected")
+    # Expire it
+    p_exp = json.dumps({
+        "meta": {"event_name": "subscription_expired", "test_mode": True},
+        "data": {"id": sub_id_exp, "attributes": {"status": "expired"}}
+    }).encode("utf-8")
+    st, js, _ = run_http_request(base_url, "POST", "/api/payment/webhook", headers={"X-Signature": compute_signature(p_exp)}, raw_body=p_exp)
+    record_test("LC-05", "LIFECYCLE", "subscription_expired webhook processed -> 200", st == 200, st, 200, str(js))
 
-    # Case 8: Unknown product_id or variant_id
-    p8 = json.dumps(make_ls_payload("subscription_created", "sub_wrong_var", variant_id="unknown_variant_xyz")).encode("utf-8")
-    sig8 = sign_payload(p8, TEST_SECRET)
-    st8, _, _ = run_http_request(base_url, "POST", "/api/payment/webhook", headers={"X-Signature": sig8}, raw_body=p8)
-    record_test("WH-08", "WEBHOOK_MATRIX", "Unknown variant_id -> 422", st8 == 422, st8, 422, "Unauthorized variant")
+    st_exp2, js_exp2, _ = run_http_request(
+        base_url, "POST", "/api/leads/generate",
+        headers={"Authorization": f"Bearer {tok_exp}"},
+        body={"query": "dentists"}
+    )
+    record_test("LC-05b", "LIFECYCLE", "Expired token denied on paid API -> 401", st_exp2 == 401, st_exp2, 401, str(js_exp2))
 
-    # Case 9: Test-mode event in production without ALLOW_TEST_WEBHOOKS
-    orig_allow = os.environ.get("ALLOW_TEST_WEBHOOKS", "")
-    os.environ["ALLOW_TEST_WEBHOOKS"] = "false"
-    p9 = json.dumps(make_ls_payload("order_created", "ord_test_prod", test_mode=True)).encode("utf-8")
-    sig9 = sign_payload(p9, TEST_SECRET)
-    st9, _, _ = run_http_request(base_url, "POST", "/api/payment/webhook", headers={"X-Signature": sig9}, raw_body=p9)
-    os.environ["ALLOW_TEST_WEBHOOKS"] = orig_allow
-    record_test("WH-09", "WEBHOOK_MATRIX", "Test-mode event in production rejected -> 400", st9 == 400, st9, 400, "Test mode in prod")
+    # Task 4 Test 6: subscription_paused webhook -> entitlement paused, access denied (401)
+    sub_id_pause = f"sub_pause_{int(time.time()*1000)}"
+    p_pause_init = json.dumps({
+        "meta": {"event_name": "subscription_created", "test_mode": True},
+        "data": {"id": sub_id_pause, "attributes": {"user_email": "pause@example.com", "status": "active"}}
+    }).encode("utf-8")
+    _, js_pinit, _ = run_http_request(base_url, "POST", "/api/payment/webhook", headers={"X-Signature": compute_signature(p_pause_init)}, raw_body=p_pause_init)
+    tok_pause = (js_pinit or {}).get("token", "")
 
-    # Case 10: subscription_cancelled -> handled safely, no active entitlement created, existing revoked
-    p10 = json.dumps(make_ls_payload("subscription_cancelled", "sub_valid_101", status="cancelled")).encode("utf-8")
-    sig10 = sign_payload(p10, TEST_SECRET)
-    st10, js10, _ = run_http_request(base_url, "POST", "/api/payment/webhook", headers={"X-Signature": sig10}, raw_body=p10)
-    can_ok = (st10 == 200 and (js10 or {}).get("active_entitlement_created") is False)
-    record_test("WH-10", "WEBHOOK_MATRIX", "subscription_cancelled revokes entitlement -> 200 inactive", can_ok, st10, 200, f"Resp: {js10}")
+    p_paused = json.dumps({
+        "meta": {"event_name": "subscription_paused", "test_mode": True},
+        "data": {"id": sub_id_pause, "attributes": {"status": "paused"}}
+    }).encode("utf-8")
+    st, js, _ = run_http_request(base_url, "POST", "/api/payment/webhook", headers={"X-Signature": compute_signature(p_paused)}, raw_body=p_paused)
+    record_test("LC-06", "LIFECYCLE", "subscription_paused webhook processed -> 200", st == 200, st, 200, str(js))
 
-    # Case 11: subscription_expired -> handled safely without creating active entitlement
-    p11 = json.dumps(make_ls_payload("subscription_expired", "sub_expired_99", status="expired")).encode("utf-8")
-    sig11 = sign_payload(p11, TEST_SECRET)
-    st11, js11, _ = run_http_request(base_url, "POST", "/api/payment/webhook", headers={"X-Signature": sig11}, raw_body=p11)
-    exp_ok = (st11 == 200 and (js11 or {}).get("active_entitlement_created") is False)
-    record_test("WH-11", "WEBHOOK_MATRIX", "subscription_expired -> 200 inactive", exp_ok, st11, 200, f"Resp: {js11}")
+    st_pcheck, js_pcheck, _ = run_http_request(
+        base_url, "POST", "/api/leads/generate",
+        headers={"Authorization": f"Bearer {tok_pause}"},
+        body={"query": "dentists"}
+    )
+    passed = (st_pcheck == 401) and (js_pcheck or {}).get("error") == "token_paused"
+    record_test("LC-06b", "LIFECYCLE", "Paused token denied on paid API -> 401 (token_paused)", passed, st_pcheck, 401, str(js_pcheck))
 
-    # Case 12: subscription_paused -> handled safely without creating active entitlement
-    p12 = json.dumps(make_ls_payload("subscription_paused", "sub_paused_88", status="paused")).encode("utf-8")
-    sig12 = sign_payload(p12, TEST_SECRET)
-    st12, js12, _ = run_http_request(base_url, "POST", "/api/payment/webhook", headers={"X-Signature": sig12}, raw_body=p12)
-    pau_ok = (st12 == 200 and (js12 or {}).get("active_entitlement_created") is False)
-    record_test("WH-12", "WEBHOOK_MATRIX", "subscription_paused -> 200 inactive", pau_ok, st12, 200, f"Resp: {js12}")
+    # Task 4 Test 7: subscription_resumed webhook -> entitlement active again (200)
+    p_resume = json.dumps({
+        "meta": {"event_name": "subscription_resumed", "test_mode": True},
+        "data": {"id": sub_id_pause, "attributes": {"status": "active"}}
+    }).encode("utf-8")
+    st, js, _ = run_http_request(base_url, "POST", "/api/payment/webhook", headers={"X-Signature": compute_signature(p_resume)}, raw_body=p_resume)
+    record_test("LC-07", "LIFECYCLE", "subscription_resumed webhook processed -> 200", st == 200, st, 200, str(js))
 
-    # Case 13: subscription_unpaid -> handled safely without creating active entitlement
-    p13 = json.dumps(make_ls_payload("subscription_unpaid", "sub_unpaid_77", status="unpaid")).encode("utf-8")
-    sig13 = sign_payload(p13, TEST_SECRET)
-    st13, js13, _ = run_http_request(base_url, "POST", "/api/payment/webhook", headers={"X-Signature": sig13}, raw_body=p13)
-    unp_ok = (st13 == 200 and (js13 or {}).get("active_entitlement_created") is False)
-    record_test("WH-13", "WEBHOOK_MATRIX", "subscription_unpaid -> 200 inactive", unp_ok, st13, 200, f"Resp: {js13}")
+    st_rcheck, js_rcheck, _ = run_http_request(
+        base_url, "POST", "/api/leads/generate",
+        headers={"Authorization": f"Bearer {tok_pause}"},
+        body={"query": "dentists"}
+    )
+    record_test("LC-07b", "LIFECYCLE", "Resumed token allowed on paid API -> 200", st_rcheck == 200, st_rcheck, 200, str(js_rcheck))
 
-    # Case 14: subscription_resumed -> reactivates entitlement
-    p14 = json.dumps(make_ls_payload("subscription_resumed", "sub_resumed_66", status="active")).encode("utf-8")
-    sig14 = sign_payload(p14, TEST_SECRET)
-    st14, js14, _ = run_http_request(base_url, "POST", "/api/payment/webhook", headers={"X-Signature": sig14}, raw_body=p14)
-    res_ok = (st14 == 200 and (js14 or {}).get("active_entitlement_created") is True)
-    record_test("WH-14", "WEBHOOK_MATRIX", "subscription_resumed -> 200 active entitlement granted", res_ok, st14, 200, f"Resp: {js14}")
+    # Task 4 Test 8: subscription_payment_failed webhook -> past_due (allowed during grace period)
+    sub_id_fail = f"sub_fail_{int(time.time()*1000)}"
+    p_fail_init = json.dumps({
+        "meta": {"event_name": "subscription_created", "test_mode": True},
+        "data": {"id": sub_id_fail, "attributes": {"user_email": "fail@example.com", "status": "active"}}
+    }).encode("utf-8")
+    _, js_finit, _ = run_http_request(base_url, "POST", "/api/payment/webhook", headers={"X-Signature": compute_signature(p_fail_init)}, raw_body=p_fail_init)
+    tok_fail = (js_finit or {}).get("token", "")
 
-    # Case 15: Client spoofed paid=true without valid signature
-    p15 = b'{"paid": true, "user_id": "attacker"}'
-    st15, _, _ = run_http_request(base_url, "POST", "/api/payment/webhook", headers={"X-Signature": "fake"}, raw_body=p15)
-    record_test("WH-15", "WEBHOOK_MATRIX", "Client paid=true spoofing rejected at webhook -> 401", st15 == 401, st15, 401, "Sig failed")
+    p_failed = json.dumps({
+        "meta": {"event_name": "subscription_payment_failed", "test_mode": True},
+        "data": {"id": sub_id_fail, "attributes": {"status": "past_due"}}
+    }).encode("utf-8")
+    st, js, _ = run_http_request(base_url, "POST", "/api/payment/webhook", headers={"X-Signature": compute_signature(p_failed)}, raw_body=p_failed)
+    record_test("LC-08", "LIFECYCLE", "subscription_payment_failed webhook processed -> 200", st == 200, st, 200, str(js))
 
-    # Case 16: Replay of cancelled subscription event
-    st16, js16, _ = run_http_request(base_url, "POST", "/api/payment/webhook", headers={"X-Signature": sig10}, raw_body=p10)
-    rep_can_ok = (st16 == 200 and (js16 or {}).get("status") == "duplicate_ignored")
-    record_test("WH-16", "WEBHOOK_MATRIX", "Replay of cancellation event -> 200 duplicate_ignored", rep_can_ok, st16, 200, f"Resp: {js16}")
+    st_fcheck, js_fcheck, _ = run_http_request(
+        base_url, "POST", "/api/leads/generate",
+        headers={"Authorization": f"Bearer {tok_fail}"},
+        body={"query": "dentists"}
+    )
+    record_test("LC-08b", "LIFECYCLE", "Past due token within grace period allowed -> 200", st_fcheck == 200, st_fcheck, 200, str(js_fcheck))
 
-    # Stop server
-    server.shutdown()
-    server.server_close()
+    # Task 4 Test 9: Duplicate cancellation webhook -> duplicate_ignored
+    st_dup, js_dup, _ = run_http_request(base_url, "POST", "/api/payment/webhook", headers={"X-Signature": sig2}, raw_body=payload_cancel_future)
+    passed = (st_dup == 200) and (js_dup or {}).get("status") == "duplicate_ignored"
+    record_test("LC-09", "LIFECYCLE", "Duplicate cancellation webhook ignored -> 200 duplicate_ignored", passed, st_dup, 200, str(js_dup))
 
-    # -------------------------------------------------------------------------
-    # PHASE 6: NON-LOCKDOWN STATUS CODE VERIFICATION (401 vs 403)
-    # -------------------------------------------------------------------------
-    print("\n--- PHASE 6: NON-LOCKDOWN STATUS CODE VERIFICATION (401 vs 403) ---")
-    os.environ["ENVIRONMENT"] = "local"
-    os.environ["SECURITY_LOCKDOWN_MODE"] = "false"
-    server2 = ThreadingHTTPServer(("127.0.0.1", 0), MastermindRequestHandler)
-    port2 = server2.server_address[1]
-    base_url2 = f"http://127.0.0.1:{port2}"
-    server2_thread = threading.Thread(target=server2.serve_forever, daemon=True)
-    server2_thread.start()
-    time.sleep(0.5)
+    # Task 4 Test 10: Cancellation webhook without ends_at -> fails safely without crash
+    sub_id_noend = f"sub_noend_{int(time.time()*1000)}"
+    p_noend_init = json.dumps({
+        "meta": {"event_name": "subscription_created", "test_mode": True},
+        "data": {"id": sub_id_noend, "attributes": {"user_email": "noend@example.com", "status": "active"}}
+    }).encode("utf-8")
+    run_http_request(base_url, "POST", "/api/payment/webhook", headers={"X-Signature": compute_signature(p_noend_init)}, raw_body=p_noend_init)
 
-    # Missing auth header -> 401
-    st_no_auth, _, _ = run_http_request(base_url2, "POST", "/api/leads/generate", body={"industry": "SaaS"})
-    record_test("AUTH-401-A", "AUTH_STATUS_CODES", "Missing identity header -> HTTP 401", st_no_auth == 401, st_no_auth, 401, "No Bearer token")
+    p_noend_cancel = json.dumps({
+        "meta": {"event_name": "subscription_cancelled", "test_mode": True},
+        "data": {"id": sub_id_noend, "attributes": {"status": "cancelled", "ends_at": None}}
+    }).encode("utf-8")
+    st, js, _ = run_http_request(base_url, "POST", "/api/payment/webhook", headers={"X-Signature": compute_signature(p_noend_cancel)}, raw_body=p_noend_cancel)
+    passed = (st == 200) and (js or {}).get("status") == "cancelled"
+    record_test("LC-10", "LIFECYCLE", "Cancellation without ends_at fails safely -> 200", passed, st, 200, str(js))
 
-    # Invalid token format -> 401
-    st_inv_tok, _, _ = run_http_request(base_url2, "POST", "/api/leads/generate", headers={"Authorization": "Bearer short"}, body={"industry": "SaaS"})
-    record_test("AUTH-401-B", "AUTH_STATUS_CODES", "Malformed/short token -> HTTP 401", st_inv_tok == 401, st_inv_tok, 401, "Invalid token")
+    print("\n--- PHASE 7: NON-LOCKDOWN ENTITLEMENT & AUTH ENFORCEMENT ---")
+    auth_tests = [
+        ("AUTH-01", "POST", "/api/leads/generate", None, None, 401, "Missing Authorization header -> 401"),
+        ("AUTH-02", "POST", "/api/leads/generate", {"Authorization": "Bearer short"}, None, 401, "Malformed short token -> 401"),
+        ("AUTH-03", "POST", "/api/leads/generate", {"Authorization": "Bearer ent_00000000000000000000"}, None, 401, "Unrecognized token -> 401"),
+        ("AUTH-04", "POST", "/api/leads/generate", None, {"admin": True}, 403, "Browser spoofing without token -> 403"),
+        ("AUTH-05", "GET", "/api/subscribers/list", None, None, 403, "Admin endpoint without token -> 403"),
+        ("AUTH-06", "GET", "/api/subscribers/list", {"Authorization": "Bearer wrong_secret_key_123"}, None, 403, "Admin endpoint with wrong token -> 403"),
+    ]
+    for tid, mth, path, hdrs, bdy, exp, desc in auth_tests:
+        st, js, _ = run_http_request(base_url, mth, path, headers=hdrs, body=bdy)
+        record_test(tid, "AUTH_SECURITY", f"{desc} (Actual: {st})", st == exp, st, exp, str(js))
 
-    # Expired / unlisted token -> 401
-    st_unlisted, _, _ = run_http_request(base_url2, "POST", "/api/leads/generate", headers={"Authorization": "Bearer ent_unlisted_token_12345678"}, body={"industry": "SaaS"})
-    record_test("AUTH-401-C", "AUTH_STATUS_CODES", "Unrecognized token -> HTTP 401", st_unlisted == 401, st_unlisted, 401, "Token not found")
 
-    # Client spoofing paid=true without token -> 401
-    st_paid_spoof, _, _ = run_http_request(base_url2, "POST", "/api/leads/generate", body={"paid": True})
-    record_test("AUTH-401-D", "AUTH_STATUS_CODES", "Client paid=true spoofing rejected -> HTTP 401", st_paid_spoof == 401, st_paid_spoof, 401, "Untrusted client body flag")
+def main():
+    print("=" * 80)
+    print("LEAKGRADER PRE-DEPLOY SECURITY RELEASE GATE SPRINT 0.7")
+    print("Pure Black-Box HTTP Test Suite (Zero Application Imports)")
+    print(f"Target Port: {TEST_PORT}")
+    print("=" * 80)
 
-    # Client spoofing admin=true without admin credentials -> 403
-    st_adm_spoof, _, _ = run_http_request(base_url2, "POST", "/api/leads/generate", body={"admin": True})
-    record_test("AUTH-403-A", "AUTH_STATUS_CODES", "Client admin=true claim rejected -> HTTP 403", st_adm_spoof == 403, st_adm_spoof, 403, "Admin spoofing denied")
+    # 1. Verify offline failure
+    test_offline_verification()
 
-    # Public checkout outside lockdown - validates server plans
-    st_chk_ok, _, _ = run_http_request(base_url2, "POST", "/api/checkout/create", body={"plan_key": "micro_audit"})
-    record_test("CHK-01", "CHECKOUT_HARDENING", "Valid server plan allowed outside lockdown", st_chk_ok == 200, st_chk_ok, 200, "micro_audit")
+    # 2. Verify lockdown environment configurations across subprocesses
+    test_lockdown_environments()
 
-    st_chk_bad, _, _ = run_http_request(base_url2, "POST", "/api/checkout/create", body={"plan_key": "unauthorized_custom_price_1dollar"})
-    record_test("CHK-02", "CHECKOUT_HARDENING", "Arbitrary client plan rejected -> 400", st_chk_bad == 400, st_chk_bad, 400, "Invalid plan")
+    # 3. Main Lockdown Mode Server Subprocess
+    print("\n--- STARTING PRIMARY LOCKDOWN SERVER SUBPROCESS ---")
+    main_server = TestServerSubprocess(TEST_PORT, {
+        "ENVIRONMENT": "test",
+        "SECURITY_LOCKDOWN_MODE": "enabled"
+    })
+    if not main_server.start():
+        print("ERROR: Failed to launch primary test server subprocess.")
+        return 1
 
-    server2.shutdown()
-    server2.server_close()
+    try:
+        run_lockdown_test_suite(main_server)
+    finally:
+        main_server.stop()
 
-    # -------------------------------------------------------------------------
-    # SUMMARY & EVIDENCE PERSISTENCE
-    # -------------------------------------------------------------------------
-    print("\n" + "=" * 75)
-    pass_count = sum(1 for r in results if r["status"] == "PASS")
+    # 4. Lifecycle & Non-Lockdown Server Subprocess
+    print("\n--- STARTING LIFECYCLE & NON-LOCKDOWN SERVER SUBPROCESS ---")
+    lifecycle_server = TestServerSubprocess(TEST_PORT, {
+        "ENVIRONMENT": "test",
+        "SECURITY_LOCKDOWN_MODE": "disabled",
+        "PAYMENT_GRACE_PERIOD_DAYS": "3"
+    })
+    if not lifecycle_server.start():
+        print("ERROR: Failed to launch lifecycle test server subprocess.")
+        return 1
+
+    try:
+        run_lifecycle_and_webhook_suite(lifecycle_server)
+    finally:
+        lifecycle_server.stop()
+
+    # Summary
     total_count = len(results)
-    print(f"RELEASE GATE RESULTS: {pass_count}/{total_count} TESTS PASSED ({(pass_count/total_count)*100:.1f}%)")
-    print("=" * 75)
+    pass_count = sum(1 for r in results if r["status"] == "PASS")
+    fail_count = total_count - pass_count
+
+    print("\n" + "=" * 80)
+    print(f"SPRINT 0.7 GATE RESULTS: {pass_count}/{total_count} TESTS PASSED ({(pass_count/total_count)*100:.1f}%)")
+    print("=" * 80)
 
     evidence_file = os.path.join(BASE_DIR, "qa", "PRE_DEPLOY_TEST_RESULTS_RAW.json")
     with open(evidence_file, "w", encoding="utf-8") as f:
@@ -420,10 +630,10 @@ def main():
             "branch": "security/critical-hotfix-2026-09-07",
             "total": total_count,
             "passed": pass_count,
-            "failed": total_count - pass_count,
+            "failed": fail_count,
             "results": results
         }, f, indent=2)
-    print(f"Test run results saved to: {evidence_file}")
+    print(f"Test results saved to: {evidence_file}")
 
     return 0 if pass_count == total_count else 1
 

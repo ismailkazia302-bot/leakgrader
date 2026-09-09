@@ -64,7 +64,7 @@ GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY", "")
 GROWTH_AGENT = GrowthAndIndexingAgent()
 SENTINEL_AGENT = BackendSentinelAgent()
 WEBSITE_MANAGER = MasterWebsiteManager()
-STORAGE_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "storage")
+STORAGE_DIR = os.environ.get("STORAGE_DIR", os.path.join(os.path.dirname(os.path.abspath(__file__)), "storage"))
 WEB_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "web")
 SOCIAL_POSTER = SocialAutoPoster(STORAGE_DIR)
 
@@ -1012,7 +1012,7 @@ class MastermindRequestHandler(BaseHTTPRequestHandler):
         elif path in ["/api/audit/run", "/api/audit/scan"]:
             body = self.rfile.read(content_length)
             data = json.loads(body.decode("utf-8")) if content_length > 0 else {}
-            company_or_url = data.get("url_or_company") or data.get("domain") or data.get("company", "Apex Global Real Estate")
+            company_or_url = data.get("target") or data.get("url_or_company") or data.get("domain") or data.get("company", "Apex Global Real Estate")
             industry = data.get("industry", "Real Estate")
             monthly_visitors = data.get("monthly_visitors")
             avg_deal_value = data.get("avg_deal_value") or data.get("deal_value")

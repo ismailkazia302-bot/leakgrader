@@ -17,14 +17,20 @@ import ipaddress
 import threading
 import tempfile
 from urllib.parse import urlparse
+from datetime import datetime, timezone
 
 # Global re-entrant lock for file persistence and webhook state
 _SECURITY_LOCK = threading.RLock()
 
-# File paths
-_STORAGE_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "storage")
-_PROCESSED_WEBHOOKS_FILE = os.path.join(_STORAGE_DIR, "processed_webhook_events.json")
-_ENTITLEMENTS_FILE = os.path.join(_STORAGE_DIR, "active_entitlements.json")
+def get_storage_dir() -> str:
+    """Dynamic resolution of storage directory, respecting STORAGE_DIR environment variable."""
+    return os.environ.get("STORAGE_DIR") or os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "storage")
+
+def get_processed_webhooks_file() -> str:
+    return os.path.join(get_storage_dir(), "processed_webhook_events.json")
+
+def get_entitlements_file() -> str:
+    return os.path.join(get_storage_dir(), "active_entitlements.json")
 
 
 def is_lockdown_enabled() -> bool:
@@ -54,7 +60,7 @@ def is_lockdown_enabled() -> bool:
 def get_auth_error_status(err_code: str) -> int:
     """
     Maps authorization/authentication failure reason to standard HTTP status codes:
-    - 401 Unauthorized: missing identity, invalid token format, unrecognized token, expired token.
+    - 401 Unauthorized: missing identity, invalid token format, unrecognized token, expired token, paused token.
     - 403 Forbidden: client spoofing, unauthorized admin claim, cross-workspace access, ownership mismatch.
     """
     if err_code in [
@@ -62,6 +68,9 @@ def get_auth_error_status(err_code: str) -> int:
         "invalid_token",
         "unrecognized_token",
         "token_expired",
+        "token_expired_grace_period_ended",
+        "token_paused",
+        "unrecognized_token_status",
         "missing_signature_header",
         "invalid_signature_digest_mismatch"
     ]:
@@ -97,14 +106,32 @@ def require_authenticated_user(headers: dict, body_data: dict = None) -> tuple:
     if not user_record:
         return False, None, "unrecognized_token"
 
-    # Check if entitlement status is revoked or inactive
-    if user_record.get("status") in ["inactive", "revoked", "cancelled", "expired"]:
-        return False, None, "token_expired"
-
-    # Check expiration
+    status = user_record.get("status")
     expires_at = user_record.get("expires_at", 0)
-    if expires_at and expires_at < time.time():
+    current_time = time.time()
+
+    # Lifecycle State Verification
+    if status == "active":
+        if expires_at and expires_at <= current_time:
+            return False, None, "token_expired"
+        # Access allowed (including cancelled subscriptions where auto_renew is False but expires_at > current_time)
+    elif status == "past_due":
+        # Configurable grace period (default 3 days)
+        try:
+            grace_days = float(os.environ.get("PAYMENT_GRACE_PERIOD_DAYS", "3"))
+        except Exception:
+            grace_days = 3.0
+        past_due_since = user_record.get("past_due_since", current_time)
+        if (current_time - past_due_since) > (grace_days * 86400):
+            return False, None, "token_expired_grace_period_ended"
+        # Access allowed during grace period
+    elif status == "paused":
+        return False, None, "token_paused"
+    elif status in ["inactive", "revoked", "expired", "cancelled"]:
         return False, None, "token_expired"
+    else:
+        # missing or unknown status
+        return False, None, "unrecognized_token_status"
 
     # Strict multi-tenant isolation: Verify workspace_id if specified in request
     if body_data and "workspace_id" in body_data:
@@ -131,8 +158,10 @@ def require_active_entitlement(user_ctx: dict, feature: str) -> tuple:
     if not user_ctx:
         return False, "entitlement_required"
 
-    if user_ctx.get("status") in ["inactive", "revoked", "cancelled", "expired"]:
+    status = user_ctx.get("status")
+    if status not in ["active", "past_due"]:
         return False, "entitlement_inactive"
+
 
     plan = user_ctx.get("plan", "")
     allowed_features = user_ctx.get("features", [])
@@ -347,6 +376,34 @@ def validate_url_ssrf_safe(url_or_domain: str) -> tuple:
 # LEMON SQUEEZY WEBHOOK VERIFICATION & IDEMPOTENCY
 # ==============================================================================
 
+def _parse_iso_timestamp(val) -> float:
+    """
+    Safely parses an ISO 8601 timestamp string or numeric timestamp to float epoch seconds.
+    Fails safely returning 0.0 if unparseable or empty, never raises an exception.
+    """
+    if not val:
+        return 0.0
+    if isinstance(val, (int, float)):
+        return float(val)
+    if isinstance(val, str):
+        s = val.strip()
+        if not s:
+            return 0.0
+        # Replace Zulu with UTC offset
+        clean_s = s.replace("Z", "+00:00")
+        try:
+            return datetime.fromisoformat(clean_s).timestamp()
+        except Exception:
+            pass
+        for fmt in ("%Y-%m-%dT%H:%M:%S%z", "%Y-%m-%dT%H:%M:%S", "%Y-%m-%d %H:%M:%S", "%Y-%m-%d"):
+            try:
+                dt = datetime.strptime(s.split(".")[0], fmt)
+                return dt.replace(tzinfo=timezone.utc).timestamp()
+            except Exception:
+                pass
+    return 0.0
+
+
 def verify_lemonsqueezy_webhook(raw_body: bytes, signature: str, secret: str = None) -> tuple:
     """
     Verifies incoming Lemon Squeezy webhook per strict specification:
@@ -359,8 +416,11 @@ def verify_lemonsqueezy_webhook(raw_body: bytes, signature: str, secret: str = N
     7. Verifies event structure, store_id, product/variant, and environment.
     8. Implements idempotency / replay protection.
     9. Handles full subscription lifecycle:
-       - Cancellations, pauses, non-payments, expirations do NOT create active entitlements.
-       - Revokes existing entitlements on cancellation/expiration.
+       - Cancellations: retains access until ends_at expires (auto_renew=False).
+       - Expirations: revokes active access (status=inactive).
+       - Pauses: marks paused (status=paused).
+       - Resumes: reactivates access (status=active).
+       - Payment failures: marks past_due (status=past_due) with grace period.
     10. Does not log complete webhook payloads or personal data.
     """
     webhook_secret = secret if secret is not None else os.environ.get("LEMONSQUEEZY_WEBHOOK_SECRET", "")
@@ -435,21 +495,13 @@ def verify_lemonsqueezy_webhook(raw_body: bytes, signature: str, secret: str = N
     if is_production and is_test_mode and not allow_test_events:
         return False, "test_event_rejected_in_live_production", 400, {}
 
-    # Event ID for idempotency
-    event_id = meta.get("custom_data", {}).get("event_id") or data.get("id") or f"{event_name}_{attributes.get('created_at', time.time())}"
     order_or_sub_id = str(data.get("id", ""))
     sub_status = str(attributes.get("status", "")).lower()
 
-    # Subscription deactivation / cancellation detection
-    is_deactivating_event = (
-        event_name in [
-            "subscription_cancelled",
-            "subscription_expired",
-            "subscription_paused",
-            "subscription_unpaid",
-            "subscription_payment_failed"
-        ]
-        or sub_status in ["cancelled", "expired", "paused", "unpaid", "past_due"]
+    # Event ID for idempotency: scoped by event name and resource ID
+    event_id = (
+        meta.get("custom_data", {}).get("event_id")
+        or f"{event_name}_{order_or_sub_id}"
     )
 
     with _SECURITY_LOCK:
@@ -461,27 +513,62 @@ def verify_lemonsqueezy_webhook(raw_body: bytes, signature: str, secret: str = N
                 "status": "duplicate_ignored"
             }
 
-        # Case A: Subscription Deactivated / Cancelled / Expired / Unpaid
-        if is_deactivating_event:
+        # Case A1: Subscription Cancelled (Auto-renewal stopped, keep access until ends_at)
+        if event_name == "subscription_cancelled":
+            ends_at_val = attributes.get("ends_at")
+            parsed_ends_at = _parse_iso_timestamp(ends_at_val)
+            entitlements = _load_entitlements()
+            updated_count = 0
+            for tok, rec in list(entitlements.items()):
+                if str(rec.get("order_id", "")) == order_or_sub_id:
+                    rec["auto_renew"] = False
+                    rec["cancelled_at"] = time.time()
+                    if parsed_ends_at > 0:
+                        rec["expires_at"] = parsed_ends_at
+                    # Keep status active if ends_at is in future, otherwise inactive
+                    if rec.get("expires_at", 0) > time.time():
+                        rec["status"] = "active"
+                    elif rec.get("expires_at", 0) > 0:
+                        rec["status"] = "inactive"
+                    updated_count += 1
+            if updated_count > 0:
+                _atomic_json_dump(get_entitlements_file(), entitlements)
+
+            processed_events[event_id] = {
+                "processed_at": time.time(),
+                "event_name": event_name,
+                "action": "subscription_cancelled",
+                "updated_count": updated_count
+            }
+            _atomic_json_dump(get_processed_webhooks_file(), processed_events)
+
+            return True, "subscription_cancelled_processed", 200, {
+                "event_id": event_id,
+                "status": "cancelled",
+                "auto_renew": False,
+                "active_entitlement_created": False
+            }
+
+        # Case A2: Subscription Expired or Unpaid
+        elif event_name in ["subscription_expired", "subscription_unpaid"]:
             entitlements = _load_entitlements()
             revoked_count = 0
             for tok, rec in list(entitlements.items()):
                 if str(rec.get("order_id", "")) == order_or_sub_id:
                     rec["status"] = "inactive"
                     rec["revoked_at"] = time.time()
-                    rec["expires_at"] = time.time()
+                    rec["expires_at"] = min(rec.get("expires_at", time.time()), time.time())
                     revoked_count += 1
             if revoked_count > 0:
-                _atomic_json_dump(_ENTITLEMENTS_FILE, entitlements)
+                _atomic_json_dump(get_entitlements_file(), entitlements)
 
-            # Record event processed (zero active entitlement created)
             processed_events[event_id] = {
                 "processed_at": time.time(),
                 "event_name": event_name,
-                "action": "deactivated_or_ignored",
+                "action": "subscription_expired",
                 "revoked_count": revoked_count
             }
-            _atomic_json_dump(_PROCESSED_WEBHOOKS_FILE, processed_events)
+            _atomic_json_dump(get_processed_webhooks_file(), processed_events)
 
             return True, "subscription_status_updated_inactive", 200, {
                 "event_id": event_id,
@@ -489,11 +576,99 @@ def verify_lemonsqueezy_webhook(raw_body: bytes, signature: str, secret: str = N
                 "active_entitlement_created": False
             }
 
-        # Case B: Active Entitlement Creation (order_created, subscription_created, subscription_resumed)
+        # Case A3: Subscription Paused
+        elif event_name == "subscription_paused":
+            entitlements = _load_entitlements()
+            paused_count = 0
+            for tok, rec in list(entitlements.items()):
+                if str(rec.get("order_id", "")) == order_or_sub_id:
+                    rec["status"] = "paused"
+                    rec["paused_at"] = time.time()
+                    paused_count += 1
+            if paused_count > 0:
+                _atomic_json_dump(get_entitlements_file(), entitlements)
+
+            processed_events[event_id] = {
+                "processed_at": time.time(),
+                "event_name": event_name,
+                "action": "subscription_paused",
+                "paused_count": paused_count
+            }
+            _atomic_json_dump(get_processed_webhooks_file(), processed_events)
+
+            return True, "subscription_status_updated_paused", 200, {
+                "event_id": event_id,
+                "status": "paused",
+                "active_entitlement_created": False
+            }
+
+        # Case A4: Subscription Resumed
+        elif event_name == "subscription_resumed":
+            entitlements = _load_entitlements()
+            resumed_count = 0
+            for tok, rec in list(entitlements.items()):
+                if str(rec.get("order_id", "")) == order_or_sub_id:
+                    rec["status"] = "active"
+                    rec["auto_renew"] = True
+                    rec.pop("paused_at", None)
+                    renews_at = attributes.get("renews_at") or attributes.get("ends_at")
+                    parsed_renews = _parse_iso_timestamp(renews_at)
+                    if parsed_renews > time.time():
+                        rec["expires_at"] = parsed_renews
+                    elif rec.get("expires_at", 0) <= time.time():
+                        rec["expires_at"] = time.time() + (30 * 86400)
+                    resumed_count += 1
+            if resumed_count > 0:
+                _atomic_json_dump(get_entitlements_file(), entitlements)
+
+            processed_events[event_id] = {
+                "processed_at": time.time(),
+                "event_name": event_name,
+                "action": "subscription_resumed",
+                "resumed_count": resumed_count
+            }
+            _atomic_json_dump(get_processed_webhooks_file(), processed_events)
+
+            return True, "subscription_status_updated_resumed", 200, {
+                "event_id": event_id,
+                "status": "active",
+                "active_entitlement_created": True
+            }
+
+        # Case A5: Subscription Payment Failed (Past Due with Grace Period)
+        elif event_name == "subscription_payment_failed":
+            entitlements = _load_entitlements()
+            failed_count = 0
+            for tok, rec in list(entitlements.items()):
+                if str(rec.get("order_id", "")) == order_or_sub_id:
+                    rec["status"] = "past_due"
+                    if "past_due_since" not in rec:
+                        rec["past_due_since"] = time.time()
+                    failed_count += 1
+            if failed_count > 0:
+                _atomic_json_dump(get_entitlements_file(), entitlements)
+
+            processed_events[event_id] = {
+                "processed_at": time.time(),
+                "event_name": event_name,
+                "action": "subscription_payment_failed",
+                "failed_count": failed_count
+            }
+            _atomic_json_dump(get_processed_webhooks_file(), processed_events)
+
+            return True, "subscription_status_updated_past_due", 200, {
+                "event_id": event_id,
+                "status": "past_due",
+                "active_entitlement_created": False
+            }
+
+        # Case B: Active Entitlement Creation (order_created, subscription_created)
         user_email = attributes.get("user_email", "")
         customer_hash = hashlib.sha256(user_email.encode("utf-8")).hexdigest()[:16] if user_email else "anon"
 
         token_id = f"ent_{hashlib.sha256((order_or_sub_id + str(time.time())).encode('utf-8')).hexdigest()[:24]}"
+        ends_at_val = _parse_iso_timestamp(attributes.get("ends_at"))
+        default_expiry = time.time() + (30 * 86400) if "subscription" in event_name else 0
 
         entitlement_record = {
             "token": token_id,
@@ -502,7 +677,8 @@ def verify_lemonsqueezy_webhook(raw_body: bytes, signature: str, secret: str = N
             "plan": "pro_saas",
             "features": ["b2b_leads", "seo_articles", "ai_closer"],
             "created_at": time.time(),
-            "expires_at": time.time() + (30 * 86400) if "subscription" in event_name else 0,
+            "expires_at": ends_at_val if ends_at_val > 0 else default_expiry,
+            "auto_renew": True if "subscription" in event_name else False,
             "status": "active",
             "event_name": event_name
         }
@@ -510,7 +686,7 @@ def verify_lemonsqueezy_webhook(raw_body: bytes, signature: str, secret: str = N
         # Record entitlement
         entitlements = _load_entitlements()
         entitlements[token_id] = entitlement_record
-        _atomic_json_dump(_ENTITLEMENTS_FILE, entitlements)
+        _atomic_json_dump(get_entitlements_file(), entitlements)
 
         # Mark event processed
         processed_events[event_id] = {
@@ -519,7 +695,7 @@ def verify_lemonsqueezy_webhook(raw_body: bytes, signature: str, secret: str = N
             "token_created": token_id,
             "action": "entitlement_granted"
         }
-        _atomic_json_dump(_PROCESSED_WEBHOOKS_FILE, processed_events)
+        _atomic_json_dump(get_processed_webhooks_file(), processed_events)
 
     return True, "webhook_verified_and_processed", 200, {
         "event_id": event_id,
@@ -547,9 +723,10 @@ def _atomic_json_dump(filepath: str, data: dict):
 
 
 def _load_processed_webhooks() -> dict:
-    if os.path.exists(_PROCESSED_WEBHOOKS_FILE):
+    fpath = get_processed_webhooks_file()
+    if os.path.exists(fpath):
         try:
-            with open(_PROCESSED_WEBHOOKS_FILE, "r", encoding="utf-8") as f:
+            with open(fpath, "r", encoding="utf-8") as f:
                 return json.load(f)
         except Exception:
             return {}
@@ -557,10 +734,12 @@ def _load_processed_webhooks() -> dict:
 
 
 def _load_entitlements() -> dict:
-    if os.path.exists(_ENTITLEMENTS_FILE):
+    fpath = get_entitlements_file()
+    if os.path.exists(fpath):
         try:
-            with open(_ENTITLEMENTS_FILE, "r", encoding="utf-8") as f:
+            with open(fpath, "r", encoding="utf-8") as f:
                 return json.load(f)
         except Exception:
             return {}
     return {}
+
