@@ -16,8 +16,11 @@ import socket
 import ipaddress
 import threading
 import tempfile
+import logging
 from urllib.parse import urlparse
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
+
+logger = logging.getLogger("leakgrader.security")
 
 # Global re-entrant lock for file persistence and webhook state
 _SECURITY_LOCK = threading.RLock()
@@ -504,6 +507,9 @@ def verify_lemonsqueezy_webhook(raw_body: bytes, signature: str, secret: str = N
         or f"{event_name}_{order_or_sub_id}"
     )
 
+    # Sync to PostgreSQL database tables (Sprint 1)
+    sync_webhook_to_db(event_id, event_name, raw_body, payload)
+
     with _SECURITY_LOCK:
         processed_events = _load_processed_webhooks()
         if event_id in processed_events:
@@ -742,4 +748,382 @@ def _load_entitlements() -> dict:
         except Exception:
             return {}
     return {}
+
+
+# ==============================================================================
+# SPRINT 1: POSTGRESQL SUBSCRIPTION & ENTITLEMENT LIFECYCLE
+# ==============================================================================
+
+def get_lockdown_phase() -> str:
+    """
+    Returns 'full' or 'auth_ready'.
+    Defaults to 'full' to preserve existing security guarantees.
+    """
+    val = os.environ.get("LOCKDOWN_PHASE", "full").strip().lower()
+    if val in ["auth_ready", "auth-ready", "auth"]:
+        return "auth_ready"
+    return "full"
+
+
+PLAN_LIMITS = {
+    "free": {
+        "audit_limit": 2,
+        "pdf_download": False,
+        "white_label": False,
+        "workspaces": 1,
+        "team_members": 1
+    },
+    "solo": {
+        "audit_limit": 25,
+        "pdf_download": True,
+        "white_label": False,
+        "workspaces": 1,
+        "team_members": 1,
+        "audit_history": True
+    },
+    "agency": {
+        "audit_limit": 100,
+        "pdf_download": True,
+        "white_label": True,
+        "workspaces": 3,
+        "team_members": 3,
+        "audit_history": True
+    },
+    "scale": {
+        "audit_limit": 400,
+        "pdf_download": True,
+        "white_label": True,
+        "workspaces": 10,
+        "team_members": 10,
+        "audit_history": True,
+        "scheduled_rescans": True
+    }
+}
+
+
+def sync_webhook_to_db(event_id: str, event_name: str, payload_raw: bytes, payload_dict: dict) -> bool:
+    """
+    Idempotently records webhook into PostgreSQL/SQLite database tables:
+    - webhook_events (idempotency via UNIQUE event_id)
+    - users (find or create by customer email)
+    - subscriptions (insert or update status, period, auto_renew)
+    - entitlements (insert or update plan limits and usage)
+    """
+    try:
+        from db.connection import get_db_cursor, is_sqlite
+        import uuid
+
+        payload_hash = hashlib.sha256(payload_raw).hexdigest()
+        data = payload_dict.get("data", {})
+        attributes = data.get("attributes", {})
+        order_or_sub_id = str(data.get("id", ""))
+        user_email = (
+            attributes.get("user_email")
+            or attributes.get("customer_email")
+            or payload_dict.get("meta", {}).get("custom_data", {}).get("user_email")
+            or ""
+        ).strip().lower()
+
+        raw_plan_name = (
+            attributes.get("variant_name")
+            or attributes.get("product_name")
+            or payload_dict.get("meta", {}).get("custom_data", {}).get("plan")
+            or "solo"
+        ).lower()
+
+        plan = "free"
+        if "scale" in raw_plan_name:
+            plan = "scale"
+        elif "agency" in raw_plan_name:
+            plan = "agency"
+        elif "solo" in raw_plan_name:
+            plan = "solo"
+        else:
+            plan = "solo"
+
+        limits = PLAN_LIMITS.get(plan, PLAN_LIMITS["solo"])
+        audit_limit = limits["audit_limit"]
+        now_iso = datetime.now(timezone.utc).isoformat()
+        next_month_iso = (datetime.now(timezone.utc) + timedelta(days=30)).isoformat()
+
+        with get_db_cursor(commit=True) as cur:
+            # 1. Idempotency Check in webhook_events
+            cur.execute("SELECT id FROM webhook_events WHERE event_id = %s;", (event_id,))
+            if cur.fetchone():
+                return True  # Already processed in DB
+
+            # Insert webhook_event
+            we_id = str(uuid.uuid4())
+            if is_sqlite():
+                cur.execute("""
+                    INSERT OR IGNORE INTO webhook_events (id, event_id, event_name, payload_hash, subscription_id, processed_at, status)
+                    VALUES (%s, %s, %s, %s, %s, %s, 'processed');
+                """, (we_id, event_id, event_name, payload_hash, order_or_sub_id, now_iso))
+            else:
+                cur.execute("""
+                    INSERT INTO webhook_events (id, event_id, event_name, payload_hash, subscription_id, processed_at, status)
+                    VALUES (%s, %s, %s, %s, %s, NOW(), 'processed')
+                    ON CONFLICT (event_id) DO NOTHING;
+                """, (we_id, event_id, event_name, payload_hash, order_or_sub_id))
+
+            # If user email is present, find or create user & workspace
+            if user_email:
+                cur.execute("SELECT id FROM users WHERE LOWER(email) = %s;", (user_email,))
+                user_row = cur.fetchone()
+                if user_row:
+                    user_id = str(user_row["id"])
+                else:
+                    user_id = str(uuid.uuid4())
+                    user_name = user_email.split("@")[0].capitalize()
+                    # Placeholder bcrypt hash for webhook-provisioned users
+                    dummy_hash = "$2b$12$e8YkYd2U6E5a2gU.8Qx70OHj81jWqU1Y6fP0qG3V5G.qg7V0D8Zce"
+                    if is_sqlite():
+                        cur.execute("""
+                            INSERT INTO users (id, email, password_hash, full_name, created_at, updated_at, is_active)
+                            VALUES (%s, %s, %s, %s, %s, %s, 1);
+                        """, (user_id, user_email, dummy_hash, user_name, now_iso, now_iso))
+                    else:
+                        cur.execute("""
+                            INSERT INTO users (id, email, password_hash, full_name, created_at, updated_at, is_active)
+                            VALUES (%s, %s, %s, %s, NOW(), NOW(), TRUE);
+                        """, (user_id, user_email, dummy_hash, user_name))
+
+                # Find or create workspace
+                cur.execute("SELECT id FROM workspaces WHERE owner_id = %s LIMIT 1;", (user_id,))
+                ws_row = cur.fetchone()
+                if ws_row:
+                    workspace_id = str(ws_row["id"])
+                    # Update workspace plan
+                    if is_sqlite():
+                        cur.execute("UPDATE workspaces SET plan = %s, updated_at = %s WHERE id = %s;", (plan, now_iso, workspace_id))
+                    else:
+                        cur.execute("UPDATE workspaces SET plan = %s, updated_at = NOW() WHERE id = %s;", (plan, workspace_id))
+                else:
+                    workspace_id = str(uuid.uuid4())
+                    ws_name = f"{user_email.split('@')[0]}'s Workspace"
+                    if is_sqlite():
+                        cur.execute("""
+                            INSERT INTO workspaces (id, name, owner_id, plan, created_at, updated_at)
+                            VALUES (%s, %s, %s, %s, %s, %s);
+                        """, (workspace_id, ws_name, user_id, plan, now_iso, now_iso))
+                    else:
+                        cur.execute("""
+                            INSERT INTO workspaces (id, name, owner_id, plan, created_at, updated_at)
+                            VALUES (%s, %s, %s, %s, NOW(), NOW());
+                        """, (workspace_id, ws_name, user_id, plan))
+
+                # Handle specific subscription events in subscriptions table
+                cur.execute("SELECT id FROM subscriptions WHERE workspace_id = %s OR lemon_squeezy_subscription_id = %s;", (workspace_id, order_or_sub_id))
+                sub_row = cur.fetchone()
+
+                if event_name in ["order_created", "subscription_created", "subscription_updated", "subscription_resumed"]:
+                    sub_status = "active"
+                    auto_renew = 1 if is_sqlite() else True
+                    if sub_row:
+                        sub_id = str(sub_row["id"])
+                        if is_sqlite():
+                            cur.execute("""
+                                UPDATE subscriptions SET plan = %s, status = %s, auto_renew = %s, updated_at = %s, expires_at = %s
+                                WHERE id = %s;
+                            """, (plan, sub_status, auto_renew, now_iso, next_month_iso, sub_id))
+                        else:
+                            cur.execute("""
+                                UPDATE subscriptions SET plan = %s, status = %s, auto_renew = %s, updated_at = NOW(), expires_at = NOW() + INTERVAL '30 days'
+                                WHERE id = %s;
+                            """, (plan, sub_status, auto_renew, sub_id))
+                    else:
+                        sub_id = str(uuid.uuid4())
+                        if is_sqlite():
+                            cur.execute("""
+                                INSERT INTO subscriptions (id, workspace_id, user_id, lemon_squeezy_subscription_id, plan, status, auto_renew, expires_at, created_at, updated_at)
+                                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s);
+                            """, (sub_id, workspace_id, user_id, order_or_sub_id, plan, sub_status, auto_renew, next_month_iso, now_iso, now_iso))
+                        else:
+                            cur.execute("""
+                                INSERT INTO subscriptions (id, workspace_id, user_id, lemon_squeezy_subscription_id, plan, status, auto_renew, expires_at, created_at, updated_at)
+                                VALUES (%s, %s, %s, %s, %s, %s, %s, NOW() + INTERVAL '30 days', NOW(), NOW());
+                            """, (sub_id, workspace_id, user_id, order_or_sub_id, plan, sub_status, auto_renew))
+
+                    # Create or update entitlements
+                    cur.execute("SELECT id FROM entitlements WHERE workspace_id = %s AND feature = 'audit';", (workspace_id,))
+                    ent_row = cur.fetchone()
+                    if ent_row:
+                        ent_id = str(ent_row["id"])
+                        if is_sqlite():
+                            cur.execute("""
+                                UPDATE entitlements SET subscription_id = %s, usage_limit = %s, is_active = 1, usage_reset_at = %s
+                                WHERE id = %s;
+                            """, (sub_id, audit_limit, next_month_iso, ent_id))
+                        else:
+                            cur.execute("""
+                                UPDATE entitlements SET subscription_id = %s, usage_limit = %s, is_active = TRUE, usage_reset_at = NOW() + INTERVAL '30 days'
+                                WHERE id = %s;
+                            """, (sub_id, audit_limit, ent_id))
+                    else:
+                        ent_id = str(uuid.uuid4())
+                        if is_sqlite():
+                            cur.execute("""
+                                INSERT INTO entitlements (id, workspace_id, subscription_id, feature, usage_limit, usage_count, is_active, usage_reset_at, created_at)
+                                VALUES (%s, %s, %s, 'audit', %s, 0, 1, %s, %s);
+                            """, (ent_id, workspace_id, sub_id, audit_limit, next_month_iso, now_iso))
+                        else:
+                            cur.execute("""
+                                INSERT INTO entitlements (id, workspace_id, subscription_id, feature, usage_limit, usage_count, is_active, usage_reset_at, created_at)
+                                VALUES (%s, %s, %s, 'audit', %s, 0, TRUE, NOW() + INTERVAL '30 days', NOW());
+                            """, (ent_id, workspace_id, sub_id, audit_limit))
+
+                elif event_name == "subscription_cancelled":
+                    if is_sqlite():
+                        cur.execute("""
+                            UPDATE subscriptions SET auto_renew = 0, cancelled_at = %s, updated_at = %s
+                            WHERE workspace_id = %s OR lemon_squeezy_subscription_id = %s;
+                        """, (now_iso, now_iso, workspace_id, order_or_sub_id))
+                    else:
+                        cur.execute("""
+                            UPDATE subscriptions SET auto_renew = FALSE, cancelled_at = NOW(), updated_at = NOW()
+                            WHERE workspace_id = %s OR lemon_squeezy_subscription_id = %s;
+                        """, (workspace_id, order_or_sub_id))
+
+                elif event_name in ["subscription_expired", "subscription_unpaid"]:
+                    if is_sqlite():
+                        cur.execute("""
+                            UPDATE subscriptions SET status = 'inactive', updated_at = %s
+                            WHERE workspace_id = %s OR lemon_squeezy_subscription_id = %s;
+                        """, (now_iso, workspace_id, order_or_sub_id))
+                        cur.execute("""
+                            UPDATE entitlements SET is_active = 0
+                            WHERE workspace_id = %s;
+                        """, (workspace_id,))
+                    else:
+                        cur.execute("""
+                            UPDATE subscriptions SET status = 'inactive', updated_at = NOW()
+                            WHERE workspace_id = %s OR lemon_squeezy_subscription_id = %s;
+                        """, (workspace_id, order_or_sub_id))
+                        cur.execute("""
+                            UPDATE entitlements SET is_active = FALSE
+                            WHERE workspace_id = %s;
+                        """, (workspace_id,))
+
+                elif event_name == "subscription_paused":
+                    if is_sqlite():
+                        cur.execute("""
+                            UPDATE subscriptions SET status = 'paused', updated_at = %s
+                            WHERE workspace_id = %s OR lemon_squeezy_subscription_id = %s;
+                        """, (now_iso, workspace_id, order_or_sub_id))
+                        cur.execute("""
+                            UPDATE entitlements SET is_active = 0
+                            WHERE workspace_id = %s;
+                        """, (workspace_id,))
+                    else:
+                        cur.execute("""
+                            UPDATE subscriptions SET status = 'paused', updated_at = NOW()
+                            WHERE workspace_id = %s OR lemon_squeezy_subscription_id = %s;
+                        """, (workspace_id, order_or_sub_id))
+                        cur.execute("""
+                            UPDATE entitlements SET is_active = FALSE
+                            WHERE workspace_id = %s;
+                        """, (workspace_id,))
+
+        return True
+    except Exception as e:
+        logger.warning(f"Error syncing webhook to DB: {e}")
+        return False
+
+
+def check_db_entitlement(workspace_id: str, feature: str = "audit", increment_usage: bool = False, user_id: str = None) -> tuple:
+    """
+    Checks if a workspace is entitled to use a feature:
+    - Verifies is_active
+    - Handles monthly reset on anniversary if current time > usage_reset_at
+    - Verifies usage_count < usage_limit
+    - Optionally increments usage_count and logs to usage_events
+    Returns: (is_allowed: bool, reason: str, details: dict)
+    """
+    try:
+        from db.connection import get_db_cursor, is_sqlite
+        import uuid
+
+        now_iso = datetime.now(timezone.utc).isoformat()
+        next_month_iso = (datetime.now(timezone.utc) + timedelta(days=30)).isoformat()
+
+        with get_db_cursor(commit=True) as cur:
+            cur.execute("""
+                SELECT id, workspace_id, subscription_id, feature, usage_limit, usage_count, usage_reset_at, is_active
+                FROM entitlements
+                WHERE workspace_id = %s AND feature = %s;
+            """, (workspace_id, feature))
+            ent = cur.fetchone()
+
+            if not ent:
+                # Default free tier entitlement if none found
+                ent_id = str(uuid.uuid4())
+                if is_sqlite():
+                    cur.execute("""
+                        INSERT INTO entitlements (id, workspace_id, feature, usage_limit, usage_count, is_active, usage_reset_at, created_at)
+                        VALUES (%s, %s, %s, 2, 0, 1, %s, %s);
+                    """, (ent_id, workspace_id, feature, next_month_iso, now_iso))
+                else:
+                    cur.execute("""
+                        INSERT INTO entitlements (id, workspace_id, feature, usage_limit, usage_count, is_active, usage_reset_at, created_at)
+                        VALUES (%s, %s, %s, 2, 0, TRUE, NOW() + INTERVAL '30 days', NOW());
+                    """, (ent_id, workspace_id, feature))
+
+                cur.execute("SELECT id, workspace_id, subscription_id, feature, usage_limit, usage_count, usage_reset_at, is_active FROM entitlements WHERE id = %s;", (ent_id,))
+                ent = cur.fetchone()
+
+            ent_dict = dict(ent)
+            ent_id = str(ent_dict["id"])
+
+            # Check if monthly usage reset is due
+            reset_at = ent_dict.get("usage_reset_at")
+            if reset_at:
+                try:
+                    # Parse reset_at timestamp
+                    is_past = False
+                    if isinstance(reset_at, datetime):
+                        is_past = datetime.now(timezone.utc) > reset_at
+                    elif isinstance(reset_at, str):
+                        clean_reset = reset_at.replace("Z", "+00:00")
+                        is_past = datetime.now(timezone.utc) > datetime.fromisoformat(clean_reset)
+                    if is_past:
+                        if is_sqlite():
+                            cur.execute("UPDATE entitlements SET usage_count = 0, usage_reset_at = %s WHERE id = %s;", (next_month_iso, ent_id))
+                        else:
+                            cur.execute("UPDATE entitlements SET usage_count = 0, usage_reset_at = NOW() + INTERVAL '30 days' WHERE id = %s;", (ent_id,))
+                        ent_dict["usage_count"] = 0
+                except Exception:
+                    pass
+
+            # Check active flag
+            if not ent_dict.get("is_active", True):
+                return False, "entitlement_inactive", ent_dict
+
+            # Check limit
+            limit = ent_dict.get("usage_limit")
+            count = ent_dict.get("usage_count", 0)
+            if limit is not None and count >= limit:
+                return False, "usage_limit_reached", ent_dict
+
+            # Increment usage if requested
+            if increment_usage:
+                new_count = count + 1
+                cur.execute("UPDATE entitlements SET usage_count = %s WHERE id = %s;", (new_count, ent_id))
+                ent_dict["usage_count"] = new_count
+                # Log usage event
+                ue_id = str(uuid.uuid4())
+                if is_sqlite():
+                    cur.execute("""
+                        INSERT INTO usage_events (id, workspace_id, user_id, feature, event_type, created_at)
+                        VALUES (%s, %s, %s, %s, 'audit_run', %s);
+                    """, (ue_id, workspace_id, user_id, feature, now_iso))
+                else:
+                    cur.execute("""
+                        INSERT INTO usage_events (id, workspace_id, user_id, feature, event_type, created_at)
+                        VALUES (%s, %s, %s, %s, 'audit_run', NOW());
+                    """, (ue_id, workspace_id, user_id, feature))
+
+            return True, "allowed", ent_dict
+    except Exception as e:
+        logger.warning(f"Error checking DB entitlement: {e}")
+        return False, f"error: {e}", {}
 

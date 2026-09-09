@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>User Dashboard — LeakGrader</title>
+  <link rel="icon" type="image/x-icon" href="/favicon.ico">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #06080e;
+      --card: #0f1523;
+      --border: rgba(255, 255, 255, 0.08);
+      --primary: #38bdf8;
+      --primary-hover: #0ea5e9;
+      --text: #f8fafc;
+      --text-muted: #94a3b8;
+      --danger: #ef4444;
+      --success: #10b981;
+      --indigo: #6366f1;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Plus Jakarta Sans', sans-serif; }
+    body { background: var(--bg); color: var(--text); min-height: 100vh; display: flex; flex-direction: column; }
+    header {
+      background: var(--card);
+      border-bottom: 1px solid var(--border);
+      padding: 16px 32px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .brand { display: flex; align-items: center; gap: 12px; text-decoration: none; color: var(--text); }
+    .brand-icon { width: 36px; height: 36px; border-radius: 8px; background: linear-gradient(135deg, #0284c7, #38bdf8); display: flex; align-items: center; justify-content: center; font-size: 18px; font-weight: 800; color: #fff; }
+    .brand-title { font-size: 18px; font-weight: 700; letter-spacing: -0.5px; }
+    .nav-actions { display: flex; align-items: center; gap: 16px; }
+    .btn-sm {
+      padding: 8px 14px;
+      border-radius: 6px;
+      font-size: 13px;
+      font-weight: 600;
+      text-decoration: none;
+      cursor: pointer;
+      border: 1px solid var(--border);
+      background: rgba(255, 255, 255, 0.04);
+      color: var(--text);
+      transition: all 0.2s;
+    }
+    .btn-sm:hover { background: rgba(255, 255, 255, 0.08); border-color: var(--primary); }
+    .btn-primary-sm { background: var(--primary); color: #06080e; border: none; }
+    .btn-primary-sm:hover { background: var(--primary-hover); }
+    main { max-width: 1100px; width: 100%; margin: 32px auto; padding: 0 24px; flex: 1; }
+    .welcome-card {
+      background: linear-gradient(135deg, #0e172a, #0f1523);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 28px 32px;
+      margin-bottom: 28px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 20px;
+    }
+    .welcome-text h2 { font-size: 24px; font-weight: 700; }
+    .welcome-text p { color: var(--text-muted); font-size: 14px; margin-top: 6px; }
+    .plan-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 10px;
+      border-radius: 9999px;
+      background: rgba(56, 189, 248, 0.15);
+      color: var(--primary);
+      font-size: 12px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-left: 8px;
+    }
+    .status-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--success); }
+    .grid-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 20px; margin-bottom: 32px; }
+    .stat-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 24px;
+    }
+    .stat-label { font-size: 13px; font-weight: 600; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; }
+    .stat-value { font-size: 28px; font-weight: 800; margin: 10px 0 6px; }
+    .progress-bar-bg { width: 100%; height: 8px; border-radius: 4px; background: rgba(255, 255, 255, 0.06); overflow: hidden; margin-top: 12px; }
+    .progress-bar-fill { height: 100%; border-radius: 4px; background: linear-gradient(90deg, #38bdf8, #6366f1); width: 0%; transition: width 0.4s ease; }
+    .section-title { font-size: 18px; font-weight: 700; margin-bottom: 16px; display: flex; justify-content: space-between; align-items: center; }
+    .audits-table-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      overflow: hidden;
+    }
+    table { width: 100%; border-collapse: collapse; text-align: left; }
+    th { padding: 14px 20px; font-size: 12px; text-transform: uppercase; color: var(--text-muted); font-weight: 600; border-bottom: 1px solid var(--border); background: rgba(255, 255, 255, 0.02); }
+    td { padding: 16px 20px; font-size: 14px; border-bottom: 1px solid var(--border); }
+    tr:last-child td { border-bottom: none; }
+    .domain-cell { font-weight: 600; color: #fff; font-family: 'JetBrains Mono', monospace; }
+    .empty-state { text-align: center; padding: 48px 24px; color: var(--text-muted); font-size: 14px; }
+  </style>
+</head>
+<body>
+  <header>
+    <a href="/" class="brand">
+      <div class="brand-icon">⚡</div>
+      <div class="brand-title">LeakGrader</div>
+    </a>
+    <div class="nav-actions">
+      <a href="/account.html" class="btn-sm">Account Settings</a>
+      <button id="logoutBtn" class="btn-sm">Logout</button>
+    </div>
+  </header>
+
+  <main>
+    <div class="welcome-card">
+      <div class="welcome-text">
+        <h2>Welcome, <span id="userName">User</span>! <span class="plan-badge"><span class="status-dot"></span><span id="planName">Free</span></span></h2>
+        <p>Workspace: <strong id="workspaceName">Personal Workspace</strong> &bull; Status: <strong id="subStatus" style="color: var(--success);">Active</strong></p>
+      </div>
+      <div style="display: flex; gap: 12px; flex-wrap: wrap;">
+        <a href="/" class="btn-sm btn-primary-sm">Run New Audit</a>
+        <a href="/#pricing" id="upgradeBtn" class="btn-sm" style="background: rgba(99, 102, 241, 0.2); border-color: var(--indigo); color: #c7d2fe;">Upgrade Plan</a>
+      </div>
+    </div>
+
+    <div class="grid-stats">
+      <div class="stat-card">
+        <div class="stat-label">Monthly Audit Usage</div>
+        <div class="stat-value"><span id="usageUsed">0</span> / <span id="usageLimit">2</span></div>
+        <p style="font-size: 12px; color: var(--text-muted);" id="usageStatus">Audits refreshed monthly</p>
+        <div class="progress-bar-bg">
+          <div id="usageBar" class="progress-bar-fill"></div>
+        </div>
+      </div>
+
+      <div class="stat-card">
+        <div class="stat-label">Subscription Tier</div>
+        <div class="stat-value" id="statPlan">Free</div>
+        <p style="font-size: 13px; color: var(--text-muted);">Standard 15-Point Revenue Diagnostic</p>
+      </div>
+    </div>
+
+    <div class="section-title">
+      <h3>Recent Revenue Audits</h3>
+      <a href="/" class="btn-sm">Scan Website &rarr;</a>
+    </div>
+
+    <div class="audits-table-card">
+      <table id="auditsTable">
+        <thead>
+          <tr>
+            <th>Domain Target</th>
+            <th>Leak Score</th>
+            <th>Status</th>
+            <th>Date</th>
+            <th>Action</th>
+          </tr>
+        </thead>
+        <tbody id="auditsBody">
+          <tr>
+            <td colspan="5" class="empty-state">Loading your recent audits...</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </main>
+
+  <script>
+    async function loadDashboard() {
+      try {
+        const res = await fetch('/api/auth/me');
+        if (!res.ok) {
+          window.location.href = '/login.html';
+          return;
+        }
+        const data = await res.json();
+        const user = data.user;
+        const ws = data.workspace || {};
+
+        document.getElementById('userName').textContent = user.full_name || user.email.split('@')[0];
+        document.getElementById('planName').textContent = (ws.plan || 'Free').toUpperCase();
+        document.getElementById('statPlan').textContent = (ws.plan || 'Free').toUpperCase();
+        document.getElementById('workspaceName').textContent = ws.name || "Default Workspace";
+        document.getElementById('subStatus').textContent = (ws.sub_status || 'active').toUpperCase();
+
+        const used = data.usage_count !== undefined ? data.usage_count : 0;
+        const limit = data.usage_limit !== undefined ? data.usage_limit : 2;
+        document.getElementById('usageUsed').textContent = used;
+        document.getElementById('usageLimit').textContent = limit;
+        const pct = limit > 0 ? Math.min(100, Math.round((used / limit) * 100)) : 0;
+        document.getElementById('usageBar').style.width = pct + '%';
+
+        // Upgrade button visibility
+        const planLower = (ws.plan || 'free').toLowerCase();
+        if (planLower === 'agency' || planLower === 'scale') {
+          document.getElementById('upgradeBtn').style.display = 'none';
+        }
+
+        // Render mock/recent audits
+        renderAudits(data.recent_audits || []);
+      } catch (err) {
+        window.location.href = '/login.html';
+      }
+    }
+
+    function renderAudits(audits) {
+      const tbody = document.getElementById('auditsBody');
+      if (!audits || audits.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="5" class="empty-state">No audits executed yet. Click "Run New Audit" to diagnose your first website!</td></tr>';
+        return;
+      }
+      tbody.innerHTML = audits.map(a => `
+        <tr>
+          <td class="domain-cell">${a.domain}</td>
+          <td><strong style="color: #38bdf8;">${a.score || '85'}/100</strong></td>
+          <td><span style="color: #10b981;">Completed</span></td>
+          <td style="color: #94a3b8;">${a.date || 'Just now'}</td>
+          <td><a href="/?domain=${encodeURIComponent(a.domain)}" class="btn-sm" style="padding: 4px 10px; font-size: 12px;">View Report</a></td>
+        </tr>
+      `).join('');
+    }
+
+    document.getElementById('logoutBtn').addEventListener('click', async () => {
+      try {
+        await fetch('/api/auth/logout', { method: 'POST' });
+      } catch (e) {}
+      sessionStorage.removeItem('csrf_token');
+      window.location.href = '/login.html';
+    });
+
+    loadDashboard();
+  </script>
+</body>
+</html>

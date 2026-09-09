@@ -154,12 +154,14 @@ class TestServerSubprocess:
                 except Exception:
                     pass
             self.process = None
+            time.sleep(0.5)
 
         if os.path.exists(self.storage_dir):
             try:
                 shutil.rmtree(self.storage_dir, ignore_errors=True)
             except Exception:
                 pass
+
 
 
 def compute_signature(payload_bytes: bytes, secret: str = TEST_SECRET) -> str:
