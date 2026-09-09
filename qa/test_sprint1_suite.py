@@ -77,9 +77,22 @@ def run_sprint1_suite():
 
         all_tables_present = all(t in table_names for t in required_tables)
         record("DB-02", "All 9 required tables present in schema", all_tables_present, f"Found: {len(table_names)} tables")
+
+        # Verify concurrent multi-worker migration safety (Task 2)
+        import concurrent.futures
+        with concurrent.futures.ThreadPoolExecutor(max_workers=2) as executor:
+            f1 = executor.submit(migrate.run_migrations)
+            f2 = executor.submit(migrate.run_migrations)
+            res1 = f1.result()
+            res2 = f2.result()
+        concurrent_ok = (res1 is True and res2 is True)
+        record("DB-03", "Concurrent multi-worker migration safety (2 simultaneous workers)", concurrent_ok)
+
     except Exception as e:
         record("DB-01", "Database setup exception", False, str(e))
         record("DB-02", "Table presence check", False, str(e))
+        record("DB-03", "Concurrent migration exception", False, str(e))
+
 
     # --------------------------------------------------------------------------
     # 2. User signup (valid, duplicate, invalid email, weak password)
