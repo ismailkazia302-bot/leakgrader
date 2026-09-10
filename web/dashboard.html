@@ -176,13 +176,24 @@
   </header>
 
   <main>
+    <div id="limitBanner" style="display: none; background: rgba(239, 68, 68, 0.12); border: 1px solid rgba(239, 68, 68, 0.3); border-radius: 14px; padding: 16px 22px; margin-bottom: 24px; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 14px;">
+      <div style="display: flex; align-items: center; gap: 12px;">
+        <span style="font-size: 22px;">⚠️</span>
+        <div>
+          <strong style="color: #f87171; font-size: 14px; display: block;">Monthly Audit Limit Reached</strong>
+          <span style="color: #cbd5e1; font-size: 13px;">You've used all free audits this month. Upgrade to Pro for 100 audits/month and downloadable executive PDF dossiers.</span>
+        </div>
+      </div>
+      <a href="/#pricing" class="btn-sm btn-primary-sm" style="background: #38bdf8; color: #06080e; font-weight: 700; border: none; padding: 8px 18px;">Upgrade to Pro</a>
+    </div>
+
     <div class="welcome-card">
       <div class="welcome-text">
         <h2>Welcome, <span id="userName">User</span>! <span class="plan-badge"><span class="status-dot"></span><span id="planName">Free</span></span></h2>
         <p>Workspace: <strong id="workspaceName">Personal Workspace</strong> &bull; Status: <strong id="subStatus" style="color: var(--success);">Active</strong></p>
       </div>
       <div style="display: flex; gap: 12px; flex-wrap: wrap;">
-        <a href="/" class="btn-sm btn-primary-sm">Run New Audit</a>
+        <a href="/" class="btn-sm btn-primary-sm">Full Screen Scanner</a>
         <a href="/#pricing" id="upgradeBtn" class="btn-sm" style="background: rgba(99, 102, 241, 0.2); border-color: var(--indigo); color: #c7d2fe;">Upgrade Plan</a>
       </div>
     </div>
@@ -200,13 +211,25 @@
       <div class="stat-card">
         <div class="stat-label">Subscription Tier</div>
         <div class="stat-value" id="statPlan">Free</div>
-        <p style="font-size: 13px; color: var(--text-muted);">Standard 15-Point Revenue Diagnostic</p>
+        <p style="font-size: 13px; color: var(--text-muted);" id="statTierDesc">Standard 15-Point Revenue Diagnostic</p>
       </div>
+    </div>
+
+    <!-- Quick Scan Bar -->
+    <div style="background: var(--card); border: 1px solid var(--border); border-radius: 14px; padding: 20px 24px; margin-bottom: 28px;">
+      <h3 style="font-size: 15px; font-weight: 700; margin-bottom: 12px; color: #f8fafc; display: flex; align-items: center; gap: 8px;">
+        <span>⚡ Quick Website Scan</span>
+      </h3>
+      <form id="dashScanForm" style="display: flex; gap: 10px; flex-wrap: wrap;">
+        <input type="text" id="dashScanInput" placeholder="Enter target domain or URL (e.g. stripe.com or company.ae)..." required style="flex: 1; min-width: 240px; background: rgba(0,0,0,0.3); border: 1px solid var(--border); border-radius: 8px; padding: 10px 14px; color: #fff; font-size: 13.5px; outline: none;" />
+        <button type="submit" id="dashScanBtn" class="btn-sm btn-primary-sm" style="font-weight: 700; padding: 10px 20px;">Run Audit</button>
+      </form>
+      <div id="dashScanMsg" style="display: none; font-size: 12.5px; margin-top: 10px;"></div>
     </div>
 
     <div class="section-title">
       <h3>Recent Revenue Audits</h3>
-      <a href="/" class="btn-sm">Scan Website &rarr;</a>
+      <span style="font-size: 12px; color: var(--text-muted);" id="auditsCountLabel">0 Audits Completed</span>
     </div>
 
     <div class="audits-table-card">
@@ -216,14 +239,13 @@
             <tr>
               <th>Domain Target</th>
               <th>Leak Score</th>
-              <th>Status</th>
               <th>Date</th>
-              <th>Action</th>
+              <th>Actions</th>
             </tr>
           </thead>
           <tbody id="auditsBody">
             <tr>
-              <td colspan="5" class="empty-state">Loading your recent audits...</td>
+              <td colspan="4" class="empty-state">Loading your recent audits...</td>
             </tr>
           </tbody>
         </table>
@@ -232,6 +254,8 @@
   </main>
 
   <script>
+    let currentPlan = 'free';
+
     async function loadDashboard() {
       try {
         const res = await fetch('/api/auth/me');
@@ -242,49 +266,132 @@
         const data = await res.json();
         const user = data.user;
         const ws = data.workspace || {};
+        currentPlan = (data.plan || ws.plan || 'free').toLowerCase();
 
         document.getElementById('userName').textContent = user.full_name || user.email.split('@')[0];
-        document.getElementById('planName').textContent = (ws.plan || 'Free').toUpperCase();
-        document.getElementById('statPlan').textContent = (ws.plan || 'Free').toUpperCase();
+        document.getElementById('planName').textContent = currentPlan.toUpperCase();
+        document.getElementById('statPlan').textContent = currentPlan.toUpperCase();
         document.getElementById('workspaceName').textContent = ws.name || "Default Workspace";
         document.getElementById('subStatus').textContent = (ws.sub_status || 'active').toUpperCase();
 
-        const used = data.usage_count !== undefined ? data.usage_count : 0;
-        const limit = data.usage_limit !== undefined ? data.usage_limit : 2;
+        const used = (data.usage && data.usage.used !== undefined) ? data.usage.used : (data.usage_count || 0);
+        const limit = (data.usage && data.usage.limit !== undefined) ? data.usage.limit : (data.usage_limit || 2);
         document.getElementById('usageUsed').textContent = used;
         document.getElementById('usageLimit').textContent = limit;
         const pct = limit > 0 ? Math.min(100, Math.round((used / limit) * 100)) : 0;
         document.getElementById('usageBar').style.width = pct + '%';
 
+        // Limit banner visibility & scan button disabling
+        const limitBanner = document.getElementById('limitBanner');
+        const dashScanBtn = document.getElementById('dashScanBtn');
+        if (currentPlan === 'free' && used >= limit) {
+          limitBanner.style.display = 'flex';
+          dashScanBtn.disabled = true;
+          dashScanBtn.style.opacity = '0.5';
+          dashScanBtn.title = "Monthly audit limit reached. Please upgrade to Pro.";
+        } else {
+          limitBanner.style.display = 'none';
+          dashScanBtn.disabled = false;
+          dashScanBtn.style.opacity = '1';
+          dashScanBtn.title = "";
+        }
+
         // Upgrade button visibility
-        const planLower = (ws.plan || 'free').toLowerCase();
-        if (planLower === 'agency' || planLower === 'scale') {
+        if (currentPlan === 'agency' || currentPlan === 'scale' || currentPlan === 'enterprise') {
           document.getElementById('upgradeBtn').style.display = 'none';
         }
 
-        // Render mock/recent audits
-        renderAudits(data.recent_audits || []);
+        // Render recent audits
+        const audits = data.recent_audits || [];
+        document.getElementById('auditsCountLabel').textContent = `${audits.length} Audit${audits.length === 1 ? '' : 's'} Stored`;
+        renderAudits(audits, currentPlan);
       } catch (err) {
+        console.error(err);
         window.location.href = '/login.html';
       }
     }
 
-    function renderAudits(audits) {
+    function renderAudits(audits, plan) {
       const tbody = document.getElementById('auditsBody');
       if (!audits || audits.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="5" class="empty-state">No audits executed yet. Click "Run New Audit" to diagnose your first website!</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="4" class="empty-state">No audits executed yet. Run your first website audit above!</td></tr>';
         return;
       }
-      tbody.innerHTML = audits.map(a => `
-        <tr>
-          <td class="domain-cell">${a.domain}</td>
-          <td><strong style="color: #38bdf8;">${a.score || '85'}/100</strong></td>
-          <td><span style="color: ${a.is_demo_data ? '#fbbf24' : '#10b981'};">${a.is_demo_data ? 'Sample Report' : 'Completed'}</span></td>
-          <td style="color: #94a3b8;">${a.date || 'Just now'}</td>
-          <td><a href="/?domain=${encodeURIComponent(a.domain)}" class="btn-sm" style="padding: 4px 10px; font-size: 12px;">View Report</a></td>
-        </tr>
-      `).join('');
+      tbody.innerHTML = audits.map(a => {
+        const sc = a.score !== undefined && a.score !== null ? a.score : 70;
+        const scoreColor = sc >= 80 ? '#10b981' : (sc >= 60 ? '#38bdf8' : '#fb7185');
+        let dateStr = 'Just now';
+        if (a.created_at) {
+          try {
+            const d = new Date(a.created_at);
+            dateStr = d.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
+          } catch(e) {}
+        }
+        const isFree = plan === 'free';
+        const pdfBtn = isFree
+          ? `<a href="/#pricing" class="btn-sm" style="padding: 4px 10px; font-size: 12px; color: #94a3b8; border-color: rgba(255,255,255,0.06);" title="Upgrade to Pro to download PDF">🔒 PDF</a>`
+          : `<a href="/api/audit/${a.id}/pdf" download class="btn-sm btn-primary-sm" style="padding: 4px 10px; font-size: 12px;">📄 PDF</a>`;
+
+        return `
+          <tr>
+            <td class="domain-cell">${a.domain}</td>
+            <td><strong style="color: ${scoreColor}; font-family: 'JetBrains Mono', monospace;">${sc}/100</strong></td>
+            <td style="color: #94a3b8; font-size: 13px;">${dateStr}</td>
+            <td style="display: flex; gap: 8px; align-items: center;">
+              <a href="/report/${a.id}" target="_blank" class="btn-sm" style="padding: 4px 10px; font-size: 12px;">View Report</a>
+              ${pdfBtn}
+            </td>
+          </tr>
+        `;
+      }).join('');
     }
+
+    document.getElementById('dashScanForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const domainInput = document.getElementById('dashScanInput');
+      const scanBtn = document.getElementById('dashScanBtn');
+      const scanMsg = document.getElementById('dashScanMsg');
+      const targetDomain = domainInput.value.trim();
+      if (!targetDomain) return;
+
+      scanBtn.disabled = true;
+      scanBtn.textContent = 'Scanning 10s...';
+      scanMsg.style.display = 'none';
+
+      try {
+        const res = await fetch('/api/audit/run', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ target: targetDomain })
+        });
+        const resData = await res.json();
+        if (res.status === 403) {
+          scanMsg.style.display = 'block';
+          scanMsg.style.color = '#fb7185';
+          scanMsg.innerHTML = `⚠️ ${resData.message || "Monthly audit limit reached."} <a href="/#pricing" style="color:#38bdf8; font-weight:bold; margin-left:6px;">Upgrade to Pro &rarr;</a>`;
+          document.getElementById('limitBanner').style.display = 'flex';
+          return;
+        }
+        if (!res.ok) {
+          scanMsg.style.display = 'block';
+          scanMsg.style.color = '#fb7185';
+          scanMsg.textContent = resData.error || 'Failed to complete audit. Please check domain target.';
+          return;
+        }
+        domainInput.value = '';
+        scanMsg.style.display = 'block';
+        scanMsg.style.color = '#34d399';
+        scanMsg.textContent = `✓ Audit completed for ${targetDomain}! Refreshing list...`;
+        await loadDashboard();
+      } catch (err) {
+        scanMsg.style.display = 'block';
+        scanMsg.style.color = '#fb7185';
+        scanMsg.textContent = 'Network error while executing scan.';
+      } finally {
+        scanBtn.disabled = (currentPlan === 'free' && document.getElementById('limitBanner').style.display === 'flex');
+        scanBtn.textContent = 'Run Audit';
+      }
+    });
 
     document.getElementById('logoutBtn').addEventListener('click', async () => {
       try {

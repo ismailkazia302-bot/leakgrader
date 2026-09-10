@@ -73,6 +73,30 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
 
+  // Global User Session Cache & GA4 Telemetry
+  let _currentUser = null;
+  fetch('/api/auth/me').then(r => r.ok ? r.json() : null).then(d => {
+    if (d && d.user) _currentUser = d;
+  }).catch(() => {});
+
+  // Delegated GA4 Click Telemetry (Sign-Up and Upgrade Tracking)
+  document.addEventListener('click', (e) => {
+    const el = e.target.closest('a, button');
+    if (!el) return;
+    const href = (el.getAttribute('href') || '').toLowerCase();
+    const id = el.id || '';
+    if (href.includes('signup') || el.classList.contains('btn-signup-cta')) {
+      if (typeof gtag === 'function') {
+        gtag('event', 'sign_up_click', { url: href, text: (el.innerText || 'Sign Up').trim() });
+      }
+    }
+    if (href.includes('pricing') || el.classList.contains('btn-upgrade-cta') || id === 'upgradeBtn' || id === 'btn-limit-upgrade' || id === 'btn-modal-upgrade') {
+      if (typeof gtag === 'function') {
+        gtag('event', 'upgrade_click', { plan: 'pro', text: (el.innerText || 'Upgrade').trim() });
+      }
+    }
+  });
+
   // ====================================================
   // 2. TAB 1: 10-SECOND REVENUE LEAK AUDITOR
   // ====================================================
@@ -313,6 +337,10 @@ document.addEventListener('DOMContentLoaded', () => {
   async function triggerAudit(urlOrCompany) {
     if (!btnRunAudit || !auditResultsContainer) return;
 
+    if (typeof gtag === 'function') {
+      gtag('event', 'audit_start', { domain: urlOrCompany });
+    }
+
     btnRunAudit.disabled = true;
     btnRunAudit.innerHTML = '<i data-lucide="loader-2" class="icon-sm spin"></i><span>Scanning 10s...</span>';
     if (window.lucide) lucide.createIcons();
@@ -367,6 +395,35 @@ document.addEventListener('DOMContentLoaded', () => {
       });
 
       const data = await res.json();
+
+      if (res.status === 403) {
+        if (typeof gtag === 'function') {
+          gtag('event', 'plan_limit_reached', { plan: data.plan || 'free', limit: data.limit || 2 });
+        }
+        auditResultsContainer.innerHTML = `
+          <div class="card-3d-tilt" style="padding: 40px 24px; text-align: center; max-width: 540px; margin: 0 auto; border: 1px solid rgba(239, 68, 68, 0.3); background: rgba(18, 10, 14, 0.95); border-radius: 16px;">
+            <div style="width: 52px; height: 52px; border-radius: 50%; background: rgba(239, 68, 68, 0.15); color: #fb7185; display: flex; align-items: center; justify-content: center; margin: 0 auto 16px;">
+              <i data-lucide="lock" style="width: 26px; height: 26px;"></i>
+            </div>
+            <h3 style="font-size: 18px; font-weight: 800; color: #fff; margin-bottom: 8px;">Monthly Audit Limit Reached</h3>
+            <p style="font-size: 13.5px; color: #cbd5e1; margin-bottom: 20px; line-height: 1.5;">${data.message || "You've reached your free monthly limit (2 of 2 audits). Upgrade to Pro for 100 audits/month and downloadable executive PDF dossiers."}</p>
+            <div style="display: flex; gap: 12px; justify-content: center; flex-wrap: wrap;">
+              <a href="${data.upgrade_url || '/#pricing'}" id="btn-modal-upgrade" class="btn-action-3d btn-upgrade-cta" style="background: linear-gradient(135deg, #0284c7, #38bdf8); color: #000; padding: 12px 24px; font-size: 13px; font-weight: 800; border-radius: 10px; text-decoration: none;">
+                🚀 Upgrade to Pro (100 Audits)
+              </a>
+              <a href="/dashboard.html" class="btn-action-3d" style="background: rgba(255,255,255,0.06); color: #fff; padding: 12px 20px; font-size: 13px; font-weight: 600; border-radius: 10px; text-decoration: none; border: 1px solid var(--border-subtle);">
+                View Past Audits
+              </a>
+            </div>
+          </div>
+        `;
+        if (window.lucide) lucide.createIcons();
+        btnRunAudit.disabled = false;
+        btnRunAudit.innerHTML = '<i data-lucide="zap" class="icon-sm"></i><span>Run Free Audit</span>';
+        if (window.lucide) lucide.createIcons();
+        return;
+      }
+
       if (data.error || (data.status && data.status === 'INVALID_INPUT') || (data.audit && data.audit.status === 'INVALID_INPUT')) {
         const errMsg = data.error || (data.audit && data.audit.error) || 'Invalid domain format. Please enter a valid website domain.';
         auditResultsContainer.innerHTML = `
@@ -385,9 +442,21 @@ document.addEventListener('DOMContentLoaded', () => {
         if (window.lucide) lucide.createIcons();
         return;
       }
+
       const audit = data.audit || {};
-      const score = audit.ai_readiness_score || 74;
+      const score = audit.ai_readiness_score || audit.score || 74;
       const leak = audit.estimated_monthly_leak || '$35,000/mo';
+      const grade = audit.grade || (score >= 80 ? 'A' : score >= 60 ? 'B' : 'C');
+
+      if (typeof gtag === 'function') {
+        gtag('event', 'audit_complete', {
+          domain: urlOrCompany,
+          score: score,
+          grade: grade,
+          leak_amount: leak
+        });
+      }
+
       const leaks = audit.top_conversion_leaks || [
         { title: 'Zero Instant WhatsApp/SMS Lead Capture', financial_impact: 'Losing 42% of high-intent mobile visitors.', solution_fix: 'Deploy 24/7 AI WhatsApp Closer Bot.' },
         { title: 'Uncaptured After-Hours Inbound Traffic', financial_impact: '68% of inquiries arrive after 7 PM with 8-hour reply lag.', solution_fix: 'Autonomous 30-sec lead qualification.' },
@@ -395,6 +464,15 @@ document.addEventListener('DOMContentLoaded', () => {
       ];
 
       const cleanSlug = encodeURIComponent((audit.company_name || urlOrCompany).toLowerCase().replace(/[^a-z0-9]+/g, '-'));
+      const auditId = data.audit_id || data.id || cleanSlug;
+      const isAuth = !!_currentUser;
+      const userPlan = (_currentUser && (_currentUser.plan || (_currentUser.workspace && _currentUser.workspace.plan))) || 'free';
+      const isFree = userPlan === 'free';
+      const allPoints = audit.diagnostic_points || [];
+
+      // Split points for anonymous preview vs authenticated full view
+      const visiblePoints = isAuth ? allPoints : allPoints.slice(0, 3);
+      const lockedPoints = isAuth ? [] : allPoints.slice(3);
 
       auditResultsContainer.innerHTML = `
         <div class="scorecard-wrapper-3d">
@@ -467,12 +545,12 @@ document.addEventListener('DOMContentLoaded', () => {
                 <h3 style="font-size:15px; font-weight:800; color:#ffffff; margin:0;">Full 15-Point Conversion & Technical Diagnostic</h3>
               </div>
               <div style="display:flex; align-items:center; gap:8px;">
-                <span class="badge-tag cyan" style="font-size:10px;">15 of 15 Checks Completed</span>
+                <span class="badge-tag cyan" style="font-size:10px;">${isAuth ? '15 of 15 Checks Completed' : '3 of 15 Checks Unlocked'}</span>
               </div>
             </div>
 
             <div id="diagnostic-points-table" style="margin-top:16px; display:flex; flex-direction:column; gap:8px;">
-              ${(audit.diagnostic_points || []).map(dp => {
+              ${visiblePoints.map(dp => {
                 const badgeColor = dp.status === 'PASS' ? '#34d399' : (dp.status === 'WARN' ? '#fbbf24' : '#fb7185');
                 const badgeBg = dp.status === 'PASS' ? 'rgba(52,211,153,0.12)' : (dp.status === 'WARN' ? 'rgba(251,191,36,0.12)' : 'rgba(251,113,133,0.12)');
                 return `
@@ -492,9 +570,31 @@ document.addEventListener('DOMContentLoaded', () => {
                   </div>
                 `;
               }).join('')}
+
+              ${!isAuth && lockedPoints.length > 0 ? `
+                <div style="filter: blur(4px); opacity: 0.35; user-select: none; pointer-events: none; display: flex; flex-direction: column; gap: 8px; margin-top: 4px;">
+                  ${lockedPoints.slice(0, 3).map(dp => `
+                    <div style="display:flex; justify-content:space-between; align-items:center; padding:10px 14px; background:rgba(255,255,255,0.02); border:1px solid rgba(255,255,255,0.05); border-radius:8px;">
+                      <span style="font-family:'JetBrains Mono',monospace; font-size:11px; color:var(--text-muted);">#${dp.point_number}</span>
+                      <div style="font-size:12.5px; font-weight:700; color:#f8fafc;">${dp.name}</div>
+                      <span style="font-size:10px; font-weight:800; padding:3px 8px; border-radius:5px; background:rgba(52,211,153,0.12); color:#34d399;">PASS</span>
+                    </div>
+                  `).join('')}
+                </div>
+
+                <div style="margin-top:16px; padding:24px 20px; border-radius:12px; background:rgba(56,189,248,0.05); border:1px dashed rgba(56,189,248,0.3); text-align:center;">
+                  <div style="font-size: 26px; margin-bottom: 8px;">🔒</div>
+                  <h4 style="color:#fff; font-size:15px; font-weight:800; margin-bottom:6px;">12 Additional Diagnostic Checks Locked</h4>
+                  <p style="color:var(--text-muted); font-size:13px; margin-bottom:16px;">Create a free account to unlock all 15 findings. 2 full audits included.</p>
+                  <a href="/signup.html" class="btn-action-3d btn-signup-cta" style="background:#38bdf8; color:#06080e; font-weight:800; padding:10px 24px; border-radius:8px; text-decoration:none; display:inline-flex; align-items:center; gap:6px;">
+                    <span>Sign up free — 2 full audits included &rarr;</span>
+                  </a>
+                </div>
+              ` : ''}
             </div>
           </div>
 
+          <!-- FULL AUDIT REPORT & BOARDROOM DOSSIER BANNER -->
           <div class="card-3d-tilt unlock-banner-3d">
             <div class="banner-content-flex">
               <div class="banner-badge-gold"><i data-lucide="crown"></i> FULL AUDIT REPORT & BOARDROOM DOSSIER</div>
@@ -502,14 +602,28 @@ document.addEventListener('DOMContentLoaded', () => {
               <p>Get the executive-grade dark-mode dossier with full leak teardown, tech-stack breakdown, and 90-day ROI projection.</p>
             </div>
             <div style="display:flex; gap:10px; flex-wrap:wrap;">
-              <a href="/report/dossier/${cleanSlug}" target="_blank" class="btn-action-3d" style="background:#38bdf8; color:#000; border:none; padding:12px 20px; font-size:13px; font-weight:800; border-radius:10px; text-decoration:none; display:inline-flex; align-items:center; gap:6px;">
-                <i data-lucide="file-text" class="icon-sm"></i>
-                <span>📄 View / Print PDF Dossier</span>
-              </a>
-              <button class="btn-gold-3d" id="btn-unlock-dynamic" type="button">
-                <i data-lucide="lock" class="icon-sm"></i>
-                <span>Unlock Full Report ($9)</span>
-              </button>
+              ${isAuth ? `
+                <a href="/report/${auditId}" target="_blank" class="btn-action-3d" style="background:#38bdf8; color:#000; border:none; padding:12px 20px; font-size:13px; font-weight:800; border-radius:10px; text-decoration:none; display:inline-flex; align-items:center; gap:6px;">
+                  <i data-lucide="file-text" class="icon-sm"></i>
+                  <span>📄 View / Print PDF Dossier</span>
+                </a>
+                ${isFree ? `
+                  <a href="/#pricing" class="btn-action-3d btn-upgrade-cta" style="background:rgba(255,255,255,0.08); color:#38bdf8; border:1px solid rgba(56,189,248,0.3); padding:12px 20px; font-size:13px; font-weight:800; border-radius:10px; text-decoration:none; display:inline-flex; align-items:center; gap:6px;">
+                    <i data-lucide="lock" class="icon-sm"></i>
+                    <span>Upgrade to Pro to Download PDF</span>
+                  </a>
+                ` : `
+                  <a href="/api/audit/${auditId}/pdf" download class="btn-action-3d" style="background:linear-gradient(135deg, #0284c7, #38bdf8); color:#000; border:none; padding:12px 20px; font-size:13px; font-weight:800; border-radius:10px; text-decoration:none; display:inline-flex; align-items:center; gap:6px;">
+                    <i data-lucide="download" class="icon-sm"></i>
+                    <span>Download PDF Dossier</span>
+                  </a>
+                `}
+              ` : `
+                <a href="/signup.html" class="btn-action-3d btn-signup-cta" style="background:#38bdf8; color:#06080e; border:none; padding:12px 20px; font-size:13px; font-weight:800; border-radius:10px; text-decoration:none; display:inline-flex; align-items:center; gap:6px;">
+                  <i data-lucide="user-plus" class="icon-sm"></i>
+                  <span>Sign up free — 2 full audits included &rarr;</span>
+                </a>
+              `}
             </div>
           </div>
 
