@@ -317,3 +317,107 @@ class ExecutiveDossierGenerator:
   </div>
 </body>
 </html>"""
+
+
+def generate_audit_pdf(audit_data: dict) -> bytes:
+    """
+    Generates a 100% valid, self-contained PDF 1.4 binary stream with
+    domain, score, revenue leak calculation, all 15 diagnostic points,
+    benchmark disclaimer, and remediation plan.
+    """
+    domain = audit_data.get("domain") or audit_data.get("company_name", "Target Domain")
+    score = audit_data.get("score") or audit_data.get("ai_readiness_score", 70)
+    leak = audit_data.get("estimated_monthly_leak", "$35,000/mo")
+    ts = audit_data.get("timestamp", time.strftime("%Y-%m-%d %H:%M:%S UTC"))
+    diag_pts = audit_data.get("diagnostic_points", [])
+
+    lines = [
+        "LEAKGRADER EXECUTIVE REVENUE LEAK DOSSIER",
+        "=" * 50,
+        f"Domain Target: {domain}",
+        f"Conversion & AI Readiness Score: {score}/100",
+        f"Estimated Monthly Revenue Leak: {leak}",
+        f"Generated: {ts}",
+        "",
+        "BENCHMARK METHODOLOGY & DISCLAIMER:",
+        "Formula: Traffic x 8.0% (High Intent) x 68.4% (After-Hours) x 72.0% (Lag)",
+        "         x 2.5% (Close Rate Benchmark) x Avg Deal Value",
+        "Public Front-End Forensic Diagnostic (No Private/Bank Data Accessed)",
+        "",
+        "15-POINT CONVERSION & RESPONSE TIME AUDIT:",
+        "-" * 50
+    ]
+
+    for p in diag_pts:
+        p_num = p.get("point_number", 1)
+        p_name = p.get("name", "Diagnostic Check")
+        p_cat = p.get("category", "General")
+        p_stat = p.get("status", "PASS")
+        p_sc = p.get("score", 80)
+        lines.append(f"[{p_stat}] #{p_num} {p_name} ({p_cat}) - {p_sc}/100")
+        obs = p.get("observation", "")
+        if obs:
+            lines.append(f"      Observation: {obs[:85]}")
+
+    lines.extend([
+        "-" * 50,
+        "RECOMMENDED REMEDIATION & CASH-FLOW ACTION:",
+        "Phase 1 (Days 1-7): Deploy 24/7 Autonomous AI WhatsApp Closer Widget",
+        "Phase 2 (Days 8-21): Integrate Instant Calendar Booking & Qualification",
+        "Phase 3 (Days 22-90): Activate High-DA Programmatic Directory Hubs",
+        "=" * 50,
+        "Prepared autonomously by LeakGrader.com"
+    ])
+
+    # Build PDF Content Stream
+    content_ops = ["BT", "/F1 9 Tf", "40 760 Td", "13 TL"]
+    for l in lines:
+        escaped = l.replace("\\", "\\\\").replace("(", "\\(").replace(")", "\\)")
+        if "LEAKGRADER" in l:
+            content_ops.append(f"T* /F1 14 Tf ({escaped}) Tj /F1 9 Tf")
+        elif l.startswith("="):
+            content_ops.append(f"T* /F1 10 Tf ({escaped}) Tj /F1 9 Tf")
+        else:
+            content_ops.append(f"T* ({escaped}) Tj")
+    content_ops.append("ET")
+    content_stream = "\n".join(content_ops).encode("latin-1", errors="replace")
+
+    obj1 = b"1 0 obj\n<< /Type /Catalog /Pages 2 0 R >>\nendobj\n"
+    obj2 = b"2 0 obj\n<< /Type /Pages /Kids [3 0 R] /Count 1 >>\nendobj\n"
+    obj3 = (
+        b"3 0 obj\n"
+        b"<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792]\n"
+        b"   /Contents 4 0 R\n"
+        b"   /Resources << /Font << /F1 5 0 R >> >>\n"
+        b">>\nendobj\n"
+    )
+    obj4 = (
+        f"4 0 obj\n<< /Length {len(content_stream)} >>\nstream\n".encode("latin-1")
+        + content_stream
+        + b"\nendstream\nendobj\n"
+    )
+    obj5 = b"5 0 obj\n<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>\nendobj\n"
+
+    header = b"%PDF-1.4\n"
+    offsets = []
+    curr = len(header)
+    for obj in [obj1, obj2, obj3, obj4, obj5]:
+        offsets.append(curr)
+        curr += len(obj)
+
+    xref_offset = curr
+    xref = [
+        "xref\n0 6\n0000000000 65535 f \n",
+        f"{offsets[0]:010d} 00000 n \n",
+        f"{offsets[1]:010d} 00000 n \n",
+        f"{offsets[2]:010d} 00000 n \n",
+        f"{offsets[3]:010d} 00000 n \n",
+        f"{offsets[4]:010d} 00000 n \n"
+    ]
+    xref_bytes = "".join(xref).encode("latin-1")
+    trailer = (
+        f"trailer\n<< /Size 6 /Root 1 0 R >>\nstartxref\n{xref_offset}\n%%EOF\n"
+    ).encode("latin-1")
+
+    return header + obj1 + obj2 + obj3 + obj4 + obj5 + xref_bytes + trailer
+

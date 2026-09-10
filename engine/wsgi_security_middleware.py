@@ -10,6 +10,9 @@ import sys
 import json
 import io
 import time
+import uuid
+import re
+from datetime import datetime, timezone
 from urllib.parse import unquote
 
 from engine.security_guard import (
@@ -58,7 +61,7 @@ def _extract_headers(environ):
     return hdrs
 
 
-def _send_response(start_response, status_code: int, body_dict: dict = None, text_content: str = None, content_type: str = "application/json", extra_headers: list = None):
+def _send_response(start_response, status_code: int, body_dict: dict = None, text_content: str = None, binary_content: bytes = None, content_type: str = "application/json", extra_headers: list = None):
     status_str = f"{status_code} "
     if status_code == 200: status_str += "OK"
     elif status_code == 201: status_str += "Created"
@@ -74,15 +77,24 @@ def _send_response(start_response, status_code: int, body_dict: dict = None, tex
     elif status_code == 503: status_str += "Service Unavailable"
     else: status_str += "Response"
 
-    headers = [("Content-Type", f"{content_type}; charset=utf-8")]
+    if binary_content is not None or "charset" in content_type:
+        headers = [("Content-Type", content_type)]
+    else:
+        headers = [("Content-Type", f"{content_type}; charset=utf-8")]
+
     for k, v in SECURITY_HEADERS:
         headers.append((k, v))
     if extra_headers:
         for k, v in extra_headers:
-            headers.append((k, v))
+            if k.lower() == "content-type":
+                headers[0] = (k, v)
+            else:
+                headers.append((k, v))
 
     start_response(status_str, headers)
-    if body_dict is not None:
+    if binary_content is not None:
+        return [binary_content]
+    elif body_dict is not None:
         return [json.dumps(body_dict).encode("utf-8")]
     elif text_content is not None:
         return [text_content.encode("utf-8")]
@@ -310,6 +322,34 @@ def secured_app(environ, start_response):
             ent_info = {}
             if ws_id:
                 allowed, _, ent_info = check_db_entitlement(ws_id, "audit")
+
+            recent_audits = []
+            if ws_id:
+                from db.connection import get_db_cursor
+                with get_db_cursor() as cur:
+                    cur.execute("""
+                        SELECT id, domain, score, created_at
+                        FROM audits
+                        WHERE workspace_id = %s
+                        ORDER BY created_at DESC
+                        LIMIT 10;
+                    """, (ws_id,))
+                    rows = cur.fetchall() or []
+                    for r in rows:
+                        ca = r["created_at"]
+                        if isinstance(ca, datetime):
+                            ca = ca.isoformat()
+                        recent_audits.append({
+                            "id": str(r["id"]),
+                            "domain": r["domain"],
+                            "score": r["score"],
+                            "created_at": ca
+                        })
+
+            plan_name = ws.get("plan") or ent_info.get("plan") or "free"
+            usage_cnt = ent_info.get("usage_count", 0)
+            usage_lim = ent_info.get("usage_limit", 2)
+
             return _send_response(start_response, 200, body_dict={
                 "success": True,
                 "user": {
@@ -318,8 +358,14 @@ def secured_app(environ, start_response):
                     "full_name": sess["full_name"]
                 },
                 "workspace": ws,
-                "usage_count": ent_info.get("usage_count", 0),
-                "usage_limit": ent_info.get("usage_limit", 2),
+                "plan": plan_name,
+                "usage_count": usage_cnt,
+                "usage_limit": usage_lim,
+                "usage": {
+                    "used": usage_cnt,
+                    "limit": usage_lim
+                },
+                "recent_audits": recent_audits,
                 "csrf_token": sess["csrf_token"]
             })
 
@@ -352,6 +398,130 @@ def secured_app(environ, start_response):
             return _send_response(start_response, 200, body_dict={"success": True, "message": "Password updated"})
 
         return _send_response(start_response, 404, body_dict={"error": "Auth endpoint not found"})
+
+    # 9b. Completed Audit Report HTML Dossier: /report/<audit_id>
+    if path_lower.startswith("/report/") and not path_lower.startswith("/report/dossier"):
+        if method != "GET":
+            return _send_response(start_response, 404, text_content="Not Found", content_type="text/plain")
+
+        sess = _get_session(environ, headers)
+        if not sess:
+            return _send_response(start_response, 401, body_dict={"error": "unauthenticated"})
+
+        ws = sess.get("workspace")
+        ws_id = ws["id"] if ws else None
+        if not ws_id:
+            return _send_response(start_response, 404, text_content="Report not found", content_type="text/plain")
+
+        audit_uuid = raw_path[len("/report/"):].strip("/")
+        from db.connection import get_db_cursor
+        with get_db_cursor() as cur:
+            cur.execute("""
+                SELECT id, workspace_id, domain, results, score
+                FROM audits
+                WHERE id = %s;
+            """, (audit_uuid,))
+            audit_row = cur.fetchone()
+
+        if not audit_row or str(audit_row["workspace_id"]) != str(ws_id):
+            return _send_response(start_response, 404, text_content="Report not found", content_type="text/plain")
+
+        results_data = audit_row["results"]
+        if isinstance(results_data, str):
+            try:
+                results_data = json.loads(results_data)
+            except Exception:
+                results_data = {}
+        elif not isinstance(results_data, dict):
+            results_data = {}
+
+        if "company_name" not in results_data and audit_row["domain"]:
+            results_data["company_name"] = audit_row["domain"]
+        if "target_url" not in results_data and audit_row["domain"]:
+            results_data["target_url"] = f"https://{audit_row['domain']}"
+        if "ai_readiness_score" not in results_data and audit_row["score"]:
+            results_data["ai_readiness_score"] = audit_row["score"]
+
+        from engine.pdf_dossier import ExecutiveDossierGenerator
+        gen = ExecutiveDossierGenerator()
+        html_content = gen.generate_dossier_html(results_data)
+        return _send_response(start_response, 200, text_content=html_content, content_type="text/html")
+
+    # 9c. Audit Retrieval & PDF: /api/audit/<audit_id> and /api/audit/<audit_id>/pdf
+    if path_lower.startswith("/api/audit/") and path_lower not in ["/api/audit/run", "/api/audit/scan", "/api/audit/competitor-battle", "/api/audit/dossier"]:
+        sess = _get_session(environ, headers)
+        if not sess:
+            return _send_response(start_response, 401, body_dict={"error": "unauthenticated", "status": "unauthenticated"})
+
+        ws = sess.get("workspace")
+        ws_id = ws["id"] if ws else None
+        if not ws_id:
+            return _send_response(start_response, 404, body_dict={"error": "Audit not found"})
+
+        subpath = raw_path[len("/api/audit/"):].strip("/")
+        parts = subpath.split("/")
+        audit_uuid = parts[0]
+        is_pdf = len(parts) > 1 and parts[1].lower() == "pdf"
+
+        from db.connection import get_db_cursor
+        with get_db_cursor() as cur:
+            cur.execute("""
+                SELECT id, workspace_id, user_id, domain, competitor_domain, scan_type, results, score, created_at
+                FROM audits
+                WHERE id = %s;
+            """, (audit_uuid,))
+            audit_row = cur.fetchone()
+
+        if not audit_row or str(audit_row["workspace_id"]) != str(ws_id):
+            return _send_response(start_response, 404, body_dict={"error": "Audit not found"})
+
+        results_data = audit_row["results"]
+        if isinstance(results_data, str):
+            try:
+                results_data = json.loads(results_data)
+            except Exception:
+                results_data = {}
+        elif not isinstance(results_data, dict):
+            results_data = {}
+
+        if is_pdf:
+            plan = ws.get("plan", "free")
+            if plan == "free":
+                return _send_response(start_response, 403, body_dict={
+                    "error": "feature_requires_upgrade",
+                    "plan": plan,
+                    "message": "PDF reports require Pro plan",
+                    "upgrade_url": "/pricing"
+                })
+
+            from engine.pdf_dossier import generate_audit_pdf
+            if "domain" not in results_data:
+                results_data["domain"] = audit_row["domain"]
+            if "score" not in results_data:
+                results_data["score"] = audit_row["score"]
+
+            pdf_bytes = generate_audit_pdf(results_data)
+            domain_clean = re.sub(r'[^a-zA-Z0-9.-]', '_', audit_row["domain"] or "audit")
+            filename = f"leakgrader-report-{domain_clean}.pdf"
+            extra_headers = [
+                ("Content-Type", "application/pdf"),
+                ("Content-Disposition", f'attachment; filename="{filename}"')
+            ]
+            return _send_response(start_response, 200, binary_content=pdf_bytes, content_type="application/pdf", extra_headers=extra_headers)
+
+        # GET /api/audit/<audit_id>
+        ca = audit_row["created_at"]
+        if isinstance(ca, datetime):
+            ca = ca.isoformat()
+        audit_resp = {
+            "id": str(audit_row["id"]),
+            "domain": audit_row["domain"],
+            "score": audit_row["score"],
+            "scan_type": audit_row["scan_type"],
+            "created_at": ca,
+            "results": results_data
+        }
+        return _send_response(start_response, 200, body_dict={"success": True, "audit": audit_resp})
 
     # 10. Lockdown Mode Gating: All Paid/Mutating APIs return 503 Fail-Closed
     lockdown_paid_routes = [
@@ -405,19 +575,94 @@ def secured_app(environ, start_response):
                     "details": ssrf_err
                 })
 
-        # Under lockdown mode, execute audit without file persistence
-        if is_lockdown_enabled():
-            from app import AUDIT_ENGINE
-            ind_hint = body_json.get('industry', 'Real Estate')
-            m_visitors = body_json.get('monthly_visitors')
-            a_deal = body_json.get('avg_deal_value') or body_json.get('deal_value')
-            audit_res = AUDIT_ENGINE.run_instant_audit(target or "Apex Global Real Estate", ind_hint, monthly_visitors=m_visitors, avg_deal_value=a_deal)
-            resp = {"success": True, "audit": audit_res}
+        # Check authentication & session
+        sess = _get_session(environ, headers)
+        ws_id = None
+        user_id = None
+        plan_name = "free"
+        if sess:
+            user_id = sess.get("user_id")
+            ws = sess.get("workspace")
+            if ws:
+                ws_id = ws.get("id")
+                plan_name = ws.get("plan", "free")
+
+        # If authenticated, enforce plan limit BEFORE executing scan
+        if sess and ws_id:
+            allowed, reason, ent_info = check_db_entitlement(ws_id, "audit", increment_usage=False, user_id=user_id)
+            if not allowed:
+                return _send_response(start_response, 403, body_dict={
+                    "error": "usage_limit_reached",
+                    "plan": ent_info.get("plan") or plan_name,
+                    "used": ent_info.get("usage_count", 2),
+                    "limit": ent_info.get("usage_limit", 2),
+                    "upgrade_url": "/pricing",
+                    "message": "Monthly audit limit reached. Please upgrade to Pro."
+                })
+
+        from app import AUDIT_ENGINE
+        ind_hint = body_json.get('industry', 'Real Estate')
+        m_visitors = body_json.get('monthly_visitors')
+        a_deal = body_json.get('avg_deal_value') or body_json.get('deal_value')
+        audit_res = AUDIT_ENGINE.run_instant_audit(target or "Apex Global Real Estate", ind_hint, monthly_visitors=m_visitors, avg_deal_value=a_deal)
+
+        audit_id = str(uuid.uuid4())
+
+        # If authenticated: atomically increment usage and insert into audits table
+        if sess and ws_id:
+            check_db_entitlement(ws_id, "audit", increment_usage=True, user_id=user_id)
+
+            from db.connection import get_db_cursor, is_sqlite
+            now_dt = datetime.now(timezone.utc)
+            now_iso = now_dt.isoformat()
+            audit_score = audit_res.get("ai_readiness_score") or audit_res.get("score") or audit_res.get("total_leak_score") or 50
+            try:
+                audit_score = int(audit_score)
+            except Exception:
+                audit_score = 50
+            results_json = json.dumps(audit_res)
+            domain_val = target or "Apex Global Real Estate"
+            competitor_val = body_json.get("competitor_domain")
+            scan_type_val = body_json.get("scan_type", "single")
+
+            with get_db_cursor(commit=True) as cur:
+                if is_sqlite():
+                    cur.execute("""
+                        INSERT INTO audits (id, workspace_id, user_id, domain, competitor_domain, scan_type, results, score, created_at)
+                        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s);
+                    """, (audit_id, ws_id, user_id, domain_val, competitor_val, scan_type_val, results_json, audit_score, now_iso))
+                else:
+                    cur.execute("""
+                        INSERT INTO audits (id, workspace_id, user_id, domain, competitor_domain, scan_type, results, score, created_at)
+                        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, NOW());
+                    """, (audit_id, ws_id, user_id, domain_val, competitor_val, scan_type_val, results_json, audit_score))
+
+            if not is_lockdown_enabled():
+                try:
+                    from app import AUDITS, save_audits
+                    AUDITS.append(audit_res)
+                    save_audits()
+                except Exception:
+                    pass
+
+            resp = {"success": True, "audit_id": audit_id, "id": audit_id, "audit": audit_res}
             resp.update(audit_res)
+            resp["audit_id"] = audit_id
+            resp["id"] = audit_id
             return _send_response(start_response, 200, body_dict=resp)
 
-        original_app = get_original_app()
-        return original_app(environ, start_response)
+        # Anonymous user: do not save to DB, do not increment usage
+        if not is_lockdown_enabled():
+            try:
+                from app import AUDITS, save_audits
+                AUDITS.append(audit_res)
+                save_audits()
+            except Exception:
+                pass
+
+        resp = {"success": True, "audit": audit_res}
+        resp.update(audit_res)
+        return _send_response(start_response, 200, body_dict=resp)
 
     # 13. Lemon Squeezy Webhook Verification: /api/payment/webhook
     if path_lower == "/api/payment/webhook":

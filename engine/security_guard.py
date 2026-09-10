@@ -1074,6 +1074,14 @@ def check_db_entitlement(workspace_id: str, feature: str = "audit", increment_us
             ent_dict = dict(ent)
             ent_id = str(ent_dict["id"])
 
+            # Resolve workspace plan
+            cur.execute("SELECT plan FROM workspaces WHERE id = %s;", (workspace_id,))
+            ws_row = cur.fetchone()
+            if ws_row and "plan" in ws_row:
+                ent_dict["plan"] = ws_row["plan"]
+            else:
+                ent_dict["plan"] = "free"
+
             # Check if monthly usage reset is due
             reset_at = ent_dict.get("usage_reset_at")
             if reset_at:
@@ -1106,8 +1114,30 @@ def check_db_entitlement(workspace_id: str, feature: str = "audit", increment_us
 
             # Increment usage if requested
             if increment_usage:
-                new_count = count + 1
-                cur.execute("UPDATE entitlements SET usage_count = %s WHERE id = %s;", (new_count, ent_id))
+                if limit is not None:
+                    if is_sqlite():
+                        cur.execute("""
+                            UPDATE entitlements
+                            SET usage_count = usage_count + 1
+                            WHERE id = %s AND is_active = 1 AND usage_count < usage_limit;
+                        """, (ent_id,))
+                    else:
+                        cur.execute("""
+                            UPDATE entitlements
+                            SET usage_count = usage_count + 1
+                            WHERE id = %s AND is_active = TRUE AND usage_count < usage_limit;
+                        """, (ent_id,))
+                    if cur.rowcount == 0:
+                        cur.execute("SELECT usage_count FROM entitlements WHERE id = %s;", (ent_id,))
+                        rc = cur.fetchone()
+                        if rc:
+                            ent_dict["usage_count"] = rc["usage_count"]
+                        return False, "usage_limit_reached", ent_dict
+                    new_count = count + 1
+                else:
+                    cur.execute("UPDATE entitlements SET usage_count = usage_count + 1 WHERE id = %s;", (ent_id,))
+                    new_count = count + 1
+
                 ent_dict["usage_count"] = new_count
                 # Log usage event
                 ue_id = str(uuid.uuid4())
