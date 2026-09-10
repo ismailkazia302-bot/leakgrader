@@ -121,9 +121,9 @@ def _get_session(environ, headers):
 
 
 def get_original_app():
-    """Lazily load the inner wsgi.application callable to avoid circular imports."""
+    """Lazily load the inner wsgi application callable to avoid circular imports."""
     import wsgi
-    return wsgi.application
+    return getattr(wsgi, '_raw_application', wsgi.application)
 
 
 def secured_app(environ, start_response):

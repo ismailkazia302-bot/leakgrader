@@ -1181,12 +1181,15 @@ def application(environ, start_response):
     start_response(status, response_headers)
     return [b'404 Not Found']
 
+_raw_application = application
+
 from engine.wsgi_security_middleware import secured_app
+application = secured_app
 app = secured_app
 
 if __name__ == '__main__':
     from wsgiref.simple_server import make_server
     port = int(os.environ.get('PORT', 8090))
     print(f"[*] Starting WSGI Development Server on port {port}...")
-    server = make_server('0.0.0.0', port, application)
+    server = make_server('0.0.0.0', port, app)
     server.serve_forever()

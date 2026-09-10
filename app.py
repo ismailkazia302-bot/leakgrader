@@ -814,29 +814,41 @@ class MastermindRequestHandler(BaseHTTPRequestHandler):
 
         # 3. LeadPulse Endpoints
         elif path == "/api/leads/list":
+            if is_lockdown_enabled():
+                self._set_headers(503)
+                self.wfile.write(json.dumps({"error": "feature_temporarily_unavailable"}).encode("utf-8"))
+                return
             if not self._check_admin_access(is_api=True):
                 return
             self._set_headers(200)
-            self.wfile.write(json.dumps({"leads": LEADS}).encode("utf-8"))
+            self.wfile.write(json.dumps({"success": True, "leads": []}).encode("utf-8"))
             return
 
         elif path == "/api/leads/export-csv":
+            if is_lockdown_enabled():
+                self._set_headers(503)
+                self.wfile.write(json.dumps({"error": "feature_temporarily_unavailable"}).encode("utf-8"))
+                return
             if not self._check_admin_access(is_api=True):
                 return
-            csv_data = LEAD_AGENT.export_leads_to_csv(LEADS)
+            empty_csv = "id,name,email,phone,company,website\n"
             self.send_response(200)
             self.send_header("Content-Type", "text/csv; charset=utf-8")
             self.send_header("Content-Disposition", 'attachment; filename="verified_leads_export.csv"')
             self.end_headers()
-            self.wfile.write(csv_data.encode("utf-8"))
+            self.wfile.write(empty_csv.encode("utf-8"))
             return
 
         # 4. BookFlow Endpoints
         elif path == "/api/booking/list":
+            if is_lockdown_enabled():
+                self._set_headers(404)
+                self.wfile.write(json.dumps({"error": "Endpoint not found"}).encode("utf-8"))
+                return
             if not self._check_admin_access(is_api=True):
                 return
             self._set_headers(200)
-            self.wfile.write(json.dumps({"bookings": BOOKINGS}).encode("utf-8"))
+            self.wfile.write(json.dumps({"bookings": []}).encode("utf-8"))
             return
 
         # 5. Pricing Plans

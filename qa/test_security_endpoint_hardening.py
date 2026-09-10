@@ -131,8 +131,10 @@ def run_test_suite():
     try:
         # 1. Anonymous GET /api/leads/list in full lockdown -> 503
         st, js, b, _ = run_http_request(f"{base_full}/api/leads/list")
-        record_test("SEC-01", "Full_Lockdown", "GET /api/leads/list returns 503 Service Unavailable",
-                    st == 503, actual=st, expected=503)
+        body_text_leads = b.decode("utf-8", errors="ignore")
+        has_no_leads = (st == 503) and ("leads" not in (js or {})) and ("email" not in body_text_leads) and ("phone" not in body_text_leads)
+        record_test("SEC-01", "Full_Lockdown", "GET /api/leads/list returns 503 and zero lead data (no name/email/phone)",
+                    has_no_leads, actual=f"status={st}, has_leads={'leads' in (js or {})}", expected="status=503, has_leads=False")
 
         # 2. Anonymous GET /api/leads/export-csv in full lockdown -> 503
         st, js, b, _ = run_http_request(f"{base_full}/api/leads/export-csv")
@@ -187,6 +189,12 @@ def run_test_suite():
         record_test("SEC-11", "Probe_Rejection", "GET /wp-admin/install.php returns clean 404 text/plain",
                     st == 404 and "<!DOCTYPE" not in body_text, actual=st, expected=404)
 
+        # 11b. Probe /wp-admin/install.php?step=1 returns 404 text/plain
+        st, js, b, _ = run_http_request(f"{base_full}/wp-admin/install.php?step=1")
+        body_text = b.decode("utf-8", errors="ignore")
+        record_test("SEC-11b", "Probe_Rejection", "GET /wp-admin/install.php?step=1 returns clean 404 text/plain",
+                    st == 404 and "<!DOCTYPE" not in body_text, actual=st, expected=404)
+
         # 12. Probe /.git/config returns 404
         st, js, b, _ = run_http_request(f"{base_full}/.git/config")
         record_test("SEC-12", "Probe_Rejection", "GET /.git/config returns 404",
@@ -232,6 +240,25 @@ def run_test_suite():
         st, js, b, _ = run_http_request(f"{base_full}/api/audit/run", method="POST", body={"url": "example.com"})
         record_test("SEC-20", "Public_Routes", "POST /api/audit/run returns 200 for public audit scan",
                     st == 200 and js and js.get("success") is True, actual=st, expected=200)
+
+        # 20b. Direct wsgi:application entrypoint test (Gunicorn default PEP-3333 callable)
+        port_app_entry = 8783
+        env_entry = env_full.copy()
+        env_entry["PORT"] = str(port_app_entry)
+        proc_app_entry = subprocess.Popen(
+            [sys.executable, "-c", f"from wsgiref.simple_server import make_server; from wsgi import application; make_server('127.0.0.1', {port_app_entry}, application).serve_forever()"],
+            env=env_entry,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL
+        )
+        time.sleep(2.0)
+        try:
+            st_ae, js_ae, b_ae, _ = run_http_request(f"http://127.0.0.1:{port_app_entry}/api/leads/list")
+            record_test("SEC-20b", "Full_Lockdown", "Direct wsgi:application entrypoint returns 503 for leads/list",
+                        st_ae == 503, actual=st_ae, expected=503)
+        finally:
+            proc_app_entry.terminate()
+            proc_app_entry.wait()
 
     finally:
         proc_full.terminate()
