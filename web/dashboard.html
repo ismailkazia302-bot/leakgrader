@@ -279,7 +279,7 @@
         <tr>
           <td class="domain-cell">${a.domain}</td>
           <td><strong style="color: #38bdf8;">${a.score || '85'}/100</strong></td>
-          <td><span style="color: #10b981;">Completed</span></td>
+          <td><span style="color: ${a.is_demo_data ? '#fbbf24' : '#10b981'};">${a.is_demo_data ? 'Sample Report' : 'Completed'}</span></td>
           <td style="color: #94a3b8;">${a.date || 'Just now'}</td>
           <td><a href="/?domain=${encodeURIComponent(a.domain)}" class="btn-sm" style="padding: 4px 10px; font-size: 12px;">View Report</a></td>
         </tr>

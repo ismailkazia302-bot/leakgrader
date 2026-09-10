@@ -69,8 +69,8 @@ class AutonomousOutreachEngine:
             "location": chosen["location"],
             "industry": chosen["industry"],
             "pitch_dispatched": f"Autonomous Revenue Leak Teardown: Identified ~$45,000/mo after-hours dropoff on {lead.get('company_name')}. Free scorecard link sent.",
-            "channel": "Email + WhatsApp Auto-Queue",
-            "status": "DISPATCHED_AUTONOMOUSLY"
+            "channel": "Simulated Queue (Local Draft)",
+            "status": "PLANNED_OUTREACH_DRAFT"
         }
         self.history.append(entry)
         self._save_history()
@@ -78,5 +78,6 @@ class AutonomousOutreachEngine:
         return {
             "status": "OUTREACH_CYCLE_SUCCESS",
             "dispatched_target": entry,
+            "total_outreach_planned_today": len(self.history),
             "total_outreach_sent_today": len(self.history)
         }

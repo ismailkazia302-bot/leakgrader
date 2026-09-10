@@ -141,6 +141,14 @@ class ViralAuditEngine:
         loss_formatted = f"${loss_num:,}/mo"
         diagnostic_points = self._build_15_point_diagnostic(seed, enrichment, clean_name, score)
 
+        benchmark_factors = {
+            "lead_to_close_rate": "2.5% (Industry Benchmark)",
+            "high_intent_traffic_rate": "8.0% (Industry Benchmark)",
+            "after_hours_traffic_share": "68.4% (Industry Benchmark)",
+            "latency_abandonment_rate": "72.0% (Industry Benchmark)",
+            "data_access_type": "Public Front-End Forensic Diagnostic (No Access to Bank or Private Financial Data Required)"
+        }
+
         # 1. Try Live Gemini Call if API key exists
         if self.api_key:
             try:
@@ -180,6 +188,7 @@ Return JSON with:
                     parsed["avg_deal_value"] = avg_deal
                     parsed["user_customized_metrics"] = user_custom
                     parsed["calculation_basis"] = "User Verified Metrics" if user_custom else "Transparent Industry Benchmark Formula"
+                    parsed["benchmark_factors"] = benchmark_factors
                     parsed["status"] = "VERIFIED_AUDIT"
                     return parsed
             except Exception:
@@ -198,6 +207,7 @@ Return JSON with:
             "avg_deal_value": avg_deal,
             "user_customized_metrics": user_custom,
             "calculation_basis": "User Verified Metrics" if user_custom else "Transparent Industry Benchmark Formula",
+            "benchmark_factors": benchmark_factors,
             "top_conversion_leaks": [
                 {
                     "title": "Zero Instant WhatsApp & SMS Lead Capture",

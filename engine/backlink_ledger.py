@@ -142,7 +142,8 @@ class BacklinkLedgerEngine:
             "anchor_text": dynamic_anchor,
             "deduplication_hash": hashlib.md5(f"{dir_info['platform']}_{dynamic_anchor}".encode()).hexdigest()[:12],
             "is_unique_sprint": True,
-            "status": "DISPATCHED_&_LOGGED",
+            "status": "PLANNED_BACKLINK_DRAFT",
+            "daily_targets_planned": f"{total_used + 1}/50 unique daily targets",
             "daily_quota_used": f"{total_used + 1}/50 unique daily targets"
         }
 
@@ -156,6 +157,7 @@ class BacklinkLedgerEngine:
         today_entries = [e for e in self.history if e.get("timestamp", "").startswith(today_date)]
         return {
             "date": today_date,
+            "total_backlinks_planned_today": len(today_entries),
             "total_backlinks_sent_today": len(today_entries),
             "daily_safe_target": "20 - 50 Quality Links / Day",
             "avg_domain_authority": round(sum(e.get("domain_authority", 50) for e in today_entries) / max(len(today_entries), 1), 1),

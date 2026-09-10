@@ -603,6 +603,11 @@ class LeadPulseAgent:
                         phone_num = scraped["phones"][0]
                     lead_source = "Live Website Scraper (100% Free)"
 
+            has_real_contact = bool((hunter_data and hunter_data.get("email")) or (scraped and scraped.get("has_real_contact")))
+            is_demo = not has_real_contact
+            if is_demo:
+                lead_source = f"{biz.get('source', 'OpenStreetMap')} (Sample Contact)"
+
             # Realistic Turnover in Local Currency
             if is_india_biz:
                 if is_small_retail:
@@ -666,7 +671,13 @@ class LeadPulseAgent:
                 "industry": clean_ind.title(),
                 "primary_pain_point": pain,
                 "pitch_script": pitch,
-                "data_source": lead_source
+                "data_source": lead_source,
+                "is_demo_data": is_demo,
+                "metadata": {
+                    "is_demo_data": is_demo,
+                    "lead_type": "verified_realtime" if not is_demo else "sample_contact",
+                    "company_source": biz.get("source", "OpenStreetMap")
+                }
             })
 
         return enriched_leads
@@ -739,6 +750,13 @@ RETURN VALID JSON ARRAY of objects with this schema:
                     item["company"] = item["company_name"]
                 if not item.get("website", "").startswith("http"):
                     item["website"] = f"https://{item.get('website', 'company.com')}"
+                item["is_demo_data"] = True
+                item["data_source"] = "Gemini AI Synthesized (Sample Data)"
+                item["metadata"] = {
+                    "is_demo_data": True,
+                    "lead_type": "ai_synthesized",
+                    "company_source": "Gemini AI"
+                }
             return leads_list
 
     def _generate_geo_accurate_fallback_leads(self, industry: str, location: str, my_service: str, count: int, geo_meta: dict = None) -> list:
@@ -912,7 +930,13 @@ RETURN VALID JSON ARRAY of objects with this schema:
                 "industry": ind_clean,
                 "primary_pain_point": pain,
                 "pitch_script": pitch,
-                "data_source": "Verified Regional Business Database"
+                "data_source": "Sample Demonstration Record (Synthetic)",
+                "is_demo_data": True,
+                "metadata": {
+                    "is_demo_data": True,
+                    "lead_type": "synthetic_sample",
+                    "company_source": "Algorithmic Demo Generator"
+                }
             })
         return leads
 
@@ -927,15 +951,18 @@ RETURN VALID JSON ARRAY of objects with this schema:
             "Executive Title",
             "Company Name",
             "Estimated Revenue",
-            "Verified Email",
+            "Email Address",
             "Phone Number",
             "Location",
             "Website",
             "Primary Conversion Leak",
             "Pitch Script",
-            "Data Source"
+            "Data Source",
+            "Record Type"
         ])
         for l in leads:
+            is_demo = l.get("is_demo_data", True)
+            record_type = "Sample Data" if is_demo else "Real-Time Verified"
             writer.writerow([
                 l.get("contact_name", "Decision Maker"),
                 l.get("title", "Executive"),
@@ -947,7 +974,8 @@ RETURN VALID JSON ARRAY of objects with this schema:
                 l.get("website", "https://company.com"),
                 l.get("primary_pain_point", "After-hours response lag"),
                 l.get("pitch_script", "").replace("\n", " "),
-                l.get("data_source", "OpenStreetMap Public Registry")
+                l.get("data_source", "OpenStreetMap Public Registry"),
+                record_type
             ])
         return output.getvalue()
 

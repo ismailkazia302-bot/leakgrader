@@ -709,9 +709,15 @@ document.addEventListener('DOMContentLoaded', () => {
               </td>
               <td style="padding:14px 16px;">
                 <div class="contact-cell" style="display:flex; flex-direction:column; gap:4px;">
-                  <span class="badge-verified-email" style="display:inline-flex; align-items:center; gap:5px; color:#34d399; font-size:11.5px; font-family:var(--font-mono); font-weight:700;">
-                    <i data-lucide="check-circle" class="icon-xs" style="width:12px; height:12px;"></i> ${l.email || 'name@company.com'}
-                  </span>
+                  ${l.is_demo_data ? `
+                    <span class="badge-sample-email" style="display:inline-flex; align-items:center; gap:5px; color:#fbbf24; font-size:11.5px; font-family:var(--font-mono); font-weight:700;">
+                      <i data-lucide="mail" class="icon-xs" style="width:12px; height:12px;"></i> ${l.email || 'name@company.com'}
+                    </span>
+                  ` : `
+                    <span class="badge-verified-email" style="display:inline-flex; align-items:center; gap:5px; color:#34d399; font-size:11.5px; font-family:var(--font-mono); font-weight:700;">
+                      <i data-lucide="check-circle" class="icon-xs" style="width:12px; height:12px;"></i> ${l.email || 'name@company.com'}
+                    </span>
+                  `}
                   <span class="phone-tag" style="color:#94a3b8; font-size:11px; display:inline-flex; align-items:center; gap:4px;">
                     <i data-lucide="phone" class="icon-xs" style="width:11px; height:11px;"></i> ${l.phone || '+1 555 019 2834'}
                   </span>
@@ -724,10 +730,17 @@ document.addEventListener('DOMContentLoaded', () => {
                 </div>
               </td>
               <td style="padding:14px 16px;">
-                <span class="source-badge" style="display:inline-flex; align-items:center; gap:4px; font-size:10.5px; font-weight:700; padding:3px 8px; border-radius:6px; background:rgba(56,189,248,0.1); border:1px solid rgba(56,189,248,0.25); color:#38bdf8;">
-                  <i data-lucide="shield-check" style="width:11px; height:11px;"></i>
-                  ${l.data_source || 'Verified Regional Business'}
-                </span>
+                ${l.is_demo_data ? `
+                  <span class="source-badge" style="display:inline-flex; align-items:center; gap:4px; font-size:10.5px; font-weight:700; padding:3px 8px; border-radius:6px; background:rgba(251,191,36,0.12); border:1px solid rgba(251,191,36,0.3); color:#fbbf24;">
+                    <i data-lucide="database" style="width:11px; height:11px;"></i>
+                    Sample Data
+                  </span>
+                ` : `
+                  <span class="source-badge" style="display:inline-flex; align-items:center; gap:4px; font-size:10.5px; font-weight:700; padding:3px 8px; border-radius:6px; background:rgba(56,189,248,0.1); border:1px solid rgba(56,189,248,0.25); color:#38bdf8;">
+                    <i data-lucide="shield-check" style="width:11px; height:11px;"></i>
+                    ${l.data_source || 'Verified Regional Business'}
+                  </span>
+                `}
               </td>
               <td style="padding:14px 16px;">
                 <div>
@@ -789,13 +802,22 @@ document.addEventListener('DOMContentLoaded', () => {
                 <span class="mobile-meta-pill"><i data-lucide="building" style="width:11px; height:11px;"></i> ${l.company_name || 'Enterprise'}</span>
                 <span class="mobile-meta-pill rev"><i data-lucide="dollar-sign" style="width:11px; height:11px;"></i> ${l.estimated_revenue || '$15M - $30M / yr'}</span>
                 <span class="mobile-meta-pill"><i data-lucide="map-pin" style="width:11px; height:11px;"></i> ${l.location || 'Global'}</span>
-                <span class="mobile-meta-pill" style="color:#38bdf8; border-color:rgba(56,189,248,0.3);"><i data-lucide="shield-check" style="width:11px; height:11px;"></i> ${l.data_source || 'Verified Source'}</span>
+                ${l.is_demo_data ? `
+                  <span class="mobile-meta-pill" style="color:#fbbf24; border-color:rgba(251,191,36,0.3);"><i data-lucide="database" style="width:11px; height:11px;"></i> Sample Data</span>
+                ` : `
+                  <span class="mobile-meta-pill" style="color:#38bdf8; border-color:rgba(56,189,248,0.3);"><i data-lucide="shield-check" style="width:11px; height:11px;"></i> ${l.data_source || 'Verified Source'}</span>
+                `}
               </div>
 
               <div class="mobile-lead-contacts">
                 <div class="mobile-contact-item">
-                  <i data-lucide="check-circle" style="width:12px; height:12px; color:#34d399;"></i>
-                  <span>${l.email || 'name@company.com'}</span>
+                  ${l.is_demo_data ? `
+                    <i data-lucide="mail" style="width:12px; height:12px; color:#fbbf24;"></i>
+                    <span style="color:#fbbf24;">${l.email || 'name@company.com'} (Sample)</span>
+                  ` : `
+                    <i data-lucide="check-circle" style="width:12px; height:12px; color:#34d399;"></i>
+                    <span>${l.email || 'name@company.com'}</span>
+                  `}
                 </div>
                 <div class="mobile-contact-item">
                   <i data-lucide="phone" style="width:12px; height:12px; color:#38bdf8;"></i>
@@ -855,11 +877,12 @@ document.addEventListener('DOMContentLoaded', () => {
     const label = document.getElementById('selected-count-label');
 
     const total = (leads && leads.length) ? leads.length : 0;
+    const verifiedCount = (leads && leads.length) ? leads.filter(l => !l.is_demo_data).length : 0;
     const totalText = total > 0 ? `${total}` : '-- (Awaiting Search)';
-    const verifiedText = total > 0 ? `${total} (100% Verified)` : '--';
+    const verifiedText = total > 0 ? (verifiedCount > 0 ? `${verifiedCount} Verified (${total - verifiedCount} Sample)` : `${total} (Sample Data)`) : '--';
     const intentText = total > 0 ? '98.0% High Intent' : '--';
     const pipelineText = total > 0 ? `$${(total * 25000).toLocaleString()}` : '--';
-    const labelText = total > 0 ? `Showing all ${total} verified enterprise decision-makers` : 'Ready to search verified enterprise decision-makers';
+    const labelText = total > 0 ? (verifiedCount > 0 ? `Showing ${total} prospects (${verifiedCount} verified)` : `Showing ${total} sample demonstration prospects`) : 'Ready to search verified enterprise decision-makers';
 
     if (mTotal) mTotal.textContent = totalText;
     if (mTotalDup) mTotalDup.textContent = totalText;
