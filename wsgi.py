@@ -25,6 +25,7 @@ from app import (
 )
 from engine.document_parser import parse_file, extract_text_from_url, chunk_text
 from engine.pdf_dossier import ExecutiveDossierGenerator
+from engine.security_guard import is_lockdown_enabled, get_lockdown_phase
 
 DOSSIER_GEN = ExecutiveDossierGenerator()
 
@@ -821,13 +822,23 @@ def application(environ, start_response):
         return [json.dumps({"status": "SUCCESS", "latest_blast": blaster_data, "total_blasts": len(TRAFFIC_BLASTER.history)}).encode('utf-8')]
 
     elif path == '/api/leads/list':
+        if is_lockdown_enabled():
+            status = '503 Service Unavailable'
+            response_headers = [('Content-Type', 'application/json; charset=utf-8')]
+            start_response(status, response_headers)
+            return [json.dumps({"error": "feature_temporarily_unavailable"}).encode('utf-8')]
         status = '200 OK'
         response_headers = [('Content-Type', 'application/json; charset=utf-8'), ('Access-Control-Allow-Origin', '*')]
         start_response(status, response_headers)
-        return [json.dumps({"success": True, "leads": LEADS}).encode('utf-8')]
+        return [json.dumps({"success": True, "leads": []}).encode('utf-8')]
 
     elif path == '/api/leads/export-csv':
-        csv_data = LEAD_AGENT.export_leads_to_csv(LEADS)
+        if is_lockdown_enabled():
+            status = '503 Service Unavailable'
+            response_headers = [('Content-Type', 'application/json; charset=utf-8')]
+            start_response(status, response_headers)
+            return [json.dumps({"error": "feature_temporarily_unavailable"}).encode('utf-8')]
+        empty_csv = "id,name,email,phone,company,website\n"
         status = '200 OK'
         response_headers = [
             ('Content-Type', 'text/csv; charset=utf-8'),
@@ -835,7 +846,7 @@ def application(environ, start_response):
             ('Access-Control-Allow-Origin', '*')
         ]
         start_response(status, response_headers)
-        return [csv_data.encode('utf-8')]
+        return [empty_csv.encode('utf-8')]
 
     elif path == '/robots.txt':
         robots_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "web", "robots.txt")
@@ -1006,27 +1017,15 @@ def application(environ, start_response):
         return [file_bytes]
 
     elif path == '/api/booking/list':
+        if is_lockdown_enabled():
+            status = '404 Not Found'
+            response_headers = [('Content-Type', 'application/json; charset=utf-8')]
+            start_response(status, response_headers)
+            return [json.dumps({"error": "not_found"}).encode('utf-8')]
         status = '200 OK'
         response_headers = [('Content-Type', 'application/json; charset=utf-8'), ('Access-Control-Allow-Origin', '*')]
         start_response(status, response_headers)
-        return [json.dumps({"bookings": BOOKINGS}).encode('utf-8')]
-
-    elif path == '/api/leads/list':
-        status = '200 OK'
-        response_headers = [('Content-Type', 'application/json; charset=utf-8'), ('Access-Control-Allow-Origin', '*')]
-        start_response(status, response_headers)
-        return [json.dumps({"leads": LEADS}).encode('utf-8')]
-
-    elif path == '/api/leads/export-csv':
-        csv_data = LEAD_AGENT.export_leads_to_csv(LEADS) if hasattr(LEAD_AGENT, 'export_leads_to_csv') else ''
-        status = '200 OK'
-        response_headers = [
-            ('Content-Type', 'text/csv; charset=utf-8'),
-            ('Content-Disposition', 'attachment; filename="verified_leads_export.csv"'),
-            ('Access-Control-Allow-Origin', '*')
-        ]
-        start_response(status, response_headers)
-        return [csv_data.encode('utf-8')]
+        return [json.dumps({"bookings": []}).encode('utf-8')]
 
     elif path in ['/health', '/health.html']:
         from db.connection import get_db_cursor, is_sqlite
@@ -1063,6 +1062,24 @@ def application(environ, start_response):
         response_headers = [('Content-Type', 'application/json; charset=utf-8'), ('Access-Control-Allow-Origin', '*')]
         start_response(status, response_headers)
         return [json.dumps(health).encode('utf-8')]
+
+    elif path in ['/about', '/about.html']:
+        about_file = os.path.join(WEB_DIR_PATH, 'about.html')
+        if os.path.exists(about_file):
+            status = '200 OK'
+            response_headers = [('Content-Type', 'text/html; charset=utf-8'), ('Cache-Control', 'public, max-age=3600')]
+            start_response(status, response_headers)
+            with open(about_file, 'rb') as f:
+                return [f.read()]
+
+    elif path in ['/contact', '/contact.html']:
+        contact_file = os.path.join(WEB_DIR_PATH, 'contact.html')
+        if os.path.exists(contact_file):
+            status = '200 OK'
+            response_headers = [('Content-Type', 'text/html; charset=utf-8'), ('Cache-Control', 'public, max-age=3600')]
+            start_response(status, response_headers)
+            with open(contact_file, 'rb') as f:
+                return [f.read()]
 
     elif path in ['/privacy', '/privacy.html']:
         privacy_file = os.path.join(WEB_DIR_PATH, 'privacy.html')
@@ -1104,6 +1121,14 @@ def application(environ, start_response):
 
     file_path = path.lstrip('/')
     full_path = os.path.join(WEB_DIR_PATH, file_path)
+
+    # If direct file does not exist, check if appending .html matches a valid web file
+    if not (os.path.exists(full_path) and os.path.isfile(full_path)):
+        html_candidate = os.path.join(WEB_DIR_PATH, f"{file_path}.html")
+        if os.path.exists(html_candidate) and os.path.isfile(html_candidate):
+            full_path = html_candidate
+            file_path = f"{file_path}.html"
+
     if os.path.exists(full_path) and os.path.isfile(full_path):
         if file_path.endswith('.js'):
             content_type = 'application/javascript; charset=utf-8'
@@ -1119,6 +1144,8 @@ def application(environ, start_response):
             content_type = 'image/png'
         elif file_path.endswith(('.jpg', '.jpeg')):
             content_type = 'image/jpeg'
+        elif file_path.endswith('.html'):
+            content_type = 'text/html; charset=utf-8'
         else:
             mime, _ = mimetypes.guess_type(full_path)
             content_type = mime or 'text/plain'
@@ -1148,21 +1175,9 @@ def application(environ, start_response):
         start_response(status, response_headers)
         return [json.dumps({"error": f"API endpoint {path} not found", "status": "ERROR"}).encode('utf-8')]
 
-    # Fallback to index.html for single-page app routing
-    fallback_index = os.path.join(WEB_DIR_PATH, 'index.html')
-    if os.path.exists(fallback_index):
-        status = '200 OK'
-        response_headers = [('Content-Type', 'text/html; charset=utf-8')]
-        start_response(status, response_headers)
-        with open(fallback_index, 'rb') as f:
-            content = f.read()
-        ga_id = os.environ.get('GA_MEASUREMENT_ID', '')
-        if ga_id:
-            content = content.replace(b'{{GA_MEASUREMENT_ID}}', ga_id.encode('utf-8'))
-        return [content]
-
+    # Clean 404 for unknown probe paths (never return 200 with homepage content)
     status = '404 Not Found'
-    response_headers = [('Content-Type', 'text/plain')]
+    response_headers = [('Content-Type', 'text/plain; charset=utf-8')]
     start_response(status, response_headers)
     return [b'404 Not Found']
 

@@ -1032,8 +1032,18 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Fetch initial leads if already present in backend
   async function loadInitialLeads() {
+    if (!sessionStorage.getItem('csrf_token')) {
+      renderProspectsTable([]);
+      updateLeadMetrics([]);
+      return;
+    }
     try {
       const res = await fetch('/api/leads/list');
+      if (!res.ok) {
+        renderProspectsTable([]);
+        updateLeadMetrics([]);
+        return;
+      }
       const data = await res.json();
       if (data && data.leads && data.leads.length > 0) {
         CURRENT_LEADS = data.leads;
@@ -1532,26 +1542,39 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   });
 
+  function renderEmptyBookings() {
+    if (!ledgerList) return;
+    ledgerList.innerHTML = `
+      <div class="empty-state" style="padding:48px 16px; text-align:center;">
+        <div style="width:44px; height:44px; border-radius:12px; background:rgba(52,211,153,0.12); border:1px solid rgba(52,211,153,0.3); color:#34d399; display:flex; align-items:center; justify-content:center; margin:0 auto 12px;">
+          <i data-lucide="calendar" style="width:20px; height:20px;"></i>
+        </div>
+        <h4 style="font-size:14px; font-weight:800; color:#ffffff; margin-bottom:6px;">No Booked Consultations Yet</h4>
+        <p style="color:var(--text-body); font-size:11.5px; max-width:300px; margin:0 auto 14px; line-height:1.5;">
+          Type a message in the <strong>AI Sales Closer</strong> on the left (e.g. <em>"I want to book a call tomorrow, budget $15,000"</em>) to see qualified meetings auto-posted here.
+        </p>
+      </div>
+    `;
+    if (window.lucide) lucide.createIcons();
+  }
+
   async function loadBookings() {
     if (!ledgerList) return;
+    if (!sessionStorage.getItem('csrf_token')) {
+      renderEmptyBookings();
+      return;
+    }
     try {
       const res = await fetch('/api/booking/list');
+      if (!res.ok) {
+        renderEmptyBookings();
+        return;
+      }
       const data = await res.json();
       const serverBookings = data.bookings || [];
 
       if (serverBookings.length === 0) {
-        ledgerList.innerHTML = `
-          <div class="empty-state" style="padding:48px 16px; text-align:center;">
-            <div style="width:44px; height:44px; border-radius:12px; background:rgba(52,211,153,0.12); border:1px solid rgba(52,211,153,0.3); color:#34d399; display:flex; align-items:center; justify-content:center; margin:0 auto 12px;">
-              <i data-lucide="calendar" style="width:20px; height:20px;"></i>
-            </div>
-            <h4 style="font-size:14px; font-weight:800; color:#ffffff; margin-bottom:6px;">No Booked Consultations Yet</h4>
-            <p style="color:var(--text-body); font-size:11.5px; max-width:300px; margin:0 auto 14px; line-height:1.5;">
-              Type a message in the <strong>AI Sales Closer</strong> on the left (e.g. <em>"I want to book a call tomorrow, budget $15,000"</em>) to see qualified meetings auto-posted here.
-            </p>
-          </div>
-        `;
-        if (window.lucide) lucide.createIcons();
+        renderEmptyBookings();
         return;
       }
 
@@ -2637,10 +2660,11 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  // Preload and recurring auto-sync
-  loadSeoActivity();
-  startSeoCountdown();
-  setInterval(loadSeoActivity, 20000);
+  // Preload and countdown auto-sync only if feed container is present
+  if (document.getElementById('seo-activity-tbody')) {
+    loadSeoActivity();
+    startSeoCountdown();
+  }
 
   // ====================================================
   // 10. HELPER UTILITIES

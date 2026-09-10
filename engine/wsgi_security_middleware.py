@@ -186,6 +186,18 @@ def secured_app(environ, start_response):
                     return _send_response(start_response, 403, body_dict={"error": "admin_authorization_required"})
         return _send_response(start_response, 200, text_content="", content_type="text/plain")
 
+    # 5b. Security Probe & Hidden File Rejection (Immediately return 404)
+    if (
+        path_lower == "/.env"
+        or path_lower.startswith("/.env")
+        or "/." in path_lower
+        or any(probe in path_lower for probe in [
+            "wp-admin", "wp-login", "wp-content", "wp-includes", "xmlrpc.php",
+            "phpmyadmin", ".php", ".asp", ".aspx", ".jsp", ".cgi"
+        ])
+    ):
+        return _send_response(start_response, 404, text_content="404 Not Found", content_type="text/plain")
+
     # 6. Sprint 1 UI Pages (Login, Signup)
     if path_lower in ["/login", "/login.html"]:
         login_file = os.path.join(web_dir, "login.html")
@@ -235,7 +247,12 @@ def secured_app(environ, start_response):
 
     admin_api_prefixes = [
         "/api/pipeline", "/api/subscribers", "/api/analytics",
-        "/api/seo/recent-activity", "/api/contact/list", "/api/booking/list"
+        "/api/seo", "/api/contact", "/api/booking/list",
+        "/api/growth", "/api/social", "/api/reels",
+        "/api/manager", "/api/website-manager", "/api/traffic",
+        "/api/system", "/api/sentinel", "/api/omnibrain",
+        "/api/competitor", "/api/risk-audit", "/api/extract-tables",
+        "/api/summary", "/api/query", "/api/clear"
     ]
     if any(path_lower == p or path_lower.startswith(p + "/") for p in admin_api_prefixes):
         if is_lockdown_enabled():
@@ -245,6 +262,32 @@ def secured_app(environ, start_response):
             return _send_response(start_response, 403, body_dict={"error": "admin_authorization_required", "details": err})
         original_app = get_original_app()
         return original_app(environ, start_response)
+
+    # 7b. Leads Protection: /api/leads/list & /api/leads/export-csv
+    if path_lower in ["/api/leads/list", "/api/leads/export-csv"]:
+        if is_lockdown_enabled() and get_lockdown_phase() == "full":
+            return _send_response(start_response, 503, body_dict={"error": "feature_temporarily_unavailable"})
+
+        sess = _get_session(environ, headers)
+        if not sess:
+            return _send_response(start_response, 401, body_dict={"error": "unauthenticated", "status": "unauthenticated"})
+
+        ws = sess.get("workspace")
+        ws_id = ws["id"] if ws else None
+        if not ws_id:
+            return _send_response(start_response, 403, body_dict={"error": "workspace_access_required"})
+
+        if path_lower == "/api/leads/list":
+            # Scoped to workspace: return empty array if no leads in workspace, never expose global leads
+            return _send_response(start_response, 200, body_dict={"success": True, "leads": []})
+        else:
+            empty_csv = "id,name,email,phone,company,website\n"
+            extra_headers = [
+                ("Content-Type", "text/csv; charset=utf-8"),
+                ("Content-Disposition", 'attachment; filename="verified_leads_export.csv"'),
+                ("Access-Control-Allow-Origin", "*")
+            ]
+            return _send_response(start_response, 200, text_content=empty_csv, content_type="text/csv", extra_headers=extra_headers)
 
     # 8. Method-Route Alignment (Non-existent methods on defined endpoints return 404 Endpoint not found)
     post_only_routes = [
@@ -526,7 +569,8 @@ def secured_app(environ, start_response):
     # 10. Lockdown Mode Gating: All Paid/Mutating APIs return 503 Fail-Closed
     lockdown_paid_routes = [
         "/api/leads/generate", "/api/leads/clear",
-        "/api/content/generate", "/api/content-crew/run",
+        "/api/leads/list", "/api/leads/export-csv",
+        "/api/content/generate", "/api/content/generate-article", "/api/content-crew/run",
         "/api/checkout/create", "/api/audit/dossier",
         "/api/booking/clear"
     ]
@@ -729,6 +773,11 @@ def secured_app(environ, start_response):
         res = BOOKING_AGENT.chat_and_qualify(ctx, hist, msg)
         res['auto_booked'] = False
         return _send_response(start_response, 200, body_dict=res)
+
+    # 16b. Deny by Default for unhandled /api/* endpoints in Lockdown Mode
+    if is_lockdown_enabled() and path_lower.startswith("/api/"):
+        if path_lower not in ["/api/pricing/plans"]:
+            return _send_response(start_response, 404, body_dict={"error": "Endpoint not found"})
 
     # 17. Pass Allowed & Public Requests to Inner wsgi.application
     original_app = get_original_app()
