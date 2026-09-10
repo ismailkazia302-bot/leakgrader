@@ -2848,4 +2848,52 @@ document.addEventListener('DOMContentLoaded', () => {
     if (btnInstallApp) btnInstallApp.style.display = 'none';
     deferredInstallPrompt = null;
   });
+
+  // ====================================================
+  // SPRINT 1.6: CONVERSION SECTION TELEMETRY & ACTIONS
+  // ====================================================
+
+  // 1. FAQ Question Expanded Telemetry
+  document.querySelectorAll('.faq-accordion-item').forEach(detail => {
+    detail.addEventListener('toggle', () => {
+      if (detail.open) {
+        const qTitle = detail.querySelector('.faq-accordion-summary span')?.textContent?.trim() || 'FAQ Item';
+        if (typeof gtag === 'function') {
+          gtag('event', 'faq_expand', { label: qTitle });
+        }
+      }
+    });
+  });
+
+  // 2. Comparison Table Viewed Telemetry (Scroll-into-view)
+  const compSection = document.getElementById('comparison-section');
+  if (compSection && 'IntersectionObserver' in window) {
+    let compLogged = false;
+    const compObserver = new IntersectionObserver((entries) => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting && !compLogged) {
+          compLogged = true;
+          if (typeof gtag === 'function') {
+            gtag('event', 'comparison_view');
+          }
+        }
+      });
+    }, { threshold: 0.25 });
+    compObserver.observe(compSection);
+  }
+
+  // 3. How It Works CTA Click Telemetry & Smooth Focus
+  const btnHowWorks = document.getElementById('btn-how-it-works-cta');
+  if (btnHowWorks) {
+    btnHowWorks.addEventListener('click', () => {
+      if (typeof gtag === 'function') {
+        gtag('event', 'how_it_works_cta');
+      }
+      const targetInput = document.getElementById('audit-target-input');
+      if (targetInput) {
+        targetInput.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        setTimeout(() => { targetInput.focus(); }, 450);
+      }
+    });
+  }
 });
