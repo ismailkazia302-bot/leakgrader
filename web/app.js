@@ -2896,4 +2896,14 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     });
   }
+
+  // 4. Pricing Plan CTA Click Telemetry
+  document.querySelectorAll('.btn-plan-select').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const planName = btn.dataset.planName || btn.dataset.plan || btn.textContent.trim();
+      if (typeof gtag === 'function') {
+        gtag('event', 'pricing_cta_click', { label: planName });
+      }
+    });
+  });
 });

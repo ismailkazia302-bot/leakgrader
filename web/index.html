@@ -621,7 +621,7 @@
                       </tr>
                       <tr>
                         <td style="font-weight: 700; color: #fff;">Starting Price</td>
-                        <td class="col-leakgrader" style="font-weight: 700; color: #fff;">$29/mo</td>
+                        <td class="col-leakgrader" style="font-weight: 700; color: #fff;">Free / $29+</td>
                         <td>$19/mo</td>
                         <td>$129/mo</td>
                         <td>$259/yr</td>
@@ -697,56 +697,78 @@
               </div>
 
               <div class="homepage-pricing-grid">
+                <!-- Free Plan -->
+                <div class="home-plan-card">
+                  <div>
+                    <h3 class="home-plan-name">Free</h3>
+                    <p class="home-plan-desc">Try it out</p>
+                    <div class="home-plan-price">$0</div>
+                    <ul class="home-plan-features">
+                      <li><i data-lucide="check"></i> 2 website audits per month</li>
+                      <li><i data-lucide="check"></i> Top findings preview</li>
+                      <li><i data-lucide="check"></i> Basic score</li>
+                      <li class="disabled"><i data-lucide="minus"></i> No PDF download</li>
+                      <li class="disabled"><i data-lucide="minus"></i> No white-label</li>
+                    </ul>
+                  </div>
+                  <a href="/signup.html?plan=free" class="btn-plan-select" data-plan="free" data-plan-name="Free">Start Free</a>
+                </div>
+
                 <!-- Solo Plan -->
                 <div class="home-plan-card">
                   <div>
                     <h3 class="home-plan-name">Solo</h3>
-                    <p class="home-plan-desc">For freelancers and solo consultants prospecting their first audit clients.</p>
+                    <p class="home-plan-desc">For freelancers</p>
                     <div class="home-plan-price">$29 <span>/ month</span></div>
                     <ul class="home-plan-features">
-                      <li><i data-lucide="check"></i> 25 Website Audits / month</li>
-                      <li><i data-lucide="check"></i> Complete 15-Point Revenue Breakdown</li>
-                      <li><i data-lucide="check"></i> Instant Online Share Links</li>
-                      <li><i data-lucide="check"></i> Standard Email Support</li>
+                      <li><i data-lucide="check"></i> 25 audits per month</li>
+                      <li><i data-lucide="check"></i> Full findings + recommendations</li>
+                      <li><i data-lucide="check"></i> PDF report download</li>
+                      <li><i data-lucide="check"></i> Audit history</li>
                     </ul>
                   </div>
-                  <a href="/signup.html" class="btn-plan-select">Get Started</a>
+                  <a href="/signup.html?plan=solo" class="btn-plan-select" data-plan="solo" data-plan-name="Solo">Choose Solo</a>
                 </div>
 
-                <!-- Pro Plan (Featured) -->
+                <!-- Agency Plan (Featured - Most Popular) -->
                 <div class="home-plan-card featured">
                   <span class="home-plan-badge">MOST POPULAR</span>
                   <div>
-                    <h3 class="home-plan-name">Pro</h3>
-                    <p class="home-plan-desc">For growing agencies needing deep client dossiers, closer bots, and verified leads.</p>
+                    <h3 class="home-plan-name">Agency</h3>
+                    <p class="home-plan-desc">For growing agencies</p>
                     <div class="home-plan-price">$79 <span>/ month</span></div>
                     <ul class="home-plan-features">
-                      <li><i data-lucide="check"></i> 100 Website Audits / month</li>
-                      <li><i data-lucide="check"></i> PDF Executive Dossier Downloads</li>
-                      <li><i data-lucide="check"></i> 24/7 AI WhatsApp Closer Bot</li>
-                      <li><i data-lucide="check"></i> Verified B2B Decision-Maker Finder</li>
-                      <li><i data-lucide="check"></i> Priority Support &amp; Updates</li>
+                      <li><i data-lucide="check"></i> 100 audits per month</li>
+                      <li><i data-lucide="check"></i> White-label PDF reports</li>
+                      <li><i data-lucide="check"></i> Your logo and branding</li>
+                      <li><i data-lucide="check"></i> 3 client workspaces</li>
+                      <li><i data-lucide="check"></i> 3 team members</li>
                     </ul>
                   </div>
-                  <a href="/signup.html" class="btn-plan-select">Upgrade to Pro</a>
+                  <a href="/signup.html?plan=agency" class="btn-plan-select" data-plan="agency" data-plan-name="Agency">Choose Agency</a>
                 </div>
 
-                <!-- Agency Plan -->
+                <!-- Scale Plan -->
                 <div class="home-plan-card">
                   <div>
-                    <h3 class="home-plan-name">Agency</h3>
-                    <p class="home-plan-desc">For established agencies wanting custom branding, team seats, and white-labeling.</p>
+                    <h3 class="home-plan-name">Scale</h3>
+                    <p class="home-plan-desc">For high-volume teams</p>
                     <div class="home-plan-price">$199 <span>/ month</span></div>
                     <ul class="home-plan-features">
-                      <li><i data-lucide="check"></i> Unlimited Website Audits</li>
-                      <li><i data-lucide="check"></i> White-Label Reports (Your Agency Logo)</li>
-                      <li><i data-lucide="check"></i> Multi-Seat Team Workspace Access</li>
-                      <li><i data-lucide="check"></i> Custom CRM &amp; WhatsApp Webhook Setup</li>
-                      <li><i data-lucide="check"></i> Dedicated Account Manager</li>
+                      <li><i data-lucide="check"></i> 400 audits per month</li>
+                      <li><i data-lucide="check"></i> White-label reports</li>
+                      <li><i data-lucide="check"></i> 10 client workspaces</li>
+                      <li><i data-lucide="check"></i> 10 team members</li>
+                      <li><i data-lucide="check"></i> Scheduled rescans</li>
+                      <li><i data-lucide="check"></i> Priority support</li>
                     </ul>
                   </div>
-                  <a href="/signup.html" class="btn-plan-select">Get Agency Access</a>
+                  <a href="/signup.html?plan=scale" class="btn-plan-select" data-plan="scale" data-plan-name="Scale">Choose Scale</a>
                 </div>
+              </div>
+
+              <div class="pricing-footer-note">
+                <p>All prices in USD. Cancel anytime.</p>
               </div>
             </section>
 
