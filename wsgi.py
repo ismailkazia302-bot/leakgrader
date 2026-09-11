@@ -886,6 +886,7 @@ def application(environ, start_response):
                 status = '200 OK'
                 response_headers = [
                     ('Content-Type', 'text/html; charset=utf-8'),
+                    ('X-Robots-Tag', 'noindex, follow'),
                     ('Cache-Control', 'public, max-age=86400, stale-while-revalidate=604800')
                 ]
                 start_response(status, response_headers)

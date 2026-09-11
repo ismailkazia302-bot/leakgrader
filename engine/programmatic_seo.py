@@ -48,15 +48,23 @@ class ProgrammaticSEOEngine:
         return routes
 
     def generate_sitemap_xml(self) -> str:
-        routes = self.get_all_routes()
         xml = ['<?xml version="1.0" encoding="UTF-8"?>']
         xml.append('<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">')
         
-        # Root URL
-        xml.append(f'  <url><loc>{self.base_url}/</loc><changefreq>daily</changefreq><priority>1.0</priority></url>')
-        
-        for r in routes:
-            xml.append(f'  <url><loc>{self.base_url}{r["url"]}</loc><changefreq>weekly</changefreq><priority>0.8</priority></url>')
+        # Core Platform URLs only
+        core_pages = [
+            ("/", "daily", "1.0"),
+            ("/pricing", "daily", "0.9"),
+            ("/about", "weekly", "0.8"),
+            ("/contact", "weekly", "0.8"),
+            ("/login", "monthly", "0.6"),
+            ("/signup", "monthly", "0.7"),
+            ("/privacy", "monthly", "0.5"),
+            ("/terms", "monthly", "0.5"),
+        ]
+        for path, changefreq, priority in core_pages:
+            loc = f"{self.base_url}{path}" if path != "/" else f"{self.base_url}/"
+            xml.append(f'  <url><loc>{loc}</loc><changefreq>{changefreq}</changefreq><priority>{priority}</priority></url>')
             
         xml.append('</urlset>')
         return "\n".join(xml)

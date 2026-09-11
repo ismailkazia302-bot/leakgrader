@@ -448,16 +448,20 @@ class ProgrammaticSEOEngine:
         xml = ['<?xml version="1.0" encoding="UTF-8"?>']
         xml.append('<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">')
         
-        # Core Platform URLs
-        xml.append(f"  <url><loc>{self.base_url}/</loc><changefreq>daily</changefreq><priority>1.0</priority></url>")
-        xml.append(f"  <url><loc>{self.base_url}/privacy</loc><changefreq>monthly</changefreq><priority>0.5</priority></url>")
-        xml.append(f"  <url><loc>{self.base_url}/terms</loc><changefreq>monthly</changefreq><priority>0.5</priority></url>")
-        
-        # All 12,600 Programmatic Hubs
-        for c in self.cities:
-            for n in self.niches:
-                loc = f"{self.base_url}/directory/{c['slug']}/{n['slug']}"
-                xml.append(f"  <url><loc>{loc}</loc><changefreq>weekly</changefreq><priority>0.8</priority></url>")
+        # Core Platform URLs only (clean editorial indexing)
+        core_pages = [
+            ("/", "daily", "1.0"),
+            ("/pricing", "daily", "0.9"),
+            ("/about", "weekly", "0.8"),
+            ("/contact", "weekly", "0.8"),
+            ("/login", "monthly", "0.6"),
+            ("/signup", "monthly", "0.7"),
+            ("/privacy", "monthly", "0.5"),
+            ("/terms", "monthly", "0.5"),
+        ]
+        for path, changefreq, priority in core_pages:
+            loc = f"{self.base_url}{path}" if path != "/" else f"{self.base_url}/"
+            xml.append(f"  <url><loc>{loc}</loc><changefreq>{changefreq}</changefreq><priority>{priority}</priority></url>")
                 
         xml.append('</urlset>')
         self._cached_sitemap_xml = '\n'.join(xml)
@@ -585,7 +589,7 @@ class ProgrammaticSEOEngine:
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <title>{page_title}</title>
   <meta name="description" content="{meta_desc}">
-  <meta name="robots" content="index, follow, max-snippet:-1, max-image-preview:large">
+  <meta name="robots" content="noindex, follow">
   <link rel="canonical" href="{canonical_url}">
   
   <!-- Open Graph -->

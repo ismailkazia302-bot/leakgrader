@@ -573,6 +573,7 @@ class MastermindRequestHandler(BaseHTTPRequestHandler):
                 if html_content:
                     self.send_response(200)
                     self.send_header("Content-Type", "text/html; charset=utf-8")
+                    self.send_header("X-Robots-Tag", "noindex, follow")
                     self.send_header("Cache-Control", "public, max-age=86400, stale-while-revalidate=604800")
                     self.end_headers()
                     self.wfile.write(html_content.encode("utf-8"))
