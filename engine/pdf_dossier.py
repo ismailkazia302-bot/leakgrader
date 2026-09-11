@@ -17,13 +17,15 @@ class ExecutiveDossierGenerator:
         """
         company = audit_data.get("company_name", "Enterprise Client")
         target_url = audit_data.get("target_url", "https://company.com")
-        score = audit_data.get("ai_readiness_score", 72)
-        leak = audit_data.get("estimated_monthly_leak", "$45,000/mo")
+        score = audit_data.get("ai_readiness_score") or audit_data.get("score", 72)
+        opp_range = audit_data.get("estimated_monthly_opportunity") or audit_data.get("estimated_monthly_leak") or "$15,000 – $35,000/mo"
         audit_id = audit_data.get("audit_id", f"dossier_{int(time.time())}")
         timestamp = audit_data.get("timestamp", time.strftime("%Y-%m-%d %H:%M:%S UTC"))
         tech_stack = ", ".join(audit_data.get("tech_stack", ["Modern Web Architecture", "Enterprise CDN"]))
-        form_fields = audit_data.get("form_friction_fields", 6)
+        form_fields = audit_data.get("form_friction_fields", 5)
         diag_points = audit_data.get("diagnostic_points", [])
+        top_leaks = audit_data.get("top_conversion_leaks", [])
+        disclaimer = audit_data.get("opportunity_disclaimer", "Illustrative estimate based on industry benchmarks and assumptions, not measured data. Enter your actual traffic and conversion data for accuracy.")
 
         diag_rows_list = []
         for p in diag_points:
@@ -39,11 +41,37 @@ class ExecutiveDossierGenerator:
             )
         diagnostic_rows = "\n".join(diag_rows_list) if diag_rows_list else "<tr><td colspan='6' style='text-align:center;'>Standard 15-Point Diagnostic Verified</td></tr>"
 
+        leaks_html_list = []
+        for i, leak_item in enumerate(top_leaks, 1):
+            ltitle = leak_item.get("title", f"Optimization Area #{i}")
+            limpact = leak_item.get("financial_impact", "")
+            lfix = leak_item.get("solution_fix", "")
+            leaks_html_list.append(f"""    <div class="leak-item">
+      <div class="leak-title">{i}. {ltitle}</div>
+      <div class="leak-desc">{limpact}</div>
+      <div style="margin-top:8px; font-size:12.5px; color:var(--accent-cyan); font-weight:600;">Recommendation: {lfix}</div>
+    </div>""")
+        leaks_html = "\n".join(leaks_html_list) if leaks_html_list else f"""    <div class="leak-item">
+      <div class="leak-title">1. Contact Form Optimization ({form_fields} Fields Detected)</div>
+      <div class="leak-desc">Detected {form_fields} form input fields. Multi-field forms increase friction for mobile visitors.</div>
+      <div style="margin-top:8px; font-size:12.5px; color:var(--accent-cyan); font-weight:600;">Recommendation: Streamline form touchpoints to essential contact fields.</div>
+    </div>
+    <div class="leak-item">
+      <div class="leak-title">2. After-Hours Lead Capture</div>
+      <div class="leak-desc">Estimated 40-60% of search visits occur outside operating hours, risking drop-off without immediate confirmation.</div>
+      <div style="margin-top:8px; font-size:12.5px; color:var(--accent-cyan); font-weight:600;">Recommendation: Implement self-serve calendar booking and automated email/SMS acknowledgement.</div>
+    </div>
+    <div class="leak-item">
+      <div class="leak-title">3. Call-to-Action Visibility</div>
+      <div class="leak-desc">Calls-to-action placed below the mobile fold line reduce visitor interaction.</div>
+      <div style="margin-top:8px; font-size:12.5px; color:var(--accent-cyan); font-weight:600;">Recommendation: Position primary CTA above the fold with strong contrast and clear benefit messaging.</div>
+    </div>"""
+
         return f"""<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Executive Revenue Leak Dossier - {company} | LeakGrader</title>
+  <title>Executive Revenue Opportunity Dossier - {company} | LeakGrader</title>
   <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0%25' y1='0%25' x2='100%25' y2='100%25'%3E%3Cstop offset='0%25' stop-color='%230055ff'/%3E%3Cstop offset='100%25' stop-color='%2338bdf8'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='32' height='32' rx='8' fill='%2306080e'/%3E%3Cpath d='M16 4L28 16L16 28L4 16Z' fill='none' stroke='url(%23g)' stroke-width='2.5'/%3E%3Ccircle cx='16' cy='16' r='4' fill='%2338bdf8'/%3E%3C/svg%3E">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800;900&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
@@ -99,82 +127,81 @@ class ExecutiveDossierGenerator:
       letter-spacing: 0.05em;
       background: rgba(56, 189, 248, 0.1);
       color: var(--accent-cyan);
-      border: 1px solid rgba(56, 189, 248, 0.2);
+      border: 1px solid rgba(56, 189, 248, 0.3);
     }}
     .hero-title {{
       font-size: 32px;
       font-weight: 900;
-      line-height: 1.2;
-      margin-bottom: 8px;
       letter-spacing: -0.02em;
+      margin-bottom: 8px;
     }}
     .meta-text {{
       color: var(--text-muted);
-      font-size: 14px;
+      font-size: 13px;
       margin-bottom: 32px;
     }}
     .metrics-grid {{
       display: grid;
-      grid-template-columns: repeat(3, 1fr);
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
       gap: 16px;
       margin-bottom: 36px;
     }}
     .metric-card {{
-      background: rgba(0, 0, 0, 0.4);
+      background: rgba(255, 255, 255, 0.03);
       border: 1px solid var(--card-border);
       border-radius: 14px;
       padding: 20px;
-      text-align: center;
     }}
     .metric-val {{
-      font-size: 36px;
+      font-size: 32px;
       font-weight: 900;
-      margin: 8px 0;
-      font-family: 'JetBrains Mono', monospace;
+      margin: 8px 0 4px;
     }}
     .section-title {{
-      font-size: 18px;
+      font-size: 20px;
       font-weight: 800;
-      margin: 28px 0 16px;
-      color: #fff;
+      margin: 36px 0 16px;
       display: flex;
       align-items: center;
       gap: 8px;
     }}
     .leak-item {{
-      background: rgba(0, 0, 0, 0.2);
-      border-left: 3px solid var(--accent-rose);
-      border-radius: 0 10px 10px 0;
+      background: rgba(255, 255, 255, 0.02);
+      border: 1px solid var(--card-border);
+      border-left: 4px solid var(--accent-cyan);
+      border-radius: 12px;
       padding: 16px 20px;
       margin-bottom: 12px;
     }}
     .leak-title {{
+      font-weight: 800;
       font-size: 15px;
-      font-weight: 700;
       color: #fff;
       margin-bottom: 4px;
     }}
     .leak-desc {{
-      font-size: 13px;
       color: var(--text-muted);
+      font-size: 13px;
     }}
     .roadmap-table {{
       width: 100%;
       border-collapse: collapse;
-      margin-top: 16px;
+      margin-top: 12px;
       font-size: 13px;
     }}
     .roadmap-table th, .roadmap-table td {{
-      padding: 12px 16px;
+      padding: 12px 14px;
       text-align: left;
       border-bottom: 1px solid var(--card-border);
     }}
     .roadmap-table th {{
-      background: rgba(255, 255, 255, 0.02);
       color: var(--text-muted);
-      font-weight: 700;
-      text-transform: uppercase;
       font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }}
+    .roadmap-table tr:last-child td {{
+      border-bottom: none;
     }}
     .btn-print {{
       background: var(--accent-cyan);
@@ -222,42 +249,36 @@ class ExecutiveDossierGenerator:
       </div>
     </div>
 
-    <h1 class="hero-title">{company} — Website Revenue Diagnostic</h1>
+    <h1 class="hero-title">{company} — Website Revenue Opportunity Diagnostic</h1>
     <p class="meta-text">Target URL: <strong style="color:#fff;">{target_url}</strong> | Audit ID: <code>{audit_id}</code> | Generated: {timestamp}</p>
 
     <!-- Metrics Grid -->
     <div class="metrics-grid">
       <div class="metric-card">
-        <span style="font-size:11px; font-weight:800; color:var(--text-muted); text-transform:uppercase;">AI Readiness Score</span>
+        <span style="font-size:11px; font-weight:800; color:var(--text-muted); text-transform:uppercase;">Conversion Score</span>
         <div class="metric-val" style="color:var(--accent-cyan);">{score}<span style="font-size:16px; color:var(--text-muted);">/100</span></div>
         <span style="font-size:11px; color:var(--accent-emerald); font-weight:700;">● Benchmark Certified</span>
       </div>
       <div class="metric-card">
-        <span style="font-size:11px; font-weight:800; color:var(--text-muted); text-transform:uppercase;">Estimated Monthly Leak</span>
-        <div class="metric-val" style="color:var(--accent-rose);">{leak}</div>
-        <span style="font-size:11px; color:var(--text-muted);">After-Hours Visitor Loss</span>
+        <span style="font-size:11px; font-weight:800; color:var(--text-muted); text-transform:uppercase;">Est. Monthly Revenue Opportunity</span>
+        <div class="metric-val" style="color:var(--accent-cyan); font-size:24px;">{opp_range}</div>
+        <span style="font-size:11px; color:var(--text-muted);">Conservative – Expected Range</span>
       </div>
       <div class="metric-card">
         <span style="font-size:11px; font-weight:800; color:var(--text-muted); text-transform:uppercase;">Detected Tech Stack</span>
         <div style="font-size:16px; font-weight:700; color:#fff; margin:14px 0 8px;">{tech_stack}</div>
-        <span style="font-size:11px; color:var(--text-muted);">{form_fields} Form Inputs Detected</span>
+        <span style="font-size:11px; color:var(--text-muted);">{form_fields} Form Input{'s' if form_fields != 1 else ''} Detected</span>
       </div>
     </div>
 
+    <!-- Methodology & Disclaimer Banner -->
+    <div style="background:rgba(56,189,248,0.06); border:1px solid rgba(56,189,248,0.2); border-radius:12px; padding:14px 18px; margin:20px 0 28px 0; font-size:12.5px; color:var(--text-muted); line-height:1.5;">
+      💡 <strong style="color:var(--text-main);">Methodology & Disclaimer:</strong> {disclaimer}
+    </div>
+
     <!-- Conversion Bottlenecks -->
-    <h2 class="section-title">🚨 Primary Revenue Bottlenecks Identified</h2>
-    <div class="leak-item">
-      <div class="leak-title">1. High-Friction Mobile Form Drop-Off</div>
-      <div class="leak-desc">68% of commercial mobile prospects abandon multi-field forms. Replacing static forms with a 1-click conversational closer increases completions by 3.2x.</div>
-    </div>
-    <div class="leak-item">
-      <div class="leak-title">2. Unattended After-Hours Inbound Traffic (7 PM - 8 AM)</div>
-      <div class="leak-desc">Over 40% of high-intent buying searches occur outside operating hours. Leads that wait more than 5 minutes for a response are 21x less likely to enter the sales pipeline.</div>
-    </div>
-    <div class="leak-item">
-      <div class="leak-title">3. Zero Instant WhatsApp / SMS Calendar Booking</div>
-      <div class="leak-desc">In high-ticket sectors (Real Estate, Clinics, Law Firms), direct conversational qualification converts 400% higher than traditional email lead capture.</div>
-    </div>
+    <h2 class="section-title">🚨 Primary Conversion Bottlenecks & Opportunities</h2>
+    {leaks_html}
 
     <!-- 15-Point Diagnostic Breakdown -->
     <h2 class="section-title">📋 15-Point Autonomous Diagnostic Inspection</h2>
@@ -278,40 +299,41 @@ class ExecutiveDossierGenerator:
     </table>
 
     <!-- 90-Day Implementation Plan -->
-    <h2 class="section-title">🎯 90-Day Remediation & Cash-Flow Projection</h2>
+    <h2 class="section-title">🎯 90-Day Remediation & Opportunity Roadmap</h2>
+    <p style="color:var(--text-muted); font-size:12px; margin-bottom:16px;">Actionable conversion optimizations based on audit checkpoints. Projections represent potential improvement, not guaranteed outcomes.</p>
     <table class="roadmap-table">
       <thead>
         <tr>
           <th>Phase</th>
           <th>Implementation Action</th>
           <th>Target Timeline</th>
-          <th>Expected Revenue Impact</th>
+          <th>Potential Impact</th>
         </tr>
       </thead>
       <tbody>
         <tr>
           <td><strong>Phase 1</strong></td>
-          <td>Deploy 24/7 Autonomous AI WhatsApp Closer Widget</td>
-          <td>Days 1 - 7</td>
-          <td style="color:var(--accent-emerald); font-weight:700;">+$12,500/mo Recovered</td>
+          <td>Streamline Mobile Form Completion (Reduce to &le;3 high-intent fields)</td>
+          <td>Days 1 - 14</td>
+          <td style="color:var(--accent-emerald); font-weight:700;">Potential +15-25% Form Completion</td>
         </tr>
         <tr>
           <td><strong>Phase 2</strong></td>
-          <td>Integrate Instant Calendar Booking & Qualification</td>
-          <td>Days 8 - 21</td>
-          <td style="color:var(--accent-emerald); font-weight:700;">+$18,000/mo Recovered</td>
+          <td>Add Direct Calendar Booking & After-Hours Lead Capture</td>
+          <td>Days 15 - 45</td>
+          <td style="color:var(--accent-emerald); font-weight:700;">Potential +20-30% Pipeline Retention</td>
         </tr>
         <tr>
           <td><strong>Phase 3</strong></td>
-          <td>Activate High-DA Programmatic Directory Hubs</td>
-          <td>Days 22 - 90</td>
-          <td style="color:var(--accent-emerald); font-weight:700;">+$25,000/mo Recovered</td>
+          <td>Optimize Above-the-Fold CTAs, Schema Markup & Page Speed</td>
+          <td>Days 46 - 90</td>
+          <td style="color:var(--accent-emerald); font-weight:700;">Potential +10-18% Conversion Lift</td>
         </tr>
       </tbody>
     </table>
 
     <div class="footer-note">
-      <p>Prepared autonomously by <strong>LeakGrader.com</strong> — Enterprise Website Revenue & Autonomous AI Closer Platform.</p>
+      <p>Prepared autonomously by <strong>LeakGrader.com</strong> — Website Revenue & Conversion Diagnostic Platform.</p>
       <p style="margin-top:4px;">Verification Link: <a href="https://leakgrader.com/report/{audit_id}" style="color:var(--accent-cyan); text-decoration:none;">https://leakgrader.com/report/{audit_id}</a></p>
     </div>
   </div>
@@ -322,26 +344,26 @@ class ExecutiveDossierGenerator:
 def generate_audit_pdf(audit_data: dict) -> bytes:
     """
     Generates a 100% valid, self-contained PDF 1.4 binary stream with
-    domain, score, revenue leak calculation, all 15 diagnostic points,
-    benchmark disclaimer, and remediation plan.
+    domain, score, revenue opportunity range, all 15 diagnostic points,
+    benchmark disclaimer, and remediation roadmap.
     """
     domain = audit_data.get("domain") or audit_data.get("company_name", "Target Domain")
     score = audit_data.get("score") or audit_data.get("ai_readiness_score", 70)
-    leak = audit_data.get("estimated_monthly_leak", "$35,000/mo")
+    opp = audit_data.get("estimated_monthly_opportunity") or audit_data.get("estimated_monthly_leak", "$15,000 – $35,000/mo")
     ts = audit_data.get("timestamp", time.strftime("%Y-%m-%d %H:%M:%S UTC"))
     diag_pts = audit_data.get("diagnostic_points", [])
 
     lines = [
-        "LEAKGRADER EXECUTIVE REVENUE LEAK DOSSIER",
+        "LEAKGRADER EXECUTIVE REVENUE OPPORTUNITY DOSSIER",
         "=" * 50,
         f"Domain Target: {domain}",
         f"Conversion & AI Readiness Score: {score}/100",
-        f"Estimated Monthly Revenue Leak: {leak}",
+        f"Est. Monthly Revenue Opportunity: {opp}",
         f"Generated: {ts}",
         "",
         "BENCHMARK METHODOLOGY & DISCLAIMER:",
-        "Formula: Traffic x 8.0% (High Intent) x 68.4% (After-Hours) x 72.0% (Lag)",
-        "         x 2.5% (Close Rate Benchmark) x Avg Deal Value",
+        "Illustrative estimate based on industry benchmarks and assumptions,",
+        "not measured data. Enter your actual traffic and conversion data for accuracy.",
         "Public Front-End Forensic Diagnostic (No Private/Bank Data Accessed)",
         "",
         "15-POINT CONVERSION & RESPONSE TIME AUDIT:",
@@ -361,10 +383,10 @@ def generate_audit_pdf(audit_data: dict) -> bytes:
 
     lines.extend([
         "-" * 50,
-        "RECOMMENDED REMEDIATION & CASH-FLOW ACTION:",
-        "Phase 1 (Days 1-7): Deploy 24/7 Autonomous AI WhatsApp Closer Widget",
-        "Phase 2 (Days 8-21): Integrate Instant Calendar Booking & Qualification",
-        "Phase 3 (Days 22-90): Activate High-DA Programmatic Directory Hubs",
+        "RECOMMENDED REMEDIATION & OPPORTUNITY ROADMAP:",
+        "Phase 1 (Days 1-14): Streamline Mobile Forms (Reduce to <=3 fields)",
+        "Phase 2 (Days 15-45): Add Direct Calendar Booking & After-Hours Capture",
+        "Phase 3 (Days 46-90): Optimize Above-the-Fold CTAs & Schema Markup",
         "=" * 50,
         "Prepared autonomously by LeakGrader.com"
     ])

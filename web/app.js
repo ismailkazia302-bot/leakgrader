@@ -282,8 +282,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 <strong style="font-size:16px; color:#fff;">${my.company_name} (Your Site)</strong>
                 <span style="font-size:24px; font-weight:900; color:#38bdf8;">${my.ai_readiness_score}/100</span>
               </div>
-              <p style="font-size:12px; color:var(--text-muted); margin-top:8px;">Monthly Leak: <span style="color:#fb7185; font-weight:700;">${my.estimated_monthly_leak}</span></p>
-              <div style="margin-top:12px; font-size:11px; color:#34d399;">● ${my.has_whatsapp ? 'WhatsApp Closer Active' : 'Static Forms Used'}</div>
+              <p style="font-size:12px; color:var(--text-muted); margin-top:8px;">Monthly Opportunity: <span style="color:#38bdf8; font-weight:700;">${my.estimated_monthly_opportunity || my.estimated_monthly_leak}</span></p>
+              <div style="margin-top:12px; font-size:11px; color:#34d399;">● ${my.has_whatsapp ? 'Direct Chat Active' : 'Standard Forms'}</div>
             </div>
 
             <div class="card-3d-tilt" style="padding:24px; border:2px solid ${b.leader_tag === 'COMPETITOR_ADVANTAGE' ? '#fb7185' : 'rgba(255,255,255,0.08)'}; background:rgba(8,11,20,0.8);">
@@ -291,8 +291,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 <strong style="font-size:16px; color:#fff;">${comp.company_name} (Competitor)</strong>
                 <span style="font-size:24px; font-weight:900; color:#fb7185;">${comp.ai_readiness_score}/100</span>
               </div>
-              <p style="font-size:12px; color:var(--text-muted); margin-top:8px;">Monthly Leak: <span style="color:#fb7185; font-weight:700;">${comp.estimated_monthly_leak}</span></p>
-              <div style="margin-top:12px; font-size:11px; color:var(--text-muted);">● ${comp.has_whatsapp ? 'WhatsApp Closer Active' : 'Static Forms Used'}</div>
+              <p style="font-size:12px; color:var(--text-muted); margin-top:8px;">Monthly Opportunity: <span style="color:#38bdf8; font-weight:700;">${comp.estimated_monthly_opportunity || comp.estimated_monthly_leak}</span></p>
+              <div style="margin-top:12px; font-size:11px; color:var(--text-muted);">● ${comp.has_whatsapp ? 'Direct Chat Active' : 'Standard Forms'}</div>
             </div>
           </div>
 
@@ -445,7 +445,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
       const audit = data.audit || {};
       const score = audit.ai_readiness_score || audit.score || 74;
-      const leak = audit.estimated_monthly_leak || '$35,000/mo';
+      const oppRange = audit.estimated_monthly_opportunity || audit.estimated_monthly_leak || '$12,000 – $28,000/mo';
       const grade = audit.grade || (score >= 80 ? 'A' : score >= 60 ? 'B' : 'C');
 
       if (typeof gtag === 'function') {
@@ -453,14 +453,14 @@ document.addEventListener('DOMContentLoaded', () => {
           domain: urlOrCompany,
           score: score,
           grade: grade,
-          leak_amount: leak
+          leak_amount: oppRange
         });
       }
 
       const leaks = audit.top_conversion_leaks || [
-        { title: 'Zero Instant WhatsApp/SMS Lead Capture', financial_impact: 'Losing 42% of high-intent mobile visitors.', solution_fix: 'Deploy 24/7 AI WhatsApp Closer Bot.' },
-        { title: 'Uncaptured After-Hours Inbound Traffic', financial_impact: '68% of inquiries arrive after 7 PM with 8-hour reply lag.', solution_fix: 'Autonomous 30-sec lead qualification.' },
-        { title: 'High Friction Contact Forms', financial_impact: 'Static 7-field forms dropping conversion rate by 28%.', solution_fix: 'Interactive conversational funnel.' }
+        { title: 'Multi-Step Contact Form Friction', financial_impact: 'High field counts drop mobile completion by 25-40%.', solution_fix: 'Reduce required fields to 3 or adopt 2-step lead capture.' },
+        { title: 'Uncaptured After-Hours Inbound Inquiries', financial_impact: 'Over 50% of inbound inquiries arrive outside business hours with long response delays.', solution_fix: 'Implement automated email/SMS inquiry confirmation & instant calendar booking.' },
+        { title: 'Low Call-to-Action Visibility', financial_impact: 'Visitors scrolling past hero section without prominent next steps convert 30% lower.', solution_fix: 'Add contrasting above-the-fold or sticky CTA buttons.' }
       ];
 
       const cleanSlug = encodeURIComponent((audit.company_name || urlOrCompany).toLowerCase().replace(/[^a-z0-9]+/g, '-'));
@@ -493,7 +493,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 <div class="gauge-info-text">
                   <span class="badge-tag cyan">CONVERSION SCORE</span>
                   <h3>${audit.company_name || urlOrCompany}</h3>
-                  <p>${leaks.length} High-impact revenue bottlenecks detected in lead response time.</p>
+                  <p>${leaks.length} High-impact conversion improvement opportunities detected.</p>
                 </div>
               </div>
             </div>
@@ -501,21 +501,18 @@ document.addEventListener('DOMContentLoaded', () => {
             <div class="card-3d-tilt leak-est-card-3d">
               <div class="leak-card-inner">
                 <div class="leak-header-flex">
-                  <span class="badge-tag rose">ESTIMATED LOST REVENUE</span>
-                  <div class="pulse-warning-icon"><i data-lucide="alert-octagon"></i></div>
+                  <span class="badge-tag cyan">ESTIMATED REVENUE OPPORTUNITY</span>
+                  <div class="pulse-warning-icon"><i data-lucide="trending-up"></i></div>
                 </div>
-                <strong class="leak-val-3d">${leak}</strong>
-                <p class="leak-sub-3d">${audit.user_customized_metrics ? 'Calculated from your verified custom traffic & deal value inputs.' : 'From lost after-hours inquiries and manual response lag.'}</p>
+                <strong class="leak-val-3d">${oppRange}</strong>
+                <p class="leak-sub-3d">${audit.user_customized_metrics ? 'Calculated from your verified custom traffic & deal value inputs.' : 'Conservative – expected monthly upside based on industry benchmark models.'}</p>
                 <div style="margin: 6px 0 10px 0;">
                   <span style="font-size: 11px; font-weight: 700; color: ${audit.user_customized_metrics ? '#34d399' : '#38bdf8'}; background: ${audit.user_customized_metrics ? 'rgba(52,211,153,0.12)' : 'rgba(56,189,248,0.12)'}; border: 1px solid ${audit.user_customized_metrics ? 'rgba(52,211,153,0.3)' : 'rgba(56,189,248,0.3)'}; padding: 3px 10px; border-radius: 12px; display: inline-flex; align-items: center; gap: 5px;">
                     <i data-lucide="${audit.user_customized_metrics ? 'check-circle' : 'calculator'}" style="width: 12px; height: 12px;"></i>
-                    ${audit.calculation_basis || (audit.user_customized_metrics ? 'User Verified Metrics' : 'Empirical Benchmark Formula')}
+                    ${audit.calculation_basis || (audit.user_customized_metrics ? 'User Verified Metrics' : 'Benchmark Estimate Model')}
                   </span>
                 </div>
-                <div class="recovery-meter-bar">
-                  <div class="recovery-fill" style="width: 82%;"></div>
-                </div>
-                <small style="color:var(--text-muted); font-size:11px;">82% of these lost leads are recoverable with a 24/7 AI WhatsApp Closer.</small>
+                <small style="color:var(--text-muted); font-size:11px; display:block; line-height:1.4;">${audit.opportunity_disclaimer || 'Illustrative estimate based on industry benchmarks and assumptions, not measured data. Enter your actual traffic and conversion data for accuracy.'}</small>
               </div>
             </div>
 

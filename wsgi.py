@@ -937,7 +937,7 @@ def application(environ, start_response):
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>{slug} — Website Revenue Leak & Conversion Audit Report | LeakGrader.com</title>
+  <title>{slug} — Website Revenue Opportunity & Conversion Audit Report | LeakGrader.com</title>
   <link rel="stylesheet" href="/style.css?v=2030">
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800;900&display=swap" rel="stylesheet">
 </head>
@@ -950,17 +950,20 @@ def application(environ, start_response):
     <div style="display:inline-block; font-size:11px; font-weight:800; padding:4px 12px; background:rgba(0,85,255,0.15); color:#38bdf8; border:1px solid rgba(0,85,255,0.3); border-radius:20px; margin-bottom:12px;">OFFICIAL CONVERSION SCORECARD</div>
     <h1 style="font-size: 32px; font-weight: 900; margin-bottom: 12px;">{slug}</h1>
     <p style="color: #94a3b8; font-size: 14px; line-height: 1.6; margin-bottom: 28px;">This business has been audited for lead capture friction, after-hours visitor drop-off, and response delay.</p>
-    <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 30px;">
+    <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 24px;">
       <div style="background: rgba(0,0,0,0.5); border: 1px solid rgba(255,255,255,0.08); border-radius: 16px; padding: 22px; text-align:center;">
-        <span style="font-size:11px; color:#64748b; font-weight:700; text-transform:uppercase;">Overall AI Readiness</span>
+        <span style="font-size:11px; color:#64748b; font-weight:700; text-transform:uppercase;">Conversion Score</span>
         <div style="font-size: 48px; font-weight: 900; color: #38bdf8; margin: 8px 0;">76<span style="font-size:18px; color:#64748b;">/100</span></div>
-        <span style="font-size:11px; color:#10b981; font-weight:700;">● Above Industry Average</span>
+        <span style="font-size:11px; color:#10b981; font-weight:700;">● Benchmark Certified</span>
       </div>
       <div style="background: rgba(0,0,0,0.5); border: 1px solid rgba(255,255,255,0.08); border-radius: 16px; padding: 22px; text-align:center;">
-        <span style="font-size:11px; color:#64748b; font-weight:700; text-transform:uppercase;">Estimated Monthly Loss</span>
-        <div style="font-size: 38px; font-weight: 900; color: #fb7185; margin: 12px 0;">$35,000+</div>
-        <span style="font-size:11px; color:#94a3b8;">Recoverable via 24/7 AI WhatsApp Closer</span>
+        <span style="font-size:11px; color:#64748b; font-weight:700; text-transform:uppercase;">Est. Monthly Revenue Opportunity</span>
+        <div style="font-size: 26px; font-weight: 900; color: #38bdf8; margin: 12px 0;">$15,000 – $35,000/mo</div>
+        <span style="font-size:11px; color:#94a3b8;">Conservative – Expected Range</span>
       </div>
+    </div>
+    <div style="background:rgba(56,189,248,0.06); border:1px solid rgba(56,189,248,0.2); border-radius:12px; padding:12px 16px; font-size:12px; color:#94a3b8; line-height:1.5;">
+      💡 <strong>Disclaimer:</strong> Illustrative estimate based on industry benchmarks and assumptions, not measured data. Enter your actual traffic and conversion data for accuracy.
     </div>
   </div>
 </body>

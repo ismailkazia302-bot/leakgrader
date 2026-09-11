@@ -675,11 +675,11 @@ class MastermindRequestHandler(BaseHTTPRequestHandler):
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>{slug} — Website Revenue Leak & Conversion Audit Report | LeakGrader.com</title>
+  <title>{slug} — Website Revenue Opportunity & Conversion Audit Report | LeakGrader.com</title>
   <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0%25' y1='0%25' x2='100%25' y2='100%25'%3E%3Cstop offset='0%25' stop-color='%230055ff'/%3E%3Cstop offset='100%25' stop-color='%2338bdf8'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='32' height='32' rx='8' fill='%2306080e'/%3E%3Cpath d='M16 4L28 16L16 28L4 16Z' fill='none' stroke='url(%23g)' stroke-width='2.5'/%3E%3Ccircle cx='16' cy='16' r='4' fill='%2338bdf8'/%3E%3C/svg%3E">
-  <meta name="description" content="Verified conversion audit for {slug}. Estimated monthly revenue loss, response time benchmark, and 24/7 AI WhatsApp Closer recommendation.">
+  <meta name="description" content="Verified conversion audit for {slug}. Estimated monthly revenue opportunity range, response time benchmark, and conversion recommendations.">
   <meta property="og:title" content="{slug} — LeakGrader.com Conversion Scorecard">
-  <meta property="og:description" content="View {slug}'s official conversion score and revenue leak analysis. Audited by LeakGrader.com.">
+  <meta property="og:description" content="View {slug}'s official conversion score and revenue opportunity analysis. Audited by LeakGrader.com.">
   <meta property="og:url" content="https://leakgrader.com{path}">
   <meta name="twitter:card" content="summary_large_image">
   <link rel="stylesheet" href="/style.css?v=1020">
@@ -700,18 +700,21 @@ class MastermindRequestHandler(BaseHTTPRequestHandler):
     <h1 style="font-size: 32px; font-weight: 900; margin-bottom: 12px;">{slug}</h1>
     <p style="color: #94a3b8; font-size: 14px; line-height: 1.6; margin-bottom: 28px;">This business has been audited for lead capture friction, after-hours visitor drop-off, and response delay.</p>
 
-    <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 30px;">
+    <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 24px;">
       <div style="background: rgba(0,0,0,0.5); border: 1px solid rgba(255,255,255,0.08); border-radius: 16px; padding: 22px; text-align:center;">
-        <span style="font-size:11px; color:#64748b; font-weight:700; text-transform:uppercase;">Overall AI Readiness</span>
+        <span style="font-size:11px; color:#64748b; font-weight:700; text-transform:uppercase;">Conversion Score</span>
         <div style="font-size: 48px; font-weight: 900; color: #38bdf8; margin: 8px 0;">76<span style="font-size:18px; color:#64748b;">/100</span></div>
-        <span style="font-size:11px; color:#10b981; font-weight:700;">● Above Industry Average</span>
+        <span style="font-size:11px; color:#10b981; font-weight:700;">● Benchmark Certified</span>
       </div>
 
       <div style="background: rgba(0,0,0,0.5); border: 1px solid rgba(255,255,255,0.08); border-radius: 16px; padding: 22px; text-align:center;">
-        <span style="font-size:11px; color:#64748b; font-weight:700; text-transform:uppercase;">Estimated Monthly Loss</span>
-        <div style="font-size: 38px; font-weight: 900; color: #fb7185; margin: 12px 0;">$35,000+</div>
-        <span style="font-size:11px; color:#94a3b8;">Recoverable via 24/7 AI WhatsApp Closer</span>
+        <span style="font-size:11px; color:#64748b; font-weight:700; text-transform:uppercase;">Est. Monthly Revenue Opportunity</span>
+        <div style="font-size: 26px; font-weight: 900; color: #38bdf8; margin: 12px 0;">$15,000 – $35,000/mo</div>
+        <span style="font-size:11px; color:#94a3b8;">Conservative – Expected Range</span>
       </div>
+    </div>
+    <div style="background:rgba(56,189,248,0.06); border:1px solid rgba(56,189,248,0.2); border-radius:12px; padding:12px 16px; font-size:12px; color:#94a3b8; line-height:1.5;">
+      💡 <strong>Disclaimer:</strong> Illustrative estimate based on industry benchmarks and assumptions, not measured data. Enter your actual traffic and conversion data for accuracy.
     </div>
 
     <!-- Professional Social Sharing Bar -->
