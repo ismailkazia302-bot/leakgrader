@@ -2930,4 +2930,14 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     });
   });
+
+  // 5. Smooth scroll to pricing section when arriving at /pricing or #pricing
+  if (window.location.pathname.toLowerCase().startsWith('/pricing') || window.location.hash === '#pricing') {
+    const pricingSection = document.getElementById('pricing');
+    if (pricingSection) {
+      setTimeout(() => {
+        pricingSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }, 150);
+    }
+  }
 });

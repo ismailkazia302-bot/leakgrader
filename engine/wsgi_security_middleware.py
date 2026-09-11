@@ -198,7 +198,7 @@ def secured_app(environ, start_response):
     ):
         return _send_response(start_response, 404, text_content="404 Not Found", content_type="text/plain")
 
-    # 6. Sprint 1 UI Pages (Login, Signup)
+    # 6. Sprint 1 UI Pages (Login, Signup, Pricing)
     if path_lower in ["/login", "/login.html"]:
         login_file = os.path.join(web_dir, "login.html")
         if os.path.exists(login_file):
@@ -210,6 +210,16 @@ def secured_app(environ, start_response):
         if os.path.exists(signup_file):
             with open(signup_file, "rb") as f:
                 return _send_response(start_response, 200, text_content=f.read().decode("utf-8"), content_type="text/html")
+
+    if path_lower in ["/pricing", "/pricing.html"]:
+        pricing_file = os.path.join(web_dir, "index.html")
+        if os.path.exists(pricing_file):
+            with open(pricing_file, "rb") as f:
+                content = f.read()
+                ga_id = os.environ.get('GA_MEASUREMENT_ID', '')
+                if ga_id:
+                    content = content.replace(b'{{GA_MEASUREMENT_ID}}', ga_id.encode('utf-8'))
+                return _send_response(start_response, 200, text_content=content.decode("utf-8"), content_type="text/html")
 
     # 7. Admin Routes Protection (Lockdown hides 404; non-lockdown requires valid admin token)
     # In strict full lockdown (LOCKDOWN_PHASE=full), /dashboard returns 404 to preserve existing B-05 test!

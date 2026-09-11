@@ -1003,7 +1003,7 @@ class MastermindRequestHandler(BaseHTTPRequestHandler):
             return
 
         file_path = raw_path.lstrip("/")
-        if not file_path or file_path == "":
+        if not file_path or file_path == "" or file_path.lower() in ["pricing", "pricing.html"]:
             file_path = "index.html"
 
         full_path = os.path.join(WEB_DIR, file_path)

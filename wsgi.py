@@ -1107,7 +1107,7 @@ def application(environ, start_response):
         return [json.dumps(PLANS).encode('utf-8')]
 
     # 3. Static Web Files (HTML, CSS, JS)
-    if path in ['', '/']:
+    if path in ['', '/', '/pricing', '/pricing.html']:
         index_file = os.path.join(WEB_DIR_PATH, 'index.html')
         if os.path.exists(index_file):
             status = '200 OK'
