@@ -142,36 +142,71 @@ class OnPageAnalyzer:
         has_schema = len(unique_types) > 0
         schema_evidence = f"Schema.org structured data detected: {', '.join(unique_types[:4])}" if has_schema else "No Schema.org JSON-LD structured data detected"
 
-        # 7. Visible Form Field Count (Strictly consistent calculation)
+        # 7. Visible Form Field Count (Strictly focused on primary lead/inquiry capture)
         forms = re.findall(r'<form[^>]*>(.*?)</form>', html, re.I | re.DOTALL)
-        visible_fields = []
-        def is_visible_input(tag_str):
+
+        def is_lead_input(tag_str):
             tag_lower = tag_str.lower()
-            for skip in ['type="hidden"', "type='hidden'", 'type="submit"', "type='submit'", 'type="button"', "type='button'", 'type="reset"', "type='reset'", 'type="image"', "type='image'"]:
+            for skip in ['type="hidden"', "type='hidden'", 'type="submit"', "type='submit'", 
+                         'type="button"', "type='button'", 'type="reset"', "type='reset'", 
+                         'type="image"', "type='image'", 'type="file"', "type='file'"]:
                 if skip in tag_lower:
                     return False
+            # Exclude search inputs
+            if 'type="search"' in tag_lower or "type='search'" in tag_lower:
+                return False
+            if re.search(r'(name|id|placeholder)=["\']?[^"\']*(search|query|find|filter)[^"\']*["\']?', tag_lower):
+                return False
+            # Exclude chat / ai prompt boxes
+            if re.search(r'(name|id|placeholder)=["\']?[^"\']*(chat|prompt)[^"\']*["\']?', tag_lower):
+                return False
+            # Exclude hidden styles
+            if 'display:none' in tag_lower.replace(' ', '') or 'visibility:hidden' in tag_lower.replace(' ', ''):
+                return False
+            if ' hidden ' in tag_lower or tag_lower.endswith('hidden>') or ' hidden>' in tag_lower:
+                return False
             return True
 
+        form_counts = []
         if forms:
             for f_html in forms:
+                f_fields = 0
                 for inp in re.findall(r'<input[^>]*>', f_html, re.I):
-                    if is_visible_input(inp):
-                        visible_fields.append(inp)
-                visible_fields.extend(re.findall(r'<select[^>]*>', f_html, re.I))
-                visible_fields.extend(re.findall(r'<textarea[^>]*>', f_html, re.I))
+                    if is_lead_input(inp):
+                        f_fields += 1
+                for sel in re.findall(r'<select[^>]*>', f_html, re.I):
+                    if 'display:none' not in sel.lower().replace(' ', ''):
+                        f_fields += 1
+                for ta in re.findall(r'<textarea[^>]*>', f_html, re.I):
+                    if 'display:none' not in ta.lower().replace(' ', ''):
+                        f_fields += 1
+                if f_fields > 0:
+                    form_counts.append(f_fields)
         else:
+            standalone_count = 0
             for inp in re.findall(r'<input[^>]*>', html, re.I):
-                if is_visible_input(inp):
-                    visible_fields.append(inp)
-            visible_fields.extend(re.findall(r'<select[^>]*>', html, re.I))
-            visible_fields.extend(re.findall(r'<textarea[^>]*>', html, re.I))
+                if is_lead_input(inp):
+                    standalone_count += 1
+            for sel in re.findall(r'<select[^>]*>', html, re.I):
+                if 'display:none' not in sel.lower().replace(' ', ''):
+                    standalone_count += 1
+            for ta in re.findall(r'<textarea[^>]*>', html, re.I):
+                if 'display:none' not in ta.lower().replace(' ', ''):
+                    standalone_count += 1
+            if standalone_count > 0:
+                form_counts.append(min(standalone_count, 6))
 
-        form_fields_count = len(visible_fields)
-        num_forms = len(forms)
-        if form_fields_count == 0 and num_forms == 0:
-            form_evidence = "No visible contact or lead capture forms detected on page"
+        primary_form_fields = max(form_counts) if form_counts else 0
+        total_touchpoints = len(form_counts)
+        form_fields_count = primary_form_fields
+        num_forms = total_touchpoints
+
+        if form_fields_count == 0:
+            form_evidence = "No visible lead capture or inquiry forms detected on page"
+        elif form_fields_count <= 4:
+            form_evidence = f"Primary lead capture form has {form_fields_count} field{'s' if form_fields_count != 1 else ''} ({total_touchpoints} form touchpoint{'s' if total_touchpoints != 1 else ''} on page) — optimal low-friction conversion"
         else:
-            form_evidence = f"Detected {num_forms or 1} form touchpoint{'s' if (num_forms or 1) > 1 else ''} with {form_fields_count} visible input field{'s' if form_fields_count != 1 else ''}"
+            form_evidence = f"Primary lead capture form has {form_fields_count} visible fields ({total_touchpoints} form touchpoint{'s' if total_touchpoints != 1 else ''} on page) — consider streamlining to 3–4 fields"
 
         # 8. Click-to-Call tel: links
         tel_links = re.findall(r'href=["\']tel:([^"\']+)["\']', html, re.I)

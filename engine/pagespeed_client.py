@@ -24,11 +24,24 @@ CACHE_FILE = os.path.join(CACHE_DIR, "pagespeed_cache.json")
 CACHE_TTL = 86400  # 24 hours in seconds
 
 class PageSpeedClient:
-    def __init__(self, api_key: str = None, timeout: int = 25):
-        # Read env var if not passed; handle both with/without key
-        self.api_key = (api_key or os.environ.get("PAGESPEED_API_KEY", "")).strip()
+    def __init__(self, api_key: str = None, timeout: int = 40):
+        self.api_key = self._resolve_api_key(api_key)
         self.timeout = timeout
         self._ensure_cache_dir()
+        # Diagnostic: server-side log, no key value exposed
+        print("PSI: API key present" if self.api_key else "PSI: no API key", flush=True)
+
+    @staticmethod
+    def _resolve_api_key(passed_key: str = None) -> str:
+        key = (
+            passed_key
+            or os.environ.get("PAGESPEED_API_KEY")
+            or os.environ.get("GOOGLE_PAGESPEED_API_KEY")
+            or os.environ.get("PAGE_SPEED_API_KEY")
+            or os.environ.get("GOOGLE_API_KEY")
+            or ""
+        )
+        return key.strip().strip('"').strip("'")
 
     def _ensure_cache_dir(self):
         try:
@@ -37,6 +50,25 @@ class PageSpeedClient:
             if not os.path.exists(CACHE_FILE):
                 with open(CACHE_FILE, "w", encoding="utf-8") as f:
                     json.dump({}, f)
+        except Exception:
+            pass
+
+    def clear_cache(self, domain: str = None):
+        """Clears cache entries for a specific domain or all domains."""
+        try:
+            if not os.path.exists(CACHE_FILE):
+                return
+            if domain is None:
+                with open(CACHE_FILE, "w", encoding="utf-8") as f:
+                    json.dump({}, f)
+            else:
+                with open(CACHE_FILE, "r", encoding="utf-8") as f:
+                    cache = json.load(f)
+                clean_dom = domain.lower().replace("https://", "").replace("http://", "").replace("www.", "").split("/")[0]
+                if clean_dom in cache:
+                    del cache[clean_dom]
+                    with open(CACHE_FILE, "w", encoding="utf-8") as f:
+                        json.dump(cache, f)
         except Exception:
             pass
 
@@ -78,18 +110,18 @@ class PageSpeedClient:
     def _fetch_strategy(self, url: str, strategy: str = "mobile") -> dict:
         """
         Calls Google PageSpeed Insights API for a specific strategy (mobile or desktop).
-        Includes retry once on 5xx errors.
+        Appends PAGESPEED_API_KEY when available and executes with proper timeout.
         """
+        api_key = self._resolve_api_key(self.api_key)
         query_params = [
             ("url", url),
             ("strategy", strategy),
             ("category", "performance"),
             ("category", "accessibility"),
-            ("category", "seo"),
-            ("category", "best-practices")
+            ("category", "seo")
         ]
-        if self.api_key:
-            query_params.append(("key", self.api_key))
+        if api_key:
+            query_params.append(("key", api_key))
 
         encoded_url = "https://www.googleapis.com/pagespeedonline/v5/runPagespeed?" + urllib.parse.urlencode(query_params)
         
@@ -105,17 +137,23 @@ class PageSpeedClient:
                         raw_data = json.loads(resp.read().decode("utf-8"))
                         return self._parse_psi_response(raw_data, strategy)
             except urllib.error.HTTPError as e:
+                err_snippet = ""
+                try:
+                    err_snippet = e.read().decode("utf-8", errors="ignore")[:300]
+                except Exception:
+                    pass
+                print(f"PSI: {strategy} HTTP {e.code} for {url} - {err_snippet}", flush=True)
                 last_err = f"HTTP {e.code}"
                 # Retry once only on 5xx errors
                 if e.code >= 500 and attempt == 0:
-                    time.sleep(1.5)
+                    time.sleep(1.0)
                     continue
                 break
             except Exception as e:
-                last_err = str(e)
-                if attempt == 0:
-                    time.sleep(1.0)
-                    continue
+                err_type = type(e).__name__
+                err_msg = str(e)
+                print(f"PSI: {strategy} exception for {url} - {err_type}: {err_msg}", flush=True)
+                last_err = f"{err_type}: {err_msg}" if err_msg else err_type
                 break
 
         return {
@@ -216,17 +254,21 @@ class PageSpeedClient:
             }
         }
 
-    def get_pagespeed_metrics(self, domain_or_url: str) -> dict:
+    def get_pagespeed_metrics(self, domain_or_url: str, bypass_cache: bool = False) -> dict:
         """
         Retrieves PageSpeed metrics for mobile and desktop.
         1. Validates SSRF safety BEFORE making any request.
-        2. Checks 24h cache.
+        2. Checks 24h cache (unless bypass_cache=True).
         3. Executes concurrent mobile and desktop queries.
         4. Caches and returns normalized payload.
         """
         raw = str(domain_or_url or "").strip()
         if not raw:
             return {"status": "error", "error": "empty_domain", "is_real_psi": False}
+
+        # Dynamically refresh API key to pick up any environment variable updates
+        self.api_key = self._resolve_api_key(self.api_key)
+        print("PSI: API key present" if self.api_key else "PSI: no API key", flush=True)
 
         # Normalize URL
         url = raw if raw.startswith("http://") or raw.startswith("https://") else f"https://{raw}"
@@ -243,23 +285,27 @@ class PageSpeedClient:
             }
 
         # Check 24-hour cache
-        cached = self._read_cache(domain)
-        if cached:
-            cached["from_cache"] = True
-            return cached
+        if not bypass_cache:
+            cached = self._read_cache(domain)
+            if cached:
+                cached["from_cache"] = True
+                return cached
 
-        # Fetch mobile & desktop in parallel
+        # Fetch mobile & desktop in parallel with robust timeouts
         try:
             with ThreadPoolExecutor(max_workers=2) as executor:
                 mobile_future = executor.submit(self._fetch_strategy, safe_target, "mobile")
                 desktop_future = executor.submit(self._fetch_strategy, safe_target, "desktop")
 
-                mobile_data = mobile_future.result(timeout=self.timeout + 5)
-                desktop_data = desktop_future.result(timeout=self.timeout + 5)
+                mobile_data = mobile_future.result(timeout=self.timeout + 10)
+                desktop_data = desktop_future.result(timeout=self.timeout + 10)
         except Exception as e:
+            err_type = type(e).__name__
+            err_msg = str(e)
+            err_desc = f"{err_type}: {err_msg}" if err_msg else err_type
             mobile_data = {
                 "status": "unavailable",
-                "error": str(e),
+                "error": err_desc,
                 "strategy": "mobile",
                 "performance_score": None,
                 "accessibility_score": None,
@@ -269,7 +315,7 @@ class PageSpeedClient:
             }
             desktop_data = {
                 "status": "unavailable",
-                "error": str(e),
+                "error": err_desc,
                 "strategy": "desktop",
                 "performance_score": None,
                 "accessibility_score": None,
@@ -280,6 +326,19 @@ class PageSpeedClient:
 
         is_real = (mobile_data.get("status") == "success" or desktop_data.get("status") == "success")
         
+        if is_real:
+            note = "Verified real Google PageSpeed Insights data"
+        else:
+            combined_err = f"{mobile_data.get('error', '')} {desktop_data.get('error', '')}"
+            if "429" in combined_err:
+                note = "Google PageSpeed Insights API quota exceeded or rate-limited. Speed metrics marked pending."
+            elif "Timeout" in combined_err or "timed out" in combined_err.lower():
+                note = "Google PageSpeed Insights analysis timed out for this URL. Speed metrics marked pending."
+            elif "403" in combined_err:
+                note = "Google PageSpeed Insights API key unauthorized or API disabled. Speed metrics marked pending."
+            else:
+                note = "Google PageSpeed Insights API temporarily unavailable. Speed metrics marked pending."
+
         result = {
             "status": "success" if is_real else "unavailable",
             "is_real_psi": is_real,
@@ -287,11 +346,11 @@ class PageSpeedClient:
             "url": safe_target,
             "mobile": mobile_data,
             "desktop": desktop_data,
-            "note": "Verified real Google PageSpeed Insights data" if is_real else "Google PageSpeed Insights API is temporarily rate-limited or unavailable. Speed metrics marked pending.",
+            "note": note,
             "fetched_at": time.strftime("%Y-%m-%d %H:%M:%S UTC")
         }
 
-        # Write to cache if succeeded (or short cache on unavailable to avoid hammering)
+        # Write to cache if succeeded
         if is_real:
             self._write_cache(domain, result)
 

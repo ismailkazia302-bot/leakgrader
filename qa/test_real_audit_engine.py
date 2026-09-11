@@ -50,7 +50,8 @@ class TestRealAuditEngine(unittest.TestCase):
         self.assertEqual(res.get("status"), "VERIFIED_AUDIT")
         self.assertEqual(res.get("domain"), "python.org")
         self.assertIn("Welcome to Python.org", res.get("company_name", ""))
-        self.assertEqual(res.get("form_friction_fields"), 1)
+        # python.org has only a search input, which is correctly excluded from lead-capture forms
+        self.assertEqual(res.get("form_friction_fields"), 0)
 
     def test_03_no_unbuilt_features_or_unlabeled_claims(self):
         res = self.engine.run_instant_audit("example.com")
@@ -70,7 +71,10 @@ class TestRealAuditEngine(unittest.TestCase):
         
         # Checkpoint #6 Form Friction
         cp6 = [dp for dp in res.get("diagnostic_points", []) if dp.get("point_number") == 6][0]
-        self.assertIn(str(root_count), cp6.get("evidence", ""))
+        if root_count == 0:
+            self.assertIn("No visible lead capture", cp6.get("evidence", ""))
+        else:
+            self.assertIn(str(root_count), cp6.get("evidence", ""))
 
     def test_05_psi_timeout_resilience(self):
         # Create engine with an unreachable/timeout client

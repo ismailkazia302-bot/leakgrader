@@ -22,7 +22,7 @@ class ViralAuditEngine:
         self.api_key = api_key
         self.model = model
         self.onpage_analyzer = OnPageAnalyzer(timeout=8)
-        self.psi_client = PageSpeedClient(timeout=20)
+        self.psi_client = PageSpeedClient(timeout=40)
 
     def run_instant_audit(self, company_or_url: str, industry_hint: str = "", monthly_visitors: int = None, avg_deal_value: int = None) -> dict:
         raw_input = str(company_or_url or "").strip()
@@ -220,8 +220,10 @@ class ViralAuditEngine:
 
         # 4. Traffic & Deal Value Estimates
         seed = int(hashlib.md5(normalized_domain.encode("utf-8")).hexdigest()[:8], 16)
-        traffic = 12000 + (seed % 45) * 1250
-        avg_deal = 1400 + (seed % 28) * 220
+        # Realistic typical SMB baseline: 2,500 – 8,000 monthly visitors
+        traffic = 2500 + (seed % 12) * 500
+        # Realistic typical SMB deal / transaction size: $200 – $650
+        avg_deal = 200 + (seed % 10) * 50
         user_custom = False
 
         if monthly_visitors is not None:
@@ -242,10 +244,20 @@ class ViralAuditEngine:
             except (ValueError, TypeError):
                 pass
 
-        # Transparent Revenue Opportunity Range Formula
-        base_calc = int(traffic * 0.08 * 0.684 * 0.72 * 0.025 * avg_deal)
-        opp_min = max(500, round((base_calc * 0.35) / 100) * 100)
-        opp_max = max(opp_min + 1000, round((base_calc * 0.75) / 100) * 100)
+        # Defensible, conservative opportunity calculation tied directly to detected score & friction
+        defect_ratio = max(0.05, (100 - overall_score) / 100.0)
+        # Realistic conversion rate recovery: 0.15% base + up to 0.40% lift from fixing leaks
+        recovery_lift = 0.0015 + (defect_ratio * 0.004)
+        potential_recovery = traffic * recovery_lift * avg_deal
+
+        opp_min = max(400, round((potential_recovery * 0.40) / 100) * 100)
+        opp_max = max(opp_min + 600, round((potential_recovery * 0.90) / 100) * 100)
+
+        # Cap default uncustomized SMB estimates to avoid exaggerated claims
+        if not user_custom:
+            opp_min = min(opp_min, 18000)
+            opp_max = min(opp_max, 28000)
+
         opp_range = f"${opp_min:,} – ${opp_max:,}/mo"
 
         disclaimer_text = "Illustrative estimate based on industry benchmarks and assumptions, not measured data. Enter your actual traffic and conversion data for accuracy."
