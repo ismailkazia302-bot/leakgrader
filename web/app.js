@@ -534,6 +534,38 @@ document.addEventListener('DOMContentLoaded', () => {
             }).join('')}
           </div>
 
+          <!-- TRANSPARENT SCORE BREAKDOWN -->
+          ${audit.score_breakdown ? `
+          <div class="card-3d-tilt" style="padding: 20px 24px; background: rgba(12, 16, 26, 0.9); border: 1px solid var(--border-subtle); border-radius: 14px; margin-bottom: 24px;">
+            <h4 style="font-size:14px; font-weight:800; color:#fff; margin-bottom:12px; display:flex; align-items:center; gap:8px;">
+              <i data-lucide="bar-chart-2" style="width:16px; height:16px; color:#38bdf8;"></i>
+              Transparent Scoring Breakdown
+            </h4>
+            <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(180px, 1fr)); gap:12px;">
+              <div style="background:rgba(255,255,255,0.02); border:1px solid rgba(255,255,255,0.06); border-radius:8px; padding:12px;">
+                <span style="font-size:11px; color:var(--text-muted); font-weight:700;">PERFORMANCE (40%)</span>
+                <div style="font-size:18px; font-weight:800; color:#fff; margin:4px 0;">${audit.score_breakdown.performance.score !== null ? audit.score_breakdown.performance.score + '/100' : 'Pending / Unavailable'}</div>
+                <small style="font-size:10px; color:#64748b;">${audit.score_breakdown.performance.source}</small>
+              </div>
+              <div style="background:rgba(255,255,255,0.02); border:1px solid rgba(255,255,255,0.06); border-radius:8px; padding:12px;">
+                <span style="font-size:11px; color:var(--text-muted); font-weight:700;">ACCESSIBILITY (20%)</span>
+                <div style="font-size:18px; font-weight:800; color:#fff; margin:4px 0;">${audit.score_breakdown.accessibility.score !== null ? audit.score_breakdown.accessibility.score + '/100' : 'N/A'}</div>
+                <small style="font-size:10px; color:#64748b;">${audit.score_breakdown.accessibility.source}</small>
+              </div>
+              <div style="background:rgba(255,255,255,0.02); border:1px solid rgba(255,255,255,0.06); border-radius:8px; padding:12px;">
+                <span style="font-size:11px; color:var(--text-muted); font-weight:700;">SEO & STRUCTURE (20%)</span>
+                <div style="font-size:18px; font-weight:800; color:#fff; margin:4px 0;">${audit.score_breakdown.seo.score !== null ? audit.score_breakdown.seo.score + '/100' : 'N/A'}</div>
+                <small style="font-size:10px; color:#64748b;">${audit.score_breakdown.seo.source}</small>
+              </div>
+              <div style="background:rgba(255,255,255,0.02); border:1px solid rgba(255,255,255,0.06); border-radius:8px; padding:12px;">
+                <span style="font-size:11px; color:var(--text-muted); font-weight:700;">CONVERSION SIGNALS (20%)</span>
+                <div style="font-size:18px; font-weight:800; color:#fff; margin:4px 0;">${audit.score_breakdown.conversion.score !== null ? audit.score_breakdown.conversion.score + '/100' : 'N/A'}</div>
+                <small style="font-size:10px; color:#64748b;">${audit.score_breakdown.conversion.source}</small>
+              </div>
+            </div>
+          </div>
+          ` : ''}
+
           <!-- 15-POINT DIAGNOSTIC ACCORDION / BREAKDOWN -->
           <div class="card-3d-tilt" style="padding: 20px 24px; background: rgba(12, 16, 26, 0.9); border: 1px solid var(--border-subtle); border-radius: 14px; margin-bottom: 24px;">
             <div style="display:flex; justify-content:space-between; align-items:center; cursor:pointer;" id="toggle-diagnostic-breakdown">
@@ -556,7 +588,7 @@ document.addEventListener('DOMContentLoaded', () => {
                       <span style="font-family:'JetBrains Mono',monospace; font-size:11px; color:var(--text-muted); width:24px;">#${dp.point_number}</span>
                       <div>
                         <div style="font-size:12.5px; font-weight:700; color:#f8fafc;">${dp.name}</div>
-                        <div style="font-size:11px; color:var(--text-muted); margin-top:2px;">${dp.observation}</div>
+                        <div style="font-size:11px; color:#cbd5e1; margin-top:2px;"><strong>Evidence:</strong> ${dp.evidence || dp.observation}</div>
                       </div>
                     </div>
                     <div style="display:flex; align-items:center; gap:12px; margin-left:auto;">
